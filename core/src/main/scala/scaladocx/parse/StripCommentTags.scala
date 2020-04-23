@@ -105,7 +105,7 @@ private[scaladocx] object StripCommentTags {
   final case class Comment(style: Style, body: String)
   final object Comment {
 
-    def apply(style: Style, lines: Seq[String]): Comment = {
+    def apply(style: Style, lines: Iterable[String]): Comment = {
       Comment(style, lines.filterNot(_.trim.isEmpty).mkString("\n"))
     }
   }
