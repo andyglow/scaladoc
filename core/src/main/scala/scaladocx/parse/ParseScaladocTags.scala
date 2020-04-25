@@ -10,8 +10,7 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
   private val tags = new mutable.ArrayBuffer[MutableTag]()
   private def top: Option[MutableTag] = tags.lastOption
   private val buf = new StringBuilder
-  // TODO
-  private def parseMarkup(): Markup = Markup.PlainText(buf.toString.trim)
+  private def parseMarkup(): Markup = ParseMarkup(buf.toString)
   private def flush(): Unit = top match {
     case None =>
       if (buf.nonEmpty) throwBufferFlushError(None, buf)
@@ -22,18 +21,20 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
         case tag: TypeParam   if tag.isOpen => tag.markup = parseMarkup()
         case tag: Returns     if tag.isOpen => tag.markup = parseMarkup()
         case tag: Throws      if tag.isOpen => tag.markup = parseMarkup()
-        case tag: See         if tag.isOpen => tag.link = buf.toString.trim
+        case tag: See         if tag.isOpen => tag.value = buf.toString.trim
         case tag: Note        if tag.isOpen => tag.markup = parseMarkup()
         case tag: Example     if tag.isOpen => tag.markup = parseMarkup()
         case tag: UseCase     if tag.isOpen => tag.markup = parseMarkup()
-        case tag: Author      if tag.isOpen => tag.text = buf.toString.trim
-        case tag: Version     if tag.isOpen => tag.text = buf.toString.trim
-        case tag: Since       if tag.isOpen => tag.text = buf.toString.trim
+        case tag: Author      if tag.isOpen => tag.value = buf.toString.trim
+        case tag: Version     if tag.isOpen => tag.value = buf.toString.trim
+        case tag: Since       if tag.isOpen => tag.value = buf.toString.trim
         case tag: Todo        if tag.isOpen => tag.markup = parseMarkup()
         case tag: Deprecated  if tag.isOpen => tag.markup = parseMarkup()
         case tag: Migration   if tag.isOpen => tag.markup = parseMarkup()
         case tag: OtherTag    if tag.isOpen => tag.markup = parseMarkup()
         case tag: Description if tag.isOpen => tag.markup = parseMarkup()
+        case tag: GroupDescription if tag.isOpen => tag.value = buf.toString.trim
+        case tag: GroupName   if tag.isOpen => tag.value = buf.toString.trim
         case _ =>
           if (buf.nonEmpty) throwBufferFlushError(Some(tag), buf)
       }
@@ -42,7 +43,7 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
   }
 
   private def takeId(): String = {
-    val ident = takeWhile(_.isLetterOrDigit)
+    val ident = takeWhile(x => x.isLetterOrDigit || x == '-')
     skipSpaces()
     ident
   }
@@ -104,7 +105,7 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
             tags += Group(takeId())
           case "groupname" =>
             skipSpaces()
-            tags += GroupName(takeId(), takeId())
+            tags += GroupName(takeId(), null)
           case "groupdesc" =>
             skipSpaces()
             tags += GroupDescription(takeId(), null)
@@ -133,13 +134,13 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
           case Some(tag) if !(tag.isOpen) => tags += Description(null)
           case _ =>
         }
-        buf append chars(pos)
+        buf append char
         next()
       }
     }
     flush()
 
-    Scaladoc(tags.toList map { _.toTag })
+    Scaladoc(tags.toList filter { _.nonBlank } map { _.toTag } )
   }
 }
 

@@ -1,6 +1,7 @@
 package scaladocx.parse
 
-import scaladocx._
+import scaladocx.utils._
+
 
 private[scaladocx] sealed trait Expectation
 

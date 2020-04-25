@@ -1,6 +1,7 @@
 package scaladocx.parse
 
 import scaladocx._
+import scaladocx.utils._
 
 import scala.collection.mutable
 
@@ -26,7 +27,7 @@ final class StripCommentTags private (strictlyAlligned: Boolean, val chars: Arra
       var break = false
       while (!break) {
         if (isEOF) throwUnexpectedEOF(None)
-        ml += takeUntil {
+        ml += takeUntil2 {
           case _ if isNL => 0
           case (c1, c2) if c1 == '*' && c2 == '/' => break = true; 1
         }
@@ -106,7 +107,7 @@ private[scaladocx] object StripCommentTags {
   final object Comment {
 
     def apply(style: Style, lines: Iterable[String]): Comment = {
-      Comment(style, lines.filterNot(_.trim.isEmpty).mkString("\n"))
+      Comment(style, lines.trim.mkString("\n"))
     }
   }
 

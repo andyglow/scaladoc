@@ -1,10 +1,12 @@
 package scaladocx
 
 import scaladocx.parse.{Expectation, MutableTag}
+import scaladocx.utils._
 
 import scala.util.control.NoStackTrace
 
-sealed trait ScaladocException extends Exception with NoStackTrace
+
+sealed trait ScaladocException extends Exception // with NoStackTrace
 
 case object EmptyInput extends ScaladocException
 
@@ -64,5 +66,16 @@ final case class EmptyGroupPriority(
   column: Int,
   position: Int) extends TagSpecificException {
 
-  def message = s"Group Priority is not specified"
+  def message = "Group Priority is not specified"
+}
+
+trait MarkupException extends ParseException
+
+final case class UnexpectedParagraphSeparator(
+  line: Int,
+  column: Int,
+  position: Int,
+  length: Int) extends MarkupException {
+
+  def message = s"Unexpected Paragraph Separator: Len=$length"
 }

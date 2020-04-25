@@ -5,6 +5,7 @@ import org.scalatest.matchers.must.Matchers._
 import org.scalatest.wordspec.AnyWordSpec
 import scaladocx.parse.StripCommentTags.Comment
 import scaladocx._
+import scaladocx.utils._
 
 
 class StripCommentTagsSpec extends AnyWordSpec {
@@ -35,8 +36,8 @@ class StripCommentTagsSpec extends AnyWordSpec {
 
         "non-empty" in {
           strip(Line, "//abc") mustBe "abc"
-          strip(Line, "// abc") mustBe " abc"
-          strip(Line, "//\tabc") mustBe "\tabc"
+          strip(Line, "// abc") mustBe "abc"
+          strip(Line, "//\tabc") mustBe "abc"
         }
       }
 
@@ -44,16 +45,17 @@ class StripCommentTagsSpec extends AnyWordSpec {
 
         "for empty cases" in {
           strip(Line,"//\n//") mustBe EmptyString
-          strip(Line," //\n //\n") mustBe EmptyString
+          strip(Line," //\n //\n") mustBe "\n"
           strip(Line," \t//\n \t//") mustBe EmptyString
           strip(Line,"\n\t\n //\n\n\t\n //\t\n") mustBe EmptyString
         }
 
         "for non-empty cases" in {
           strip(Line,"//abc\n//def") mustBe "abc\ndef"
-          strip(Line," // abc\n // def\n") mustBe " abc\n def"
+          strip(Line," // abc\n // def\n") mustBe "abc\ndef"
+          strip(Line," // abc\n //  def\n") mustBe "abc\n def"
           strip(Line," \t//   abc\n \t//def") mustBe "   abc\ndef"
-          strip(Line,"\n\t\n // abc\n\t // def\t\n") mustBe " abc\n def\t"
+          strip(Line,"\n\t\n // abc\n\t // def\t\n") mustBe "abc\ndef\t"
         }
 
         "for cases with broken indentation" in {
@@ -72,12 +74,12 @@ class StripCommentTagsSpec extends AnyWordSpec {
             Line,
             """   // abc
               |  // def
-              |""".stripMargin) mustBe " abc\n def"
+              |""".stripMargin) mustBe "abc\ndef"
         }
       }
 
       "even if there are gaps" in {
-        strip(Line,"\n\t\n // abc\n\n\t\n // def\t\n") mustBe " abc"
+        strip(Line,"\n\t\n // abc\n\n\t\n // def\t\n") mustBe "abc"
       }
     }
 
@@ -94,8 +96,8 @@ class StripCommentTagsSpec extends AnyWordSpec {
 
         "non-empty" in {
           strip(Block, "/*abc*/") mustBe "abc"
-          strip(Block, " /* abc*/") mustBe " abc"
-          strip(Block, " \t/*\ta\tb\tc */\t ") mustBe "\ta\tb\tc "
+          strip(Block, " /* abc*/") mustBe "abc"
+          strip(Block, " \t/*\ta\tb\tc */\t ") mustBe "a\tb\tc "
           strip(Block, "\n\t\n /*abc */") mustBe "abc "
         }
       }
@@ -108,21 +110,21 @@ class StripCommentTagsSpec extends AnyWordSpec {
             """/*
               | *
               | */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n"
 
           strip(
             Block,
             """  /*
               |   *
               |   */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n"
 
           strip(
             Block,
             """ /*
               |  *
               |  */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n"
 
           strip(
             Block,
@@ -130,7 +132,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
               |  *
               |  *
               |  */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n\n"
         }
 
         "for non-empty cases" in {
@@ -174,7 +176,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
             """  /* abc
               |   * def
               |  */
-              |""".stripMargin) mustBe " abc\n def"
+              |""".stripMargin) mustBe "abc\ndef"
         }
       }
     }
@@ -192,8 +194,8 @@ class StripCommentTagsSpec extends AnyWordSpec {
 
         "for non-empty cases" in {
           strip(Scaladoc, "/**abc*/") mustBe "abc"
-          strip(Scaladoc, " /** abc*/") mustBe " abc"
-          strip(Scaladoc, " \t/**\ta\tb\tc */\t ") mustBe "\ta\tb\tc "
+          strip(Scaladoc, " /** abc*/") mustBe "abc"
+          strip(Scaladoc, " \t/**\ta\tb\tc */\t ") mustBe "a\tb\tc "
           strip(Scaladoc, "\n\t\n /**abc */") mustBe "abc "
         }
       }
@@ -206,21 +208,21 @@ class StripCommentTagsSpec extends AnyWordSpec {
             """/**
               | *
               | */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n"
 
           strip(
             Scaladoc,
             """  /**
               |   *
               |   */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n"
 
           strip(
             Scaladoc,
             """ /**
               |  *
               |  */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n"
 
           strip(
             Scaladoc,
@@ -228,7 +230,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
               |  *
               |  *
               |  */
-              |""".stripMargin) mustBe EmptyString
+              |""".stripMargin) mustBe "\n\n"
         }
 
         "for non-empty cases" in {
@@ -266,7 +268,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
                   |   * ghi
                   |   */
                   |""".stripMargin)
-            } mustBe scaladocx.UnexpectedChar(2, 2, 19, 'g', Expectation.Exact('*'))
+            } mustBe scaladocx.UnexpectedChar(2, 1, 19, 'g', Expectation.Exact('*'))
           }
 
           "strict alignment" in {
@@ -280,7 +282,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
                   |   */
                   |""".stripMargin,
                 strict = true)
-            } mustBe scaladocx.UnexpectedChar(2, 2, 19, 'g', Expectation.Exact(' '))
+            } mustBe scaladocx.UnexpectedChar(2, 1, 19, 'g', Expectation.Exact(' '))
 
             the[UnexpectedChar] thrownBy {
               strip(
@@ -292,7 +294,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
                   |   */
                   |""".stripMargin,
                 strict = true)
-            } mustBe scaladocx.UnexpectedChar(2, 4, 21, 'g', Expectation.Exact('*'))
+            } mustBe scaladocx.UnexpectedChar(2, 3, 21, 'g', Expectation.Exact('*'))
           }
         }
 
@@ -305,7 +307,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
                 |""".stripMargin) mustBe "abc\n def"
           }
 
-          ex mustBe UnexpectedEOF(2, 0, 18, None)
+          ex mustBe UnexpectedEOF(1, 8, 18, None)
         }
 
         "for scaladoc style #1" in {
@@ -325,7 +327,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
                 |    * def
                 |    */
                 |""".stripMargin,
-              strict = true) mustBe " abc\n def"
+              strict = true) mustBe "abc\ndef"
         }
 
         "for cases with broken indentation" in {
@@ -376,7 +378,7 @@ class StripCommentTagsSpec extends AnyWordSpec {
             """  /** abc
               |   * def
               |  */
-              |""".stripMargin) mustBe " abc\n def"
+              |""".stripMargin) mustBe "abc\ndef"
         }
       }
     }

@@ -1,9 +1,10 @@
 # TODO
 
-- [ ] Markup parser
-    - [ ] ParseMarkup Tests
-- [ ] ParseScaladocTags Tests
-- [ ] Macro Carrier (java-annotation, attachment)
-- [ ] Cross Scala Version build
+- [x] Markup parser
+    - [x] ParseMarkup Tests
+- [x] ParseScaladocTags Tests
+- [ ] Compiler Plugin (puts scaladocs alongside with bytecode)
+- [x] Cross Scala Version build
 - [x] Codecov integration
 - [x] TravisCI integration
+- [ ] Stabilize alignments (leading trims, etc)
