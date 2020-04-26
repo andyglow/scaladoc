@@ -1,8 +1,32 @@
-cache:
-  mount:
-    - /drone/.ivy
+kind: pipeline
+type: docker
+name: scaladoc-x
 
-build:
-  image: 1science/sbt:0.13.8-oracle-jre-8
-  commands:
-    - sbt +clean +test -Dsbt.ivy.home=/drone/.ivy
+steps:
+  - name: restore-cache
+    image: drillster/drone-volume-cache
+    restore: true
+    mount:
+      - /drone/.ivy2/cache
+      - /drone/.coursier/cache
+      - /drone/.sbt
+    volumes:
+      - /tmp/cache:/cache
+
+  - name: build
+    image: eed3si9n/sbt:jdk11-alpine
+    when:
+      branch: master
+    commands:
+      - git log | head -n 20
+      - sbt +clean +test
+
+  - name: rebuild-cache
+    image: drillster/drone-volume-cache
+    rebuild: true
+    mount:
+      - /drone/.ivy2/cache
+      - /drone/.coursier/cache
+      - /drone/.sbt
+    volumes:
+      - /tmp/cache:/cache
