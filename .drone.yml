@@ -5,14 +5,15 @@ name: scaladoc-x
 steps:
 - name: restore-cache
   image: drillster/drone-volume-cache
-  restore: true
-  mount:
-    - /drone/.ivy2/cache
-    - /drone/.coursier/cache
-    - /drone/.sbt
   volumes:
   - name: cache
     path: /tmp/cache
+  settings:
+    restore: true
+    mount:
+      - /drone/.ivy2/cache
+      - /drone/.coursier/cache
+      - /drone/.sbt
 
 - name: build
   image: eed3si9n/sbt:jdk11-alpine
@@ -28,11 +29,12 @@ steps:
 
 - name: rebuild-cache
   image: drillster/drone-volume-cache
-  rebuild: true
-  mount:
-    - /drone/.ivy2/cache
-    - /drone/.coursier/cache
-    - /drone/.sbt
   volumes:
   - name: cache
     path: /tmp/cache
+  settings:
+    rebuild: true
+    mount:
+      - /drone/.ivy2/cache
+      - /drone/.coursier/cache
+      - /drone/.sbt
