@@ -28,6 +28,7 @@ steps:
   - ls -lA /
   - ls -lA /drone
   - ls -lA /drone/src
+  - ls -lA /home
   - ls -lA /opt
   - ls -lA /opt/sbt/sbt
   - ls -lA /opt/workspace
