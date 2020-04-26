@@ -18,9 +18,13 @@ steps:
   image: eed3si9n/sbt:jdk11-alpine
   when:
     branch: master
+  environment:
+    CODECOV_TOKEN:
+      from_secret: codecov_token
   commands:
   - git log | head -n 20
   - sbt +clean +coverage +test +coverageReport
+  - bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy -X xcode -X gcovout
 
 - name: rebuild-cache
   image: drillster/drone-volume-cache
@@ -32,9 +36,3 @@ steps:
   volumes:
   - name: cache
     path: /tmp/cache
-
-- name: coverage
-  image: plugins/codecov
-  settings:
-    token:
-      from_secret: codecov_token
