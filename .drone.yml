@@ -28,6 +28,14 @@ steps:
   - chmod +x .codecov
   - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
 
+- name: notify
+  image: plugins/slack
+  settings:
+    webhook:
+      from_secret: slack_webhook_url
+    channel: builds
+    username: drone
+
 - name: rebuild-cache
   image: drillster/drone-volume-cache
   volumes:
