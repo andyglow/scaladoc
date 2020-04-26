@@ -34,7 +34,7 @@ steps:
 #  - ls -lA /opt/sbt/sbt
 #  - ls -lA /opt/workspace
 #  - ls -lA /tmp
-  - curl -s https://codecov.io/bash > .codecov
+  - wget -O .codecov https://codecov.io/bash
   - chmod +x .codecov
   - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
 
