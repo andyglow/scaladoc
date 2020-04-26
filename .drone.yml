@@ -28,6 +28,7 @@ steps:
   - ls -lA /
   - ls -lA /drone
   - ls -lA /drone/src
+  - ls -lA /ops/sbt
   - ls -lA /tmp
   - curl -s https://codecov.io/bash > .codecov
   - chmod +x .codecov
