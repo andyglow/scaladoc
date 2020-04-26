@@ -23,10 +23,12 @@ steps:
     CODECOV_TOKEN:
       from_secret: codecov_token
   commands:
-  - git log | head -n 20
-  - sbt +clean +coverage +test +coverageReport
+#  - git log | head -n 20
+#  - sbt +clean +coverage +test +coverageReport
+  - ls -lA /
   - ls -lA /drone
-  - ls -lA /drone/.sbt
+  - ls -lA /drone/src
+  - ls -lA /tmp
   - curl -s https://codecov.io/bash > .codecov
   - chmod +x .codecov
   - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
