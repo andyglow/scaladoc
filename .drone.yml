@@ -11,9 +11,9 @@ steps:
   settings:
     restore: true
     mount:
-      - /drone/.ivy2/cache
-      - /drone/.coursier/cache
-      - /drone/.sbt
+      - /root/.ivy2/cache
+      - /root/.coursier/cache
+      - /root/.sbt
 
 - name: build
   image: eed3si9n/sbt:jdk11-alpine
@@ -24,16 +24,16 @@ steps:
       from_secret: codecov_token
   commands:
 #  - git log | head -n 20
-  - sbt clean # +coverage +test +coverageReport
-  - find / -type d -name '.ivy2'
-  - ls -lA /
-  - ls -lA /drone
-  - ls -lA /drone/src
-  - ls -lA /home
-  - ls -lA /opt
-  - ls -lA /opt/sbt/sbt
-  - ls -lA /opt/workspace
-  - ls -lA /tmp
+  - sbt clean coverage test coverageReport
+#  - find / -type d -name '.ivy2'
+#  - ls -lA /
+#  - ls -lA /drone
+#  - ls -lA /drone/src
+#  - ls -lA /home
+#  - ls -lA /opt
+#  - ls -lA /opt/sbt/sbt
+#  - ls -lA /opt/workspace
+#  - ls -lA /tmp
   - curl -s https://codecov.io/bash > .codecov
   - chmod +x .codecov
   - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
@@ -46,6 +46,6 @@ steps:
   settings:
     rebuild: true
     mount:
-      - /drone/.ivy2/cache
-      - /drone/.coursier/cache
-      - /drone/.sbt
+      - /root/.ivy2/cache
+      - /root/.coursier/cache
+      - /root/.sbt
