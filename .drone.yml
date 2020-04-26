@@ -23,7 +23,7 @@ steps:
     CODECOV_TOKEN:
       from_secret: codecov_token
   commands:
-  - sbt clean coverage test coverageReport
+  - sbt +clean +coverage +test +coverageReport
   - wget -O .codecov https://codecov.io/bash
   - chmod +x .codecov
   - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
@@ -40,6 +40,7 @@ steps:
       {{#success build.status}}
         {{repo.name}}: build {{build.number}} succeeded (spent {{since build.started}}). Good job.
       {{else}}
+      {{
         {{repo.name}}: build {{build.number}} failed. Fix please. {{build.link}}
       {{/success}}
 
