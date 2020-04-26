@@ -25,6 +25,7 @@ steps:
   commands:
 #  - git log | head -n 20
   - sbt clean # +coverage +test +coverageReport
+  - find / -type d -name '.ivy2'
   - ls -lA /
   - ls -lA /drone
   - ls -lA /drone/src
