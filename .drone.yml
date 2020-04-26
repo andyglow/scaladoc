@@ -25,7 +25,11 @@ steps:
   commands:
   - git log | head -n 20
   - sbt +clean +coverage +test +coverageReport
-  - curl -s https://codecov.io/bash | bash -s -- -X gcov -X coveragepy -X xcode -X gcovout
+  - ls -lA /drone
+  - ls -lA /drone/.sbt
+  - curl -s https://codecov.io/bash > .codecov
+  - chmod +x .codecov
+  - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
 
 - name: rebuild-cache
   image: drillster/drone-volume-cache
