@@ -7,9 +7,9 @@ steps:
   image: drillster/drone-volume-cache
   restore: true
   mount:
-  - /drone/.ivy2/cache
-  - /drone/.coursier/cache
-  - /drone/.sbt
+    - /drone/.ivy2/cache
+    - /drone/.coursier/cache
+    - /drone/.sbt
   volumes:
   - name: cache
     path: /tmp/cache
@@ -24,15 +24,15 @@ steps:
   commands:
   - git log | head -n 20
   - sbt +clean +coverage +test +coverageReport
-  - bash <(curl -s https://codecov.io/bash) -X gcov -X coveragepy -X xcode -X gcovout
+  - curl -s https://codecov.io/bash | bash -X gcov -X coveragepy -X xcode -X gcovout
 
 - name: rebuild-cache
   image: drillster/drone-volume-cache
   rebuild: true
   mount:
-  - /drone/.ivy2/cache
-  - /drone/.coursier/cache
-  - /drone/.sbt
+    - /drone/.ivy2/cache
+    - /drone/.coursier/cache
+    - /drone/.sbt
   volumes:
   - name: cache
     path: /tmp/cache
