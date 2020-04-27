@@ -21,17 +21,17 @@ lazy val core = (project in file("core"))
       name := "scaladocx")
 
 // carries scaladocs alongside with jars in form of attachments or java annotations
-lazy val macroCarrier = (project in file("compiler-plugin"))
-  .dependsOn(core)
-  .settings(
-      commonSettings,
-      name := "scaladocx-compiler-pluginr")
+//lazy val macroCarrier = (project in file("compiler-plugin"))
+//  .dependsOn(core)
+//  .settings(
+//      commonSettings,
+//      name := "scaladocx-compiler-pluginr")
 
 lazy val root = (project in file("."))
-  .aggregate(core, macroCarrier)
+  .aggregate(core)
   .settings(
     name := "scaladocx-root",
-    crossScalaVersions := Nil,
+    // crossScalaVersions := Nil,
     publish / skip := true,
     publishArtifact := false,
     aggregate in update := false)
