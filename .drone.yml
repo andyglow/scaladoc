@@ -43,7 +43,6 @@ steps:
       {{#success build.status}}
         {{repo.name}}: build {{build.number}} succeeded (spent {{since build.started}}). Good job.
       {{else}}
-      {{
         {{repo.name}}: build {{build.number}} failed. Fix please. {{build.link}}
       {{/success}}
 
