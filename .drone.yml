@@ -31,9 +31,9 @@ steps:
 
 - name: notify
   image: plugins/slack
+  when:
+    status: [ success, failure ]
   settings:
-    when:
-      status: [ success, failure ]
     webhook:
       from_secret: slack_webhook_url
     channel: builds
