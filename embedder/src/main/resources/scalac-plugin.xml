@@ -1,0 +1,4 @@
+<plugin>
+  <name>scaladoc-embedder</name>
+  <classname>scaladocx.compile.EmbedderPlugin</classname>
+</plugin>

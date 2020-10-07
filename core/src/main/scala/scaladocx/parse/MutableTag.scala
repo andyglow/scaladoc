@@ -17,12 +17,12 @@ object MutableTag {
     def value: String
     override def isBlank: Boolean = value.isEmpty
   }
-  final case class See(var value: String)                             extends MutableTag with HasValue  { def toTag = Tag.See(value)                     ; def isOpen = value eq null }
   final case class Author(var value: String)                          extends MutableTag with HasValue  { def toTag = Tag.Author(value)                  ; def isOpen = value eq null }
   final case class Version(var value: String)                         extends MutableTag with HasValue  { def toTag = Tag.Version(value)                 ; def isOpen = value eq null }
   final case class Since(var value: String)                           extends MutableTag with HasValue  { def toTag = Tag.Since(value)                   ; def isOpen = value eq null }
   final case class GroupName(id: String, var value: String)           extends MutableTag with HasValue  { def toTag = Tag.GroupName(id, value)           ; def isOpen = value eq null }
-  final case class GroupDescription(id: String, var value: String)    extends MutableTag with HasValue  { def toTag = Tag.GroupDescription(id, value)    ; def isOpen = value eq null }
+  final case class GroupDescription(id: String, var markup: Markup)   extends MutableTag with HasMarkup { def toTag = Tag.GroupDescription(id, markup)   ; def isOpen = markup eq null }
+  final case class See(var markup: Markup)                            extends MutableTag with HasMarkup { def toTag = Tag.See(markup)                    ; def isOpen = markup eq null }
   final case class Constructor(var markup: Markup)                    extends MutableTag with HasMarkup { def toTag = Tag.Constructor(markup)            ; def isOpen = markup eq null }
   final case class Param(name: String, var markup: Markup)            extends MutableTag with HasMarkup { def toTag = Tag.Param(name, markup)            ; def isOpen = markup eq null }
   final case class TypeParam(name: String, var markup: Markup)        extends MutableTag with HasMarkup { def toTag = Tag.TypeParam(name, markup)        ; def isOpen = markup eq null }

@@ -51,6 +51,7 @@ object DumpAst {
       w.dec()
       w.writeln("</code>")
     case PlainText(text) => w.write(text)
+    case Heading(level, text) => val hh = s"h${level.value}"; w.write(s"<$hh>$text</$hh>")
     case _ =>
   }
 
@@ -78,7 +79,8 @@ object DumpAst {
         w.writeln(s"[throws: $n]")
         dumpM(m)
       case See(m)                  =>
-        w.writeln(s"[see: $m]")
+        w.writeln("[see]")
+        dumpM(m)
       case Author(m)               =>
         w.writeln(s"[author: $m]")
       case Version(m)              =>
@@ -107,8 +109,9 @@ object DumpAst {
         w.writeln(s"[group: $id]")
       case GroupName(id, v)        =>
         w.writeln(s"[groupname: $id $v]")
-      case GroupDescription(id, v) =>
-        w.writeln(s"[groupdescr: $id $v]")
+      case GroupDescription(id, m) =>
+        w.writeln(s"[groupdescr: $id]")
+        dumpM(m)
       case GroupPriority(id, v)    =>
         w.writeln(s"[groupprio: $id $v]")
       case Documentable            =>

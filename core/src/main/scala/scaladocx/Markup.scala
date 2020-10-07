@@ -55,7 +55,7 @@ object Markup {
 
   final object Heading {
 
-    sealed trait Level { def value: Int }
+    sealed trait Level extends Product { def value: Int }
 
     final case object One extends Level { def value = 1 }
 

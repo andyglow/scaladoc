@@ -1,5 +1,7 @@
 package scaladocx.utils
 
+import scaladocx.Markup.Span
+
 import scala.annotation.tailrec
 
 
@@ -25,7 +27,6 @@ trait StringUtils {
 
     def isSpace: Boolean = !isNL && c.isWhitespace
   }
-
 
   private[scaladocx] implicit class StringOps(private val chars: String) {
 

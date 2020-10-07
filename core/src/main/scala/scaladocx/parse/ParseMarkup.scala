@@ -40,8 +40,8 @@ class ParseMarkup private (
         slice foreach { e =>
           log.info(s"   - $e")
         }
-        if(from <= 0) ml.clear() else ml.remove(from, ml.length - from)
-        handle(Paragraph(slice))
+        if (from <= 0) ml.clear() else ml.remove(from, ml.length - from)
+        handle(Paragraph(slice.trim))
         log.info(s" - wrapp: result:")
         ml foreach { e =>
           log.info(s"   - $e")
@@ -53,16 +53,16 @@ class ParseMarkup private (
   def flush(): Unit = {
     if (buf.nonEmpty) {
       log.info(s"- flushing: [${buf.toString}]")
-      
+
       // compact spans into a paragraph if paragraph separator found
       buf.toString.parSepTokenized foreach {
         case ParSep.Text(text) =>
-        if (text.isEmpty) {
-          log.info(s"- flush: text: empty: skipping")
-        } else {
-          log.info(s"- flush: text: [$text]")
-          handle(PlainText(text))
-        }
+          if (text.isEmpty) {
+            log.info(s"- flush: text: empty: skipping")
+          } else {
+            log.info(s"- flush: text: [$text]")
+            handle(PlainText(text))
+          }
         case ParSep.Separator  => log.info(s"- flush: paragraph separator"); wrapIntoParagraphs(true)
       }
 

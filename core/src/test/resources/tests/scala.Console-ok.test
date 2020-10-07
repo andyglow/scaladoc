@@ -6,6 +6,7 @@
  *  == Console Output ==
  *
  *  Use the print methods to output text.
+ *
  *  {{{
  *   scala> Console.printf(
  *     "Today the outside temperature is a balmy %.1f°C. %<.1f°C beats the previous record of %.1f°C.\n",
@@ -15,7 +16,9 @@
  *  }}}
  *
  *  == ANSI escape codes ==
+ *
  *  Use the ANSI escape codes for colorizing console output either to STDOUT or STDERR.
+ *
  *  {{{
  *    import Console.{GREEN, RED, RESET, YELLOW_B, UNDERLINED}
  *
@@ -110,20 +113,26 @@
 scaladoc
   [description]
     |<p>
-    |   Implements functionality for printing Scala values on the terminal. For reading values
+    |  Implements functionality for printing Scala values on the terminal. For reading values
     |    use <a>scala.io.StdIn$ StdIn</a>.
     |    Also defines constants for marking up text on ANSI terminals.
     |</p>
-    |Use the print methods to output text.
-    |  <code>
+    |<h2> Console Output </h2>
+    |<p>
+    |  Use the print methods to output text.
+    |</p>
+    |<code>
     |     scala> Console.printf(
     |       "Today the outside temperature is a balmy %.1f°C. %<.1f°C beats the previous record of %.1f°C.\n",
     |       -137.0,
     |       -135.05)
     |     Today the outside temperature is a balmy -137.0°C. -137.0°C beats the previous record of -135.1°C.
     |</code>
+    |<h2> ANSI escape codes </h2>
+    |<p>
     |  Use the ANSI escape codes for colorizing console output either to STDOUT or STDERR.
-    |  <code>
+    |</p>
+    |<code>
     |      import Console.{GREEN, RED, RESET, YELLOW_B, UNDERLINED}
     |      object PrimeTest {
     |        def isPrime(): Unit = {
@@ -147,6 +156,7 @@ scaladoc
     |      <tr><td style="background-color:#000;color:#fff"><span style="background-color:#ff0;color:#f00;text-decoration:underline">NO!</span></td></tr>
     |    </table>
     |</p>
+    |<h2> IO redefinition </h2>
     |<p>
     |  Use IO redefinition to temporarily swap in a different set of input and/or output streams. In this example the stream based
     |    method above is wrapped into a function.
@@ -185,13 +195,21 @@ scaladoc
     |</p>
   [groupname: console-output Console Output]
   [groupprio: console-output 30]
-  [groupdescr: console-output These methods provide output via the console.]
+  [groupdescr: console-output]
+    |<p>
+    |  These methods provide output via the console.
+    |</p>
   [groupname: io-default IO Defaults]
   [groupprio: io-default 50]
-  [groupdescr: io-default These values provide direct access to the standard IO channels]
+  [groupdescr: io-default]
+    |<p>
+    |  These values provide direct access to the standard IO channels
+    |</p>
   [groupname: io-redefinition IO Redefinition]
   [groupprio: io-redefinition 60]
-  [groupdescr: io-redefinition These methods allow substituting alternative streams for the duration of
-             a body of code. Threadsafe by virtue of [[scala.util.DynamicVariable]].]
+  [groupdescr: io-redefinition]
+    |These methods allow substituting alternative streams for the duration of
+    |             a body of code. Threadsafe by virtue of <a>scala.util.DynamicVariable</a>.
+    |</p>
 
 -# --

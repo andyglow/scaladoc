@@ -21,19 +21,19 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
         case tag: TypeParam   if tag.isOpen => tag.markup = parseMarkup()
         case tag: Returns     if tag.isOpen => tag.markup = parseMarkup()
         case tag: Throws      if tag.isOpen => tag.markup = parseMarkup()
-        case tag: See         if tag.isOpen => tag.value = buf.toString.trim
+        case tag: See         if tag.isOpen => tag.markup = parseMarkup()
         case tag: Note        if tag.isOpen => tag.markup = parseMarkup()
         case tag: Example     if tag.isOpen => tag.markup = parseMarkup()
         case tag: UseCase     if tag.isOpen => tag.markup = parseMarkup()
-        case tag: Author      if tag.isOpen => tag.value = buf.toString.trim
-        case tag: Version     if tag.isOpen => tag.value = buf.toString.trim
-        case tag: Since       if tag.isOpen => tag.value = buf.toString.trim
+        case tag: Author      if tag.isOpen => tag.value  = buf.toString.trim
+        case tag: Version     if tag.isOpen => tag.value  = buf.toString.trim
+        case tag: Since       if tag.isOpen => tag.value  = buf.toString.trim
         case tag: Todo        if tag.isOpen => tag.markup = parseMarkup()
         case tag: Deprecated  if tag.isOpen => tag.markup = parseMarkup()
         case tag: Migration   if tag.isOpen => tag.markup = parseMarkup()
         case tag: OtherTag    if tag.isOpen => tag.markup = parseMarkup()
         case tag: Description if tag.isOpen => tag.markup = parseMarkup()
-        case tag: GroupDescription if tag.isOpen => tag.value = buf.toString.trim
+        case tag: GroupDescription if tag.isOpen => tag.markup = parseMarkup()
         case tag: GroupName   if tag.isOpen => tag.value = buf.toString.trim
         case _ =>
           if (buf.nonEmpty) throwBufferFlushError(Some(tag), buf)

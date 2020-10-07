@@ -6,6 +6,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scaladocx._
 import scaladocx.Markup._
 import scaladocx.Markup.Heading._
+import scaladocx.matchers.Matchers._
 
 
 class ParseMarkupSpec extends AnyWordSpec {
@@ -88,8 +89,11 @@ class ParseMarkupSpec extends AnyWordSpec {
 
     "handle little more complex example" in {
       val doc = ParseMarkup(
-        """A class to represent a ''human being''.
+        """= A Title =
           |
+          |A class to represent a ''human being''.
+          |
+          |== A Subtitle ==
           |Specify the `name`, `age`, and `weight` when creating a new `Person`,
           |then access the fields like this:
           |
@@ -102,11 +106,13 @@ class ParseMarkupSpec extends AnyWordSpec {
           |
           |Did you know: The [[com.acme.foo.Employee]] extends this class.""".stripMargin)
 
-      doc mustBe Document(
+      doc must (coincideWith (Document(
+        Heading(One, " A Title "),
         Paragraph(
           PlainText("A class to represent a "),
           Italic("human being"),
           PlainText(".")),
+        Heading(Two, " A Subtitle "),
         Paragraph(
           PlainText("Specify the "),
           Monospace("name"),
@@ -127,7 +133,7 @@ class ParseMarkupSpec extends AnyWordSpec {
         Paragraph(
           PlainText("Did you know: The "),
           Link("com.acme.foo.Employee"),
-          PlainText(" extends this class.")))
+          PlainText(" extends this class.")))))
     }
   }
 }

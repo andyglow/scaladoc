@@ -53,7 +53,7 @@ final class StripCommentTags private (strictlyAlligned: Boolean, val chars: Arra
     }
 
     skipUntilChar('/')
-    if(isEOF) None else {
+    if (isEOF) None else {
       val ident = col
       next()
 

@@ -37,6 +37,7 @@ scaladoc
     |<p>
     |  <pre>args</pre> returns the current command line arguments as an array.
     |</p>
+    |<h2>Caveats</h2>
     |<p>
     |  <b>It should be noted that this trait is implemented using the [[DelayedInit]]
     |    functionality, which means that fields of the object will not have been initialized

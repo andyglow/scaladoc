@@ -15,7 +15,7 @@ object Tag {
 
   final case class Throws(exceptionType: String, markup: Markup) extends Tag
 
-  final case class See(link: String) extends Tag
+  final case class See(markup: Markup) extends Tag
 
   final case class Note(markup: Markup) extends Tag
 
@@ -39,7 +39,7 @@ object Tag {
 
   final case class GroupName(id: String, value: String) extends Tag
 
-  final case class GroupDescription(id: String, value: String) extends Tag
+  final case class GroupDescription(id: String, markup: Markup) extends Tag
 
   final case class GroupPriority(id: String, value: Int) extends Tag
 

@@ -37,11 +37,12 @@ private[parse] trait Tokenizer {
     (0 until x) foreach { _ => next() }
 //    println(s"setPos(pos=$pos, lin=$lin, $col=$col)")
   }
-  def isSlash: Boolean = chars(pos) == '/'
-  def isStar: Boolean = chars(pos) == '*'
-  def isAt: Boolean = chars(pos) == '@'
-  def isNL: Boolean = chars(pos).isNL
+  def isSlash: Boolean = nonEOF && char == '/'
+  def isStar: Boolean = nonEOF && char == '*'
+  def isAt: Boolean = nonEOF && char == '@'
+  def isNL: Boolean = nonEOF && char.isNL
   def isEOF: Boolean = pos >= chars.length
+  def nonEOF: Boolean = pos < chars.length
 
   /* ex: [foo]   - line starts immediately at the first position, cursor is at position 0
    * ex: [ foo]  - line prefixed with a space, cursor is at position either 0 or 1

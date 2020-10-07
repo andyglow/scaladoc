@@ -1,5 +1,6 @@
 -# --
-/** A class to represent a ''human being''.
+/** = Human =
+  * A class to represent a ''human being''.
   *
   * Specify the `name`, `age`, and `weight` when creating a new `Person`,
   * then access the fields like this:
@@ -25,8 +26,9 @@
 -# --
 scaladoc
   [description]
+    |<h1> Human </h1>
     |<p>
-    |   A class to represent a <i>human being</i>.
+    |  A class to represent a <i>human being</i>.
     |</p>
     |<p>
     |  Specify the <pre>name</pre>, <pre>age</pre>, and <pre>weight</pre> when creating a new <pre>Person</pre>,
@@ -53,5 +55,6 @@ scaladoc
   [version: 1.0]
   [todo]
     |Add more functionality.
-  [see: See [[http://alvinalexander.com alvinalexander.com]] for more information.]
+  [see]
+    |See <a>http://alvinalexander.com alvinalexander.com</a> for more information.
 -# --
