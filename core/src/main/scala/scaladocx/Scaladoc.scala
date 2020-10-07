@@ -5,8 +5,6 @@ import scaladocx.parse.StripCommentTags.Comment
 import scaladocx.parse.{ParseScaladocTags, StripCommentTags}
 import scaladocx.utils.{DumpAst, IdentWriter}
 
-import scala.language.experimental.macros
-
 
 case class Scaladoc(tags: List[Tag]) extends Serializable {
 

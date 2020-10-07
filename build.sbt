@@ -6,12 +6,33 @@ lazy val commonSettings = Seq(
 
   version := "0.1",
 
-  scalaVersion := scala213,
+  scalaVersion := scala212,
 
   crossScalaVersions := Seq(scala211, scala212, scala213),
 
   libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.1.1" % Test))
+    "org.scalatest" %% "scalatest" % "3.2.2" % Test),
+
+  Compile / unmanagedSourceDirectories ++= {
+    val bd = baseDirectory.value
+    def extraDirs(suffix: String): Seq[File] = Seq(bd / "src" / "main" / s"scala$suffix")
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, y)) if y <= 12 => extraDirs("-2.12-")
+      case Some((2, y)) if y >= 13 => extraDirs("-2.13+")
+      case _                       => Nil
+    }
+  },
+
+  Test / unmanagedSourceDirectories ++= {
+    val bd = baseDirectory.value
+    def extraDirs(suffix: String): Seq[File] = Seq(bd / "src" / "test" / s"scala$suffix")
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, y)) if y <= 12 => extraDirs("-2.12-")
+      case Some((2, y)) if y >= 13 => extraDirs("-2.13+")
+      case _                       => Nil
+    }
+  }
+)
 
 // a scaladox ast
 // and parses a string representation of a scaladoc into a scaladoc ast

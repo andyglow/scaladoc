@@ -2,12 +2,13 @@ package scaladocx.compile
 
 import java.io.File
 
+import scaladocs.compile.CrossVersionSupport
 import scaladocx.Scaladoc
 import scaladocx.anno.ScaladocCarrier
 import scaladocx.macros.ExtractScaladoc
 
 import scala.tools.nsc
-import nsc.{Global, Reporting}
+import nsc.Global
 import nsc.plugins.{Plugin, PluginComponent}
 import nsc.ast.TreeDSL
 import nsc.transform.{Transform, TypingTransformers}
@@ -15,7 +16,7 @@ import scala.collection.immutable.ListMap
 
 class EmbedderComponent(
   plugin: Plugin,
-  val global: Global) extends PluginComponent with Transform with TypingTransformers with TreeDSL {
+  val global: Global) extends PluginComponent with Transform with TypingTransformers with TreeDSL with CrossVersionSupport  {
   import global._
 
   override val runsAfter  = "parser" :: Nil
@@ -24,22 +25,22 @@ class EmbedderComponent(
 
   override def newTransformer(unit: CompilationUnit): Trans = new Trans(unit)
 
-  class Trans(unit: CompilationUnit) extends TypingTransformer(unit) with ExtractScaladoc {
+  class Trans(unit: CompilationUnit) extends TypingTransformer(unit) with ExtractScaladoc{
     private val carrierTpe = typeOf[ScaladocCarrier]
 
-    inform("COOKED DOC COMMENTS " + show(global.cookedDocComments))
+//    inform("COOKED DOC COMMENTS " + show(global.cookedDocComments))
 
     override def transform(tree: global.Tree): global.Tree = {
       tree match {
-        case doc @ DocDef(comment, definition) =>
-          inform(s"DocDef [${comment.raw}] for ${show(definition)}")
-          doc
+//        case doc @ DocDef(comment, definition) =>
+//          inform(s"DocDef [${comment.raw}] for ${show(definition)}")
+//          doc
         case cls @ ClassDef(mods, name, tparams, impl) =>
           val scd = for {
             str <- getScaladoc(tree.pos)
             scd <- Scaladoc.fromString(str, strict = true) match {
                      case Left(err)  =>
-                       runReporting.warning(tree.pos, err.getMessage, Reporting.WarningCategory.Scaladoc, tree.symbol)
+                       reportError(tree.pos, err.getMessage, tree.symbol)
                        Some(tree)
                      case Right(doc) =>
 //                       inform(tree.pos, s"Scaladoc AST {\n${doc.pseudoCode}}")
@@ -61,7 +62,9 @@ class EmbedderComponent(
 //                         inform(showRaw(effectiveMods))
 ////                         inform(showCode(newAnno))
 //                         inform("---\n"+showCode(res)+"\n---")
-                         res
+
+                         // scala 2.11 requirement
+                         res.setPos(tree.pos)
                        }
                     }
           } yield scd
