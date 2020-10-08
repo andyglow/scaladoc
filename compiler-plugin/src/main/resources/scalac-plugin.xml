@@ -1,0 +1,4 @@
+<plugin>
+  <name>scaladoc-compiler-plugin</name>
+  <classname>scaladoc.compile.ScaladocCompilerPlugin</classname>
+</plugin>
