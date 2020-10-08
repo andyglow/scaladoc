@@ -1,7 +1,5 @@
 package scaladoc
 
-import utils._
-
 sealed trait Markup extends Product with Serializable {
   def isBlank: Boolean
   def nonBlank: Boolean = !isBlank
@@ -13,7 +11,7 @@ object Markup {
 
   sealed trait HasValue { this: Markup =>
     def value: String
-    override def isBlank: Boolean = value.isVain
+    override def isBlank: Boolean = value.forall(_.isWhitespace)
   }
 
   final case class PlainText(value: String) extends Span with HasValue
