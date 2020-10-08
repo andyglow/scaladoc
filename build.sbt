@@ -22,7 +22,6 @@ lazy val commonSettings = Seq(
 
   crossScalaVersions := Seq(scala211, scala212, scala213),
 
-
   licenses := Seq(("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
 
   sonatypeProfileName := "com.github.andyglow",
@@ -51,19 +50,7 @@ lazy val commonSettings = Seq(
 
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
 
-//  releaseProcess := Seq[ReleaseStep](
-//    checkSnapshotDependencies,
-//    inquireVersions,
-//    runClean,
-//    runTest,
-//    setReleaseVersion,
-//    commitReleaseVersion,
-//    tagRelease,
-//    ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
-//    setNextVersion,
-//    commitNextVersion,
-//    ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true),
-//    pushChanges),
+  javacOptions ++= Seq("-source", "11"),
 
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "3.2.2" % Test),
