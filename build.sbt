@@ -1,6 +1,5 @@
 import xerial.sbt.Sonatype._
 import ReleaseTransformations._
-import scala.sys.process._
 
 // https://github.com/xerial/sbt-sonatype/issues/71
 publishTo in ThisBuild := sonatypePublishTo.value
@@ -145,6 +144,7 @@ lazy val itExternal = (project in file("integration-tests/external-models"))
         s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
         "-Yrangepos")
     },
+    Keys.`package` := { new File("") },
     publish / skip := true,
     publishArtifact := false,
     aggregate in update := false)
@@ -154,6 +154,7 @@ lazy val it = (project in file("integration-tests/suites"))
   .settings(
     commonSettings,
     name := "scaladoc-integration-tests",
+    Keys.`package` := { new File("") },
     publish / skip := true,
     publishArtifact := false,
     aggregate in update := false,
@@ -162,8 +163,9 @@ lazy val it = (project in file("integration-tests/suites"))
 lazy val root = (project in file("."))
   .aggregate(ast, parser, compilerPlugin, itExternal, it)
   .settings(
-    name := "scaladocx-root",
+    name := "scaladoc-root",
     // crossScalaVersions := Nil,
+    Keys.`package` := { new File("") },
     publish / skip := true,
     publishArtifact := false,
     aggregate in update := false)
