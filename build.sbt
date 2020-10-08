@@ -78,22 +78,23 @@ lazy val embedder = (project in file("embedder"))
     commonSettings,
     libraryDependencies += scalaOrganization.value % "scala-compiler" % scalaVersion.value,
     name := "scaladoc-embedder",
-    Compile / scalacOptions += "-Ydebug",
-    Test / scalacOptions ++= {
-      val coreJar = (core / Compile / packageBin).value
-      val pluginJar = (Compile / packageBin).value
-      Seq(
-        s"-Xplugin:${pluginJar.getAbsolutePath}:${coreJar.getAbsolutePath}",
-        s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
-         "-Yrangepos")
-    },
-    console / initialCommands := "import scaladocx",
-    Compile / console / scalacOptions := Seq("-language:_", "-Xplugin:" + (Compile / packageBin).value),
-    Test / console / scalacOptions := (Compile / console / scalacOptions).value,
-    libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % Test,
-    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    Test / fork := true
-//Test / scalacOptions ++= Seq("-Xprint:typer", "-Xprint-pos"), // Useful for debugging
+//    Compile / scalacOptions += "-Ydebug",
+//    Test / scalacOptions ++= {
+//      val coreJar = (core / Compile / packageBin).value
+//      val pluginJar = (Compile / packageBin).value
+//      Seq(
+//        s"-Xplugin:${pluginJar.getAbsolutePath}:${coreJar.getAbsolutePath}",
+//        s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
+//         "-Yrangepos")
+//    },
+//    console / initialCommands := "import scaladocx",
+//    Compile / console / scalacOptions := Seq("-language:_", "-Xplugin:" + (Compile / packageBin).value),
+//    Test / console / scalacOptions := (Compile / console / scalacOptions).value,
+//    libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % Test,
+//    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
+//    Test / fork := true,
+
+    //Test / scalacOptions ++= Seq("-Xprint:typer", "-Xprint-pos"), // Useful for debugging
 )
 
 lazy val root = (project in file("."))

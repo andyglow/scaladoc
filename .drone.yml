@@ -19,15 +19,8 @@ steps:
   image: andyglow/sbt:latest
   when:
     branch: master
-  environment:
-    CODECOV_TOKEN:
-      from_secret: codecov_token
   commands:
-  - sbt +clean +coverage +test
-  - sbt coverageAggregate
-  - wget -O .codecov https://codecov.io/bash
-  - chmod +x .codecov
-  - ./.codecov -X gcov -X coveragepy -X xcode -X gcovout
+  - sbt +clean +test
 
 - name: notify
   image: plugins/slack
