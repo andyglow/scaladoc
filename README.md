@@ -72,6 +72,8 @@ Scaladoc = List Tag
 ## Parser
 Parser is just parser. Takes text and either gives you parsed model or an error.
 ```scala
+import scaladoc._
+
 val text = """/** = Title =
              |  *
              |  * Description
@@ -103,5 +105,24 @@ It will inspect all possible places to get the job done, it will check attachmen
 java annotations and lastly source code (if available) to provide your tool with extracted scaladoc.
 
 ```scala
+import scaladoc._
+
 val scaladoc = Scaladoc.of[Foo]
 ``` 
+
+## Usage
+
+For AST, Parser and Extractor please add following two lines into your `build.sbt`
+```sbt
+libraryDependencies += "com.github.andyglow" %% "scaladoc-ast"    % "<version>"
+libraryDependencies += "com.github.andyglow" %% "scaladoc-parser" % "<version>"
+```
+
+For scaladoc embedding functionality, please consider adding these lines into your `build.sbt`
+```sbt
+autoCompilerPlugins := true
+
+libraryDependencies += compilerPlugin("com.github.andyglow" % ("scaladoc-compiler-plugin_" + scalaVersion.value) % "<version>")
+libraryDependencies += "com.github.andyglow" %% "scaladoc-parser" % "<version>" % Provided
+libraryDependencies += "com.github.andyglow" %% "scaladoc-ast"    % "<version>"
+```
