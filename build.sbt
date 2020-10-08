@@ -163,6 +163,7 @@ lazy val it = (project in file("integration-tests/suites"))
 lazy val root = (project in file("."))
   .aggregate(ast, parser, compilerPlugin, itExternal, it)
   .settings(
+    commonSettings,
     name := "scaladoc-root",
     // crossScalaVersions := Nil,
     Keys.`package` := { new File("") },
