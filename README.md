@@ -1,24 +1,31 @@
 #### WORK IS STILL PRIMARILY IN PROGRESS, BUT...
 
-# Scaladoc X
+# Scaladoc
 
-[![Build Status](https://cloud.drone.io/api/badges/andyglow/scaladocx/status.svg)](https://cloud.drone.io/andyglow/scaladocx)
+[![Build Status](https://cloud.drone.io/api/badges/andyglow/scaladoc/status.svg)](https://cloud.drone.io/andyglow/scaladocx)
 [![codecov](https://codecov.io/gh/andyglow/scaladocx/branch/master/graph/badge.svg)](https://codecov.io/gh/andyglow/scaladocx)
+![Sonatype Nexus (Releases)](https://img.shields.io/nexus/r/com.github.andyglow/scaladoc-ast_2.11?nexusVersion=2&server=https%3A%2F%2Foss.sonatype.org)
+[![mvn: 2.11](https://img.shields.io/badge/dynamic/json.svg?label=mvn%3A%202.11&query=%24.response.docs%5B0%5D.latestVersion&url=https%3A%2F%2Fsearch.maven.org%2Fsolrsearch%2Fselect%3Fq%3Dscaladoc-ast_2.13%26start%3D0%26rows%3D1)](https://search.maven.org/artifact/com.github.andyglow/scaladoc-ast_2.11/)
+[![mvn: 2.12](https://img.shields.io/badge/dynamic/json.svg?label=mvn%3A%202.12&query=%24.response.docs%5B0%5D.latestVersion&url=https%3A%2F%2Fsearch.maven.org%2Fsolrsearch%2Fselect%3Fq%3Dscaladoc-ast_2.13%26start%3D0%26rows%3D1)](https://search.maven.org/artifact/com.github.andyglow/scaladoc-ast_2.12/)
+[![mvn: 2.13](https://img.shields.io/badge/dynamic/json.svg?label=mvn%3A%202.13&query=%24.response.docs%5B0%5D.latestVersion&url=https%3A%2F%2Fsearch.maven.org%2Fsolrsearch%2Fselect%3Fq%3Dscaladoc-ast_2.13%26start%3D0%26rows%3D1)](https://search.maven.org/artifact/com.github.andyglow/scaladoc-ast_2.13/)
 
-Original `Scaladoc` [Documentation link](https://docs.scala-lang.org/overviews/scaladoc/for-library-authors.html)
 
 This project aims to provide comprehensive toolset for scaladoc manipulations. 
-- Scaladoc AST (Tags, Markup) 
+- Scaladoc AST (Tags, Markdown) 
 - Parser
 - Compiler Plugin that can be used to embed scaladocs of classes into classes bytecode so this can be reused later on
 - Extractor that can be used to extract scaladocs for class from
   - attachments (see scala macro for attachments)
   - class bytecode
   - source file
+
+> Original `Scaladoc` [Documentation link](https://docs.scala-lang.org/overviews/scaladoc/for-library-authors.html)
  
 ## Scaladoc AST
 This Scaladoc model allows user to have pretty detailed view on class description.
-Here are the model elements. 
+It covers not only scaladoc tags but also recognizes markdown markup if used for certain type of tags. 
+
+Here is the model. 
 ```
 Span     = PlainText (String)
          | Monospace (String)
