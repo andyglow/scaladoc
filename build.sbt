@@ -2,7 +2,7 @@ import xerial.sbt.Sonatype._
 import ReleaseTransformations._
 
 // https://github.com/xerial/sbt-sonatype/issues/71
-publishTo in ThisBuild := sonatypePublishTo.value
+ThisBuild / publishTo := sonatypePublishTo.value
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.13"
@@ -134,7 +134,7 @@ lazy val itExternal = (project in file("integration-tests/external-models"))
     Keys.`package` := { new File("") },
     publish / skip := true,
     publishArtifact := false,
-    aggregate in update := false)
+    update / aggregate := false)
 
 lazy val it = (project in file("integration-tests/suites"))
   .dependsOn(ast, parser, itExternal)
@@ -144,7 +144,7 @@ lazy val it = (project in file("integration-tests/suites"))
     Keys.`package` := { new File("") },
     publish / skip := true,
     publishArtifact := false,
-    aggregate in update := false,
+    update / aggregate := false,
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1" % Test)
 
 lazy val root = (project in file("."))
@@ -156,4 +156,4 @@ lazy val root = (project in file("."))
     Keys.`package` := { new File("") },
     publish / skip := true,
     publishArtifact := false,
-    aggregate in update := false)
+    update / aggregate := false)
