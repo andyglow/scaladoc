@@ -12,7 +12,7 @@ sealed trait Markup extends Product with Serializable {
 
 object Markup {
 
-  private def trimML(x: String): String = x.linesIterator.map(_.trim).mkString("\n")
+  private[scaladoc] def trimML(x: String): String = x.linesIterator.map(_.trim).filterNot(_.isEmpty).mkString("\n")
 
   sealed trait Span extends Markup {
     override type Self <: Span
