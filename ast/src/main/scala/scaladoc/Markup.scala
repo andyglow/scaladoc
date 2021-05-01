@@ -112,8 +112,28 @@ object Markup {
   case class Document(elements: List[Markup]) extends Markup {
     override type Self = Document
     override def isBlank: Boolean = elements.forall(_.isBlank)
-    override def plainString: String = elements.map(_.plainString).mkString("\n")
-    def trimmed: Self with Trimmed = new Document(elements.map(_.trimmed)) with Trimmed
+    override def plainString: String = {
+      val sb = new StringBuilder
+      elements foreach {
+        case x: Span =>
+          sb.append(x.plainString)
+        case x =>
+          if(sb.nonEmpty) sb.append("\n")
+          sb.append(x.plainString)
+      }
+      sb.toString
+    }
+    def trimmed: Self with Trimmed = {
+      def trim(prev: Option[Markup], rest: List[Markup]): List[Markup] = (prev, rest) match {
+        case (_, Nil)                          => Nil
+        case (Some(_: Span), (x: Span) :: Nil) => List(PlainText(" "), x.trimmed)
+        case (Some(_: Span), x :: Nil)         => List(x.trimmed)
+        case (Some(_), x :: Nil)               => List(x.trimmed)
+        case (None, x :: Nil)                  => List(x.trimmed)
+        case (_, x :: xs)                      => List(x.trimmed) ++ trim(Some(x), xs)
+      }
+      new Document(trim(None, elements)) with Trimmed
+    }
   }
   object Document {
     def apply(x: Markup, xs: Markup*): Document = Document(x +: xs.toList)

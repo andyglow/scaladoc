@@ -20,4 +20,18 @@ class MarkupSpec extends FSpec {
     Markup.trimML("\t \nfoo") mustBe "foo"
     Markup.trimML("foo\t\n\t\r\n") mustBe "foo"
   }
+
+  test("Document.plainString") {
+    import Markup._
+
+    Document(Monospace("B"), PlainText(" Param")).plainString mustBe "`B` Param"
+    Document(Monospace("B"), PlainText(" Param")).trimmed.plainString mustBe "`B` Param"
+  }
+
+  test("Paragraph.plainString") {
+    import Markup._
+
+    Paragraph(Monospace("B"), PlainText(" Param")).plainString mustBe "`B` Param"
+    Paragraph(Monospace("B"), PlainText(" Param")).trimmed.plainString mustBe "`B` Param"
+  }
 }

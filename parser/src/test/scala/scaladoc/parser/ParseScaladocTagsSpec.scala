@@ -39,4 +39,24 @@ class ParseScaladocTagsSpec extends FSpec {
     doc.textParams must contain only ("foo" -> "Foo\nBar\nBaz")
     doc.tags.size mustBe 1
   }
+
+  test("extra trimmed") {
+    val doc = ParseScaladocTags(
+      """Multi
+        |Line
+        |Description
+        |
+        |@param a one line description
+        |
+        |@param b multi
+        |         line
+        |         description
+        |
+        |""".stripMargin)
+
+    doc.textDescriptions must contain only ("Multi\nLine\nDescription")
+    doc.textParams must contain only (
+      "a" -> "one line description",
+      "b" -> "multi\nline\ndescription")
+  }
 }
