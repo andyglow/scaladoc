@@ -145,7 +145,7 @@ lazy val it = (project in file("integration-tests/suites"))
     publish / skip := true,
     publishArtifact := false,
     update / aggregate := false,
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1" % Test)
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.8" % Test)
 
 lazy val root = (project in file("."))
   .aggregate(ast, parser, compilerPlugin, itExternal, it)
