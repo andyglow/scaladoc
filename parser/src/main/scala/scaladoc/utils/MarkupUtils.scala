@@ -16,9 +16,9 @@ trait MarkupUtils {
       case Link(value)        => Link(fn(value))
     }
 
-    def stripLeading: Span = map(_.stripLeading())
+    def stripLeading: Span = map(x => x.dropWhile(_.isWhitespace))
 
-    def stripTrailing: Span = map(_.stripTrailing())
+    def stripTrailing: Span = map(_.replaceAll("\\s+$", ""))
   }
 
   private[scaladoc] implicit class SliceOps(private val slice: List[Span]) {

@@ -52,7 +52,7 @@ lazy val commonSettings = Seq(
 
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
 
-  javacOptions ++= Seq("-source", "11"),
+  javacOptions ++= Seq("-source", "1.8"),
 
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "3.2.8" % Test),

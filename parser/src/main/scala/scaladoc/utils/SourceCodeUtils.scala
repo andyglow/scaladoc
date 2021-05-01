@@ -9,7 +9,11 @@ object SourceCodeUtils {
     pos.source match {
       case NoSourceFile => None
       case src =>
-        val str = new String(src.content, 0, src.lineToOffset(pos.line - 1)).stripTrailing()
+        // scala doesn't have anything to string trailing whitespaces
+        // java11 has, but for now better to keep it java8 compatible
+        // so.. introducing some hacky-regexp
+        val str = new String(src.content, 0, src.lineToOffset(pos.line - 1))
+          .replaceAll("\\s+$", "")
 
         if (str.endsWith("*/")) {
           val start = str.lastIndexOf("/**")
