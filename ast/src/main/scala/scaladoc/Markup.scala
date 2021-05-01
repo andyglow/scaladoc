@@ -3,6 +3,7 @@ package scaladoc
 sealed trait Markup extends Product with Serializable {
   def isBlank: Boolean
   def nonBlank: Boolean = !isBlank
+  def plainString: String
 }
 
 object Markup {
@@ -12,6 +13,7 @@ object Markup {
   sealed trait HasValue { this: Markup =>
     def value: String
     override def isBlank: Boolean = value.forall(_.isWhitespace)
+    override def plainString: String = value
   }
 
   final case class PlainText(value: String) extends Span with HasValue
@@ -34,6 +36,7 @@ object Markup {
 
   final case class Paragraph(markup: List[Span]) extends Markup {
     override def isBlank: Boolean = markup.forall(_.isBlank)
+    override def plainString: String = markup.map(_.plainString).mkString("\n")
   }
 
   final object Paragraph {
@@ -42,6 +45,7 @@ object Markup {
 
   case class Document(elements: List[Markup]) extends Markup {
     override def isBlank: Boolean = elements.forall(_.isBlank)
+    override def plainString: String = elements.map(_.plainString).mkString("\n")
   }
   object Document {
     def apply(x: Markup, xs: Markup*): Document = Document(x +: xs.toList)
@@ -49,6 +53,7 @@ object Markup {
 
   final case class Heading(level: Heading.Level, text: String) extends Markup {
     override def isBlank: Boolean = text.isEmpty
+    override def plainString: String = text
   }
 
   final object Heading {
