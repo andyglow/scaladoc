@@ -20,7 +20,7 @@ trait AnnotationSupport {
 
       if (body eq null)
         c.abort(c.enclosingPosition,
-          s"""expected annotation: scaladocx.anno.ScaladocCarrier(text: String, tags: Boolean)
+          s"""expected annotation: scaladocx.annotation.ScaladocCarrier(text: String, tags: Boolean)
              |but got            : ${show(a)}
              |
              |If this error happens, we probably got into situation where
