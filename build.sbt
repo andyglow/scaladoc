@@ -4,6 +4,8 @@ import ReleaseTransformations._
 // https://github.com/xerial/sbt-sonatype/issues/71
 ThisBuild / publishTo := sonatypePublishTo.value
 
+ThisBuild / versionScheme := Some("pvp")
+
 val scala211 = "2.11.12"
 val scala212 = "2.12.13"
 val scala213 = "2.13.5"
