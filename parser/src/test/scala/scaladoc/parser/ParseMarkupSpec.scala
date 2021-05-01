@@ -1,17 +1,15 @@
 package scaladoc.parser
 
 import org.scalactic.source.Position
-import org.scalatest.matchers.must.Matchers._
-import org.scalatest.wordspec.AnyWordSpec
 import scaladoc._
 import scaladoc.Markup._
 import scaladoc.Markup.Heading._
 import scaladoc.matchers.Matchers._
 
 
-class ParseMarkupSpec extends AnyWordSpec {
+class ParseMarkupSpec extends WSpec {
 
-  "ParseMarkup" should {
+  "ParseMarkup" must {
 
     "handle empty docs" in {
       ParseMarkup("") mustBe Document(Nil)

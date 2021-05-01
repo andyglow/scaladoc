@@ -1,42 +1,108 @@
 package scaladoc
 
+trait Trimmed
+
 sealed trait Markup extends Product with Serializable {
+  type Self <: Markup
   def isBlank: Boolean
   def nonBlank: Boolean = !isBlank
   def plainString: String
+  def trimmed: Self with Trimmed
 }
 
 object Markup {
 
-  sealed trait Span extends Markup
+  private def trimML(x: String): String = x.linesIterator.map(_.trim).mkString("\n")
+
+  sealed trait Span extends Markup {
+    override type Self <: Span
+  }
 
   sealed trait HasValue { this: Markup =>
     def value: String
     override def isBlank: Boolean = value.forall(_.isWhitespace)
-    override def plainString: String = value
   }
 
-  final case class PlainText(value: String) extends Span with HasValue
+  case class PlainText(value: String) extends Span with HasValue {
+    type Self = PlainText
+    override def plainString: String = value
+    def trimmed: Self with Trimmed = new PlainText(trimML(value)) with Trimmed
+  }
 
-  final case class Monospace(value: String) extends Span with HasValue
+  case class Monospace(value: String) extends Span with HasValue {
+    type Self = Monospace
+    override def plainString: String = s"`$value`"
+    def trimmed: Self with Trimmed = new Monospace(trimML(value)) with Trimmed
 
-  final case class Italic(value: String) extends Span with HasValue
+  }
 
-  final case class Bold(value: String) extends Span with HasValue
+  case class Italic(value: String) extends Span with HasValue {
+    type Self = Italic
+    override def plainString: String = s"''$value''"
+    def trimmed: Self with Trimmed = new Italic(trimML(value)) with Trimmed
 
-  final case class Underline(value: String) extends Span with HasValue
+  }
 
-  final case class Superscript(value: String) extends Span with HasValue
+  case class Bold(value: String) extends Span with HasValue {
+    type Self = Bold
+    override def plainString: String = s"'''$value'''"
+    def trimmed: Self with Trimmed = new Bold(trimML(value)) with Trimmed
 
-  final case class Subscript(value: String) extends Span with HasValue
+  }
 
-  final case class Link(value: String) extends Span with HasValue
+  case class Underline(value: String) extends Span with HasValue {
+    type Self = Underline
+    override def plainString: String = s"__${value}__"
+    def trimmed: Self with Trimmed = new Underline(trimML(value)) with Trimmed
+  }
 
-  final case class CodeBlock(value: String) extends Markup with HasValue
+  case class Superscript(value: String) extends Span with HasValue {
+    type Self = Superscript
+    override def plainString: String = s"`^$value^"
+    def trimmed: Self with Trimmed = new Superscript(trimML(value)) with Trimmed
 
-  final case class Paragraph(markup: List[Span]) extends Markup {
+  }
+
+  case class Subscript(value: String) extends Span with HasValue {
+    type Self = Superscript
+    override def plainString: String = s",,$value,,"
+    def trimmed: Self with Trimmed = new Superscript(trimML(value)) with Trimmed
+  }
+
+  case class Link(value: String) extends Span with HasValue {
+    type Self = Link
+    override def plainString: String = s"[[$value]]"
+    def trimmed: Self with Trimmed = new Link(trimML(value)) with Trimmed
+  }
+
+  case class CodeBlock(value: String) extends Markup with HasValue  {
+    override type Self = CodeBlock
+    override def plainString: String = s"{{{$value}}}"
+    def trimmed: Self with Trimmed = new CodeBlock(trimML(value)) with Trimmed
+
+  }
+
+  case class Paragraph(markup: List[Span]) extends Markup {
+    type Self = Paragraph
     override def isBlank: Boolean = markup.forall(_.isBlank)
-    override def plainString: String = markup.map(_.plainString).mkString("\n")
+    override def plainString: String = {
+      val sb = new StringBuilder
+      markup.zipWithIndex foreach {
+        case (m: Span with HasValue, _) => sb.append(m.plainString)
+        case (m, i) =>
+          sb.append(m.plainString)
+          if (i < markup.size) sb.append("\n")
+      }
+      sb.toString
+    }
+    def trimmed: Self with Trimmed = {
+      def trim(markup: List[Span]): List[Span] = markup match {
+        case Nil => Nil
+        case x :: Nil => List(x.trimmed)
+        case x :: xs => List(x.trimmed, PlainText(" ")) ++ trim(xs)
+      }
+      new Paragraph(trim(markup)) with Trimmed
+    }
   }
 
   final object Paragraph {
@@ -44,16 +110,20 @@ object Markup {
   }
 
   case class Document(elements: List[Markup]) extends Markup {
+    override type Self = Document
     override def isBlank: Boolean = elements.forall(_.isBlank)
     override def plainString: String = elements.map(_.plainString).mkString("\n")
+    def trimmed: Self with Trimmed = new Document(elements.map(_.trimmed)) with Trimmed
   }
   object Document {
     def apply(x: Markup, xs: Markup*): Document = Document(x +: xs.toList)
   }
 
-  final case class Heading(level: Heading.Level, text: String) extends Markup {
+  case class Heading(level: Heading.Level, text: String) extends Markup {
+    type Self = Heading
     override def isBlank: Boolean = text.isEmpty
     override def plainString: String = text
+    def trimmed: Self with Trimmed = new Heading(level, text.trim) with Trimmed
   }
 
   final object Heading {

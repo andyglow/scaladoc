@@ -132,7 +132,7 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
         top match {
           case None                       => tags += Description(null)
           case Some(tag) if !(tag.isOpen) => tags += Description(null)
-          case _ =>
+          case _ => // println("Something is on stack, but.. Tags: \n" + tags.mkString("- ", "\n- ", ""))
         }
         buf append char
         next()
@@ -155,6 +155,8 @@ object ParseScaladocTags {
   def apply(x: Array[Char]): Scaladoc = {
     new ParseScaladocTags(x).run()
   }
+
+  def apply(x: String): Scaladoc = ParseScaladocTags(x.toCharArray)
 
   def main(args: Array[String]): Unit = {
     val text =

@@ -1,10 +1,9 @@
 package scaladoc.parser
 
-import org.scalatest.matchers.must.Matchers._
-import org.scalatest.funsuite.AnyFunSuite
+import scaladoc.FSpec
 
 
-class TokenizerSpec extends AnyFunSuite {
+class TokenizerSpec extends FSpec {
   import TokenizerSpec._
 
   test("isLineStart") {

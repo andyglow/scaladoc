@@ -1,14 +1,12 @@
 package scaladoc.utils
 
-import org.scalatest.matchers.should.Matchers._
-import org.scalatest.funsuite.AnyFunSuite
-import scaladoc.Scaladoc
+import scaladoc._
 
 import scala.reflect.internal.util.{BatchSourceFile, OffsetPosition, Position, SourceFile}
 import scala.reflect.io.VirtualFile
 
 
-class SourceCodeUtilsSpec extends AnyFunSuite {
+class SourceCodeUtilsSpec extends FSpec {
 
   test("no indentation") {
     val pos = makePos(
@@ -16,7 +14,7 @@ class SourceCodeUtilsSpec extends AnyFunSuite {
          |  *
          |  */
          |""".stripMargin)
-    SourceCodeUtils.extractComment(pos) shouldBe Some(
+    SourceCodeUtils.extractComment(pos) mustBe Some(
       """/** foo
         |  *
         |  */""".stripMargin)
@@ -28,7 +26,7 @@ class SourceCodeUtilsSpec extends AnyFunSuite {
          |    *
          |    */
          |""".stripMargin)
-    SourceCodeUtils.extractComment(pos) shouldBe Some(
+    SourceCodeUtils.extractComment(pos) mustBe Some(
       """  /** foo
         |    *
         |    */""".stripMargin)
@@ -40,7 +38,7 @@ class SourceCodeUtilsSpec extends AnyFunSuite {
          |      *
          |      */
          |""".stripMargin)
-    SourceCodeUtils.extractComment(pos) shouldBe Some(
+    SourceCodeUtils.extractComment(pos) mustBe Some(
       """    /** foo
         |      *
         |      */""".stripMargin)
@@ -53,7 +51,7 @@ class SourceCodeUtilsSpec extends AnyFunSuite {
          |      *
          |      */
          |""".stripMargin)
-    SourceCodeUtils.extractComment(pos) shouldBe Some(
+    SourceCodeUtils.extractComment(pos) mustBe Some(
       """    /** foo
         |      *
         |      */""".stripMargin)

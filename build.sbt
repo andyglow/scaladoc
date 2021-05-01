@@ -86,7 +86,7 @@ lazy val ast = (project in file("ast"))
     name := "scaladoc-ast")
 
 lazy val parser = (project in file("parser"))
-  .dependsOn(ast)
+  .dependsOn(ast % "compile->compile;test->test")
   .settings(
     commonSettings,
     name := "scaladoc-parser",

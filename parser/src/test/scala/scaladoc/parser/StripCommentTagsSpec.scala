@@ -1,14 +1,12 @@
 package scaladoc.parser
 
 import org.scalactic.source.Position
-import org.scalatest.matchers.must.Matchers._
-import org.scalatest.wordspec.AnyWordSpec
 import scaladoc.parser.StripCommentTags.Comment
 import scaladoc._
 import scaladoc.utils._
 
 
-class StripCommentTagsSpec extends AnyWordSpec {
+class StripCommentTagsSpec extends WSpec {
   import Style._
 
   private def strip(expectedStyle: Style, x: String, strict: Boolean = false)(implicit pos: Position): String = {

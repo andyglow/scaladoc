@@ -1,11 +1,9 @@
 package scaladoc
 
-import org.scalatest.matchers.must.Matchers._
-import org.scalatest.funsuite.AnyFunSuite
 import utils._
 
 
-class UtilsSpec extends AnyFunSuite {
+class UtilsSpec extends FSpec {
 
   test("trim") {
     List(" abc", " def").trim mustBe List("abc", "def")
