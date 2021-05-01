@@ -2,7 +2,7 @@ package scaladoc.compile
 
 import scaladoc.Scaladoc
 import scaladoc.annotation.ScaladocCarrier
-import scaladoc.macros.ExtractScaladoc
+import scaladoc.utils.SourceCodeUtils
 
 import scala.tools.nsc
 import nsc.Global
@@ -23,7 +23,7 @@ class ScaladocComponent(
 
   override def newTransformer(unit: CompilationUnit): Trans = new Trans(unit)
 
-  class Trans(unit: CompilationUnit) extends TypingTransformer(unit) with ExtractScaladoc{
+  class Trans(unit: CompilationUnit) extends TypingTransformer(unit) {
     private val carrierTpe = typeOf[ScaladocCarrier]
 
 //    inform("COOKED DOC COMMENTS " + show(global.cookedDocComments))
@@ -35,7 +35,7 @@ class ScaladocComponent(
 //          doc
         case cls @ ClassDef(mods, name, tparams, impl) =>
           val scd = for {
-            str <- getScaladoc(tree.pos)
+            str <- SourceCodeUtils.extractComment(tree.pos)
             scd <- Scaladoc.fromString(str, strict = true) match {
                      case Left(err)  =>
                        reportError(tree.pos, err.getMessage, tree.symbol)
