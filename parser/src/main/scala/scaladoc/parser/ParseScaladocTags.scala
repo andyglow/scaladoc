@@ -43,7 +43,7 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
   }
 
   private def takeId(): String = {
-    val ident = takeWhile(x => x.isLetterOrDigit || x == '-')
+    val ident = takeWhile(x => x.isLetterOrDigit || x == '-' || x == '_')
     skipSpaces()
     ident
   }

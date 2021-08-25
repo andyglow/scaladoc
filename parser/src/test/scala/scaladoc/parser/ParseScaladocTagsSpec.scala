@@ -47,8 +47,9 @@ class ParseScaladocTagsSpec extends FSpec {
         |Description
         |
         |@param a one line description
+        |@param b_b underscore in the param name
         |
-        |@param b multi
+        |@param c multi
         |         line
         |         description
         |
@@ -57,6 +58,7 @@ class ParseScaladocTagsSpec extends FSpec {
     doc.textDescriptions must contain only ("Multi\nLine\nDescription")
     doc.textParams must contain only (
       "a" -> "one line description",
-      "b" -> "multi\nline\ndescription")
+      "b_b" -> "underscore in the param name",
+      "c" -> "multi\nline\ndescription")
   }
 }
