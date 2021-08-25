@@ -145,6 +145,8 @@ lazy val itExternal = (project in file("integration-tests/external-models"))
       Seq(
         s"-Xplugin:${pluginJar.getAbsolutePath}:${parserJar.getAbsolutePath}:${astJar.getAbsolutePath}",
         s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
+        // https://github.com/sbt/zinc/issues/621
+        // "-Xshow-phases",
         "-Yrangepos")
     },
     Keys.`package` := { new File("") },
