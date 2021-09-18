@@ -9,21 +9,39 @@ object SourceCodeUtils {
     pos.source match {
       case NoSourceFile => None
       case src =>
-        // scala doesn't have anything to string trailing whitespaces
-        // java11 has, but for now better to keep it java8 compatible
-        // so.. introducing some hacky-regexp
-        val str = new String(src.content, 0, src.lineToOffset(pos.line - 1))
-          .replaceAll("\\s+$", "")
+        def char = src.content
 
-        if (str.endsWith("*/")) {
-          val start = str.lastIndexOf("/**")
-          if (start >= 0) {
-            var indent = 0
-            while ((start - indent - 1) >= 0 && { val c = str.charAt(start - indent - 1)
-                     c.isWhitespace && c != '\n' && c != '\r' }) indent += 1
-            Some(str.substring(start - indent))
-          } else None
-        } else None
+        // traversing from end to start and
+        // - when `*/` is found - remember the end position
+        // - when `/**` is found - remember start position and exit the loop
+        var start: Option[Int] = None
+        var end: Option[Int] = None
+        var i = src.lineToOffset(pos.line - 1) - 2
+        while (
+          i >= 0 &&
+          start.isEmpty
+        ) {
+          if (char(i) == '*' && char(i + 1) == '/') end = Some(i + 2)
+          if (char(i) == '/' && char(i + 1) == '*' && char(i + 2) == '*') start = Some(i)
+          i -= 1
+        }
+
+        for {
+          start <- start
+          end   <- end
+        } yield {
+          // detect indent by trying to find number of spaces between the
+          // start tag and the start of the current line
+          // TODO: how do we handle tabs?
+          // TODO: what if there are non-whitespace symbol?
+          var indent = 0
+          while ((start - indent - 1) >= 0 && {
+            val c = char(start - indent - 1)
+            c.isWhitespace && c != '\n' && c != '\r'
+          }) indent += 1
+
+          new String(char, start - indent, end - (start - indent))
+        }
     }
   }
 }
