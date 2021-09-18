@@ -7,8 +7,8 @@ ThisBuild / publishTo := sonatypePublishTo.value
 ThisBuild / versionScheme := Some("pvp")
 
 val scala211 = "2.11.12"
-val scala212 = "2.12.13"
-val scala213 = "2.13.5"
+val scala212 = "2.12.15"
+val scala213 = "2.13.6"
 
 lazy val commonSettings = Seq(
 
@@ -69,7 +69,7 @@ lazy val commonSettings = Seq(
   javacOptions ++= Seq("-source", "1.8"),
 
   libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.2.8" % Test),
+    "org.scalatest" %% "scalatest" % "3.2.10" % Test),
 
   Compile / unmanagedSourceDirectories ++= {
     val bd = baseDirectory.value
