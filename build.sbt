@@ -69,7 +69,7 @@ lazy val commonSettings = Seq(
   javacOptions ++= Seq("-source", "1.8"),
 
   libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.2.16" % Test),
+    "org.scalatest" %% "scalatest" % "3.2.17" % Test),
 
   Compile / unmanagedSourceDirectories ++= {
     val bd = baseDirectory.value
