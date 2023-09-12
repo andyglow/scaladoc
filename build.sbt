@@ -8,7 +8,7 @@ ThisBuild / versionScheme := Some("pvp")
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.18"
-val scala213 = "2.13.11"
+val scala213 = "2.13.12"
 
 lazy val commonSettings = Seq(
 
