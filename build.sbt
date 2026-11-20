@@ -35,21 +35,23 @@ ThisBuild / developers := List(
 
 // GitHub Actions (sbt-github-actions): `githubWorkflowGenerate` writes .github/workflows/*.yml
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
-ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("11"))
+ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("21"))
 
+// Built on JDK 21, but bytecode and JDK API are pinned to Java 8 so the artifacts keep working on older JDKs
 def compilerOptions(v: String): Seq[String] = {
   val base = Seq("-encoding", "UTF-8", "-feature", "-unchecked", "-deprecation")
   CrossVersion.partialVersion(v) match {
-    case Some((2, 12)) => base ++ Seq("-Ywarn-unused:imports", "-language:higherKinds")
-    case Some((2, _))  => base ++ Seq("-Wunused:imports")
-    case _             => base ++ Seq("-Wunused:imports")
+    case Some((2, 12)) => base ++ Seq("-release:8", "-Ywarn-unused:imports", "-language:higherKinds")
+    case Some((2, _))  => base ++ Seq("-release:8", "-Wunused:imports")
+    case _             => base ++ Seq("-release", "8", "-Wunused:imports")
   }
 }
 
 lazy val commonSettings = Seq(
   scalacOptions := compilerOptions(scalaVersion.value),
   Compile / doc / scalacOptions := scalacOptions.value.filterNot(_.startsWith("-W")).filterNot(_.startsWith("-Ywarn")),
-  javacOptions ++= Seq("-source", "8", "-target", "8"),
+  // `-Xlint:-options`: JDK 21 warns that release 8 is obsolete
+  javacOptions ++= Seq("--release", "8", "-Xlint:-options"),
   publishMavenStyle := true,
   releaseCrossBuild             := true,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
