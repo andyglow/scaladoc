@@ -1,6 +1,6 @@
 package scaladoc.parser
 
-import scaladoc.{Markup, Scaladoc, ScaladocException, Tag}
+import scaladoc.{Markup, Scaladoc, ScaladocException}
 
 import scala.collection.mutable
 

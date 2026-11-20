@@ -3,8 +3,6 @@ package scaladoc
 import scaladoc.parser.{Expectation, MutableTag}
 import scaladoc.utils._
 
-import scala.util.control.NoStackTrace
-
 
 sealed trait ScaladocException extends Exception // with NoStackTrace
 

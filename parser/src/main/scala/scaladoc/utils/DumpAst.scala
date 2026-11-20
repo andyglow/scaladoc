@@ -6,7 +6,6 @@ import scaladoc._
 import Tag._
 import Markup._
 
-import scala.io.Source
 
 
 object DumpAst {
@@ -52,7 +51,6 @@ object DumpAst {
       w.writeln("</code>")
     case PlainText(text) => w.write(text)
     case Heading(level, text) => val hh = s"h${level.value}"; w.write(s"<$hh>$text</$hh>")
-    case _ =>
   }
 
   def apply(x: Tag, w: IdentWriter): Unit = {
