@@ -1,9 +1,9 @@
 # Scaladoc
 
 [![CI](https://github.com/andyglow/scaladoc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/andyglow/scaladoc/actions/workflows/ci.yml)
-[![scala 2.12](https://img.shields.io/maven-central/v/com.github.andyglow/scaladoc-parser_2.12?label=scala%202.12)](https://central.sonatype.com/artifact/com.github.andyglow/scaladoc-parser_2.12)
-[![scala 2.13](https://img.shields.io/maven-central/v/com.github.andyglow/scaladoc-parser_2.13?label=scala%202.13)](https://central.sonatype.com/artifact/com.github.andyglow/scaladoc-parser_2.13)
-[![scala 3](https://img.shields.io/maven-central/v/com.github.andyglow/scaladoc-parser_3?label=scala%203)](https://central.sonatype.com/artifact/com.github.andyglow/scaladoc-parser_3)
+[![scala 2.12](https://img.shields.io/maven-central/v/io.github.andyglow/scaladoc-parser_2.12?label=scala%202.12)](https://central.sonatype.com/artifact/io.github.andyglow/scaladoc-parser_2.12)
+[![scala 2.13](https://img.shields.io/maven-central/v/io.github.andyglow/scaladoc-parser_2.13?label=scala%202.13)](https://central.sonatype.com/artifact/io.github.andyglow/scaladoc-parser_2.13)
+[![scala 3](https://img.shields.io/maven-central/v/io.github.andyglow/scaladoc-parser_3?label=scala%203)](https://central.sonatype.com/artifact/io.github.andyglow/scaladoc-parser_3)
 
 A toolset for working with scaladoc comments from Scala code:
 - **AST**: a model of scaladoc tags and their markdown markup
@@ -24,20 +24,23 @@ A toolset for working with scaladoc comments from Scala code:
 
 All artifacts target Java 8 and work on any later JDK. Scala 2.11 is supported up to version 0.0.14.
 
+> **The groupId changed in 0.1.0** from `com.github.andyglow` to `io.github.andyglow`. Versions up to 0.0.14 stay
+> available under `com.github.andyglow`. To upgrade, change the groupId along with the version.
+
 ## Usage
 
 ```sbt
-libraryDependencies += "com.github.andyglow" %% "scaladoc-ast"    % "0.1.0"
-libraryDependencies += "com.github.andyglow" %% "scaladoc-parser" % "0.1.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.0"
 ```
 
 To embed scaladocs into bytecode (Scala 2 only), also add the compiler plugin:
 
 ```sbt
-addCompilerPlugin("com.github.andyglow" %% "scaladoc-compiler-plugin" % "0.1.0")
+addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.1.0")
 
-libraryDependencies += "com.github.andyglow" %% "scaladoc-ast"    % "0.1.0"
-libraryDependencies += "com.github.andyglow" %% "scaladoc-parser" % "0.1.0" % Provided
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.0" % Provided
 ```
 
 ## Scaladoc AST
