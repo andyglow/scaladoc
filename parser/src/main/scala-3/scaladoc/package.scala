@@ -18,7 +18,7 @@ package object scaladoc {
     def fromString(x: String, hasTags: Boolean = true, strict: Boolean = false): Either[ScaladocException, Scaladoc] =
       ScaladocParser.fromString(x, hasTags, strict)
 
-    /** Parses a raw doc comment as Scala 3's `Symbol.docstring` returns it. See [[parser.ScaladocParser.fromDocstring]]. */
+    /** Parses a raw doc comment as Scala 3's `Symbol.docstring` returns it. See `scaladoc.parser.ScaladocParser.fromDocstring`. */
     def fromDocstring(x: String, strict: Boolean = false): Either[ScaladocException, Scaladoc] =
       ScaladocParser.fromDocstring(x, strict)
 

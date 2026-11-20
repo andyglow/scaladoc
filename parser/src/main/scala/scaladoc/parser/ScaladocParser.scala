@@ -8,7 +8,7 @@ import scaladoc._
   */
 object ScaladocParser {
 
-  /** Parses a comment into a [[scaladoc.Scaladoc]].
+  /** Parses a comment into a `Scaladoc`.
     *
     * @param x the comment text including the opening and closing comment markers, e.g. the raw source text or what Scala 3's
     *   `Symbol.docstring` returns. Leading whitespace before the opening marker is allowed.
