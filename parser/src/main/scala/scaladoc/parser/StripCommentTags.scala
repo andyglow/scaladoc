@@ -104,7 +104,7 @@ final class StripCommentTags private (strictlyAlligned: Boolean, val chars: Arra
 private[scaladoc] object StripCommentTags {
 
   final case class Comment(style: Style, body: String)
-  final object Comment {
+  object Comment {
 
     def apply(style: Style, lines: Iterable[String]): Comment = {
       Comment(style, lines.trim.mkString("\n"))

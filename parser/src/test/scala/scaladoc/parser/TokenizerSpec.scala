@@ -27,7 +27,7 @@ class TokenizerSpec extends FSpec {
 object TokenizerSpec {
 
   final case class Tok(chars: Array[Char]) extends Tokenizer
-  final object Tok {
+  object Tok {
     def apply(x: String): Tok = Tok(x.toCharArray)
   }
 }

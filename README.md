@@ -2,10 +2,7 @@
 
 # Scaladoc
 
-[![Build Status](https://cloud.drone.io/api/badges/andyglow/scaladoc/status.svg)](https://cloud.drone.io/andyglow/scaladocx)
-[![codecov](https://codecov.io/gh/andyglow/scaladocx/branch/master/graph/badge.svg)](https://codecov.io/gh/andyglow/scaladocx)
-![Sonatype Nexus (Releases)](https://img.shields.io/nexus/r/com.github.andyglow/scaladoc-ast_2.11?nexusVersion=2&server=https%3A%2F%2Foss.sonatype.org)
-[![mvn: 2.11](https://img.shields.io/badge/dynamic/json.svg?label=mvn%3A%202.11&query=%24.response.docs%5B0%5D.latestVersion&url=https%3A%2F%2Fsearch.maven.org%2Fsolrsearch%2Fselect%3Fq%3Dscaladoc-ast_2.13%26start%3D0%26rows%3D1)](https://search.maven.org/artifact/com.github.andyglow/scaladoc-ast_2.11/)
+[![CI](https://github.com/andyglow/scaladoc/actions/workflows/ci.yml/badge.svg)](https://github.com/andyglow/scaladoc/actions/workflows/ci.yml)
 [![mvn: 2.12](https://img.shields.io/badge/dynamic/json.svg?label=mvn%3A%202.12&query=%24.response.docs%5B0%5D.latestVersion&url=https%3A%2F%2Fsearch.maven.org%2Fsolrsearch%2Fselect%3Fq%3Dscaladoc-ast_2.13%26start%3D0%26rows%3D1)](https://search.maven.org/artifact/com.github.andyglow/scaladoc-ast_2.12/)
 [![mvn: 2.13](https://img.shields.io/badge/dynamic/json.svg?label=mvn%3A%202.13&query=%24.response.docs%5B0%5D.latestVersion&url=https%3A%2F%2Fsearch.maven.org%2Fsolrsearch%2Fselect%3Fq%3Dscaladoc-ast_2.13%26start%3D0%26rows%3D1)](https://search.maven.org/artifact/com.github.andyglow/scaladoc-ast_2.13/)
 
@@ -85,6 +82,18 @@ val text = """/** = Title =
 
 val scaladoc = Scaladoc fromString text
 ```
+
+On Scala 3, `Symbol.docstring` returns the comment as written, except that the indentation of its first line is
+gone. `Scaladoc.fromDocstring(docstring)` parses that; with `strict = true` it also validates the alignment of the
+`*` border the way the Scala 2 extractor does.
+
+```scala
+import scaladoc._
+// in a macro: TypeRepr.of[T].typeSymbol.docstring.map(Scaladoc.fromDocstring(_, strict = true))
+val scaladoc = Scaladoc.fromDocstring("/** Description\n    *\n    * @param a Param A\n    */", strict = true)
+```
+
+The parser is plain Scala over `String`. On Scala 3 it has no dependencies besides `scaladoc-ast`.
 ## Compiler plugin
 In scala world we got used to the idea that pretty much anything we can derive
 out of whatever we have - case classes (product), sealed traits (sum), etc. 
@@ -108,9 +117,15 @@ java annotations and lastly source code (if available) to provide your tool with
 import scaladoc._
 
 val scaladoc = Scaladoc.of[Foo]
-``` 
+```
+
+On Scala 3 `Scaladoc.of[Foo]` reads `Symbol.docstring`. The compiler only keeps doc comments of the sources it
+compiles in the current run unless the calling module is compiled with `-Yread-docs`
+(`scalacOptions += "-Yread-docs"`), which also reads them from TASTy: other modules, jars and files skipped by an
+incremental compile. Scala 2's source-based extraction has the same incremental-compile limitation. 
 
 ## Usage
+`scaladoc-ast` and `scaladoc-parser` are published for Scala 2.12, 2.13 and 3. The compiler plugin is Scala 2 only.
 
 For AST, Parser and Extractor please add following two lines into your `build.sbt`
 ```sbt

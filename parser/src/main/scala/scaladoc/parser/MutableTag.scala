@@ -38,6 +38,6 @@ object MutableTag {
   final case class Description(var markup: Markup)                    extends MutableTag with HasMarkup { def toTag = Tag.Description(markup)            ; def isOpen = markup eq null }
   final case class GroupPriority(id: String, value: Int)              extends MutableTag                { def toTag = Tag.GroupPriority(id, value)       ; def isOpen = false; def isBlank = false }
   final case class Group(id: String)                                  extends MutableTag                { def toTag = Tag.Group(id)                      ; def isOpen = false; def isBlank = false }
-  final case object Documentable                                      extends MutableTag                { def toTag = Tag.Documentable                   ; def isOpen = false; def isBlank = false }
-  final case object InheritDoc                                        extends MutableTag                { def toTag = Tag.InheritDoc                     ; def isOpen = false; def isBlank = false }
+  case object Documentable                                      extends MutableTag                { def toTag = Tag.Documentable                   ; def isOpen = false; def isBlank = false }
+  case object InheritDoc                                        extends MutableTag                { def toTag = Tag.InheritDoc                     ; def isOpen = false; def isBlank = false }
 }

@@ -1,11 +1,9 @@
 package scaladoc
 
 import java.io.{File, FilenameFilter, StringWriter}
-import java.nio.file.{FileSystem, Paths}
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.must.Matchers._
-import org.scalatest.wordspec.AnyWordSpec
 import scaladoc.utils.{DumpAst, IdentWriter}
 
 import scala.io.Source

@@ -1,57 +1,58 @@
-import xerial.sbt.Sonatype._
 import ReleaseTransformations._
 
-// https://github.com/xerial/sbt-sonatype/issues/71
-ThisBuild / publishTo := sonatypePublishTo.value
-
-ThisBuild / versionScheme := Some("pvp")
-
-val scala211 = "2.11.12"
 val scala212 = "2.12.21"
 val scala213 = "2.13.18"
+val scala3   = "3.3.9"
+
+// `ast` and `parser` cross-build to Scala 3; the compiler plugin (and the integration tests that need it)
+// are Scala 2 only. They are still listed for Scala 3 so that `++3.3.9 <task>` keeps a consistent build, but
+// on Scala 3 they have no sources and publish nothing (see `scala2Only`).
+val allScalaVersions = Seq(scala213, scala212, scala3)
+
+def isScala3(v: String): Boolean = v.startsWith("3.")
+
+// Sonatype Central Portal (sbt 1.11+ built-in): releases are staged locally by `publishSigned`
+// and uploaded + released as a single bundle by `sonaRelease`
+ThisBuild / publishTo := {
+  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+  if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
+  else localStaging.value
+}
+
+ThisBuild / versionScheme      := Some("pvp")
+ThisBuild / scalaVersion       := scala212
+ThisBuild / crossScalaVersions := allScalaVersions
+
+ThisBuild / organization     := "com.github.andyglow"
+ThisBuild / organizationName := "andyglow"
+ThisBuild / homepage         := Some(url("https://github.com/andyglow/scaladoc"))
+ThisBuild / startYear        := Some(2017)
+ThisBuild / licenses         := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
+ThisBuild / scmInfo          := Some(ScmInfo(url("https://github.com/andyglow/scaladoc"), "scm:git@github.com:andyglow/scaladoc.git"))
+ThisBuild / developers := List(
+  Developer(id = "andyglow", name = "Andriy Onyshchuk", email = "andyglow@gmail.com", url = url("https://ua.linkedin.com/in/andyglow"))
+)
+
+// GitHub Actions (sbt-github-actions): `githubWorkflowGenerate` writes .github/workflows/*.yml
+ThisBuild / githubWorkflowPublishTargetBranches := Seq()
+ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("11"))
+
+def compilerOptions(v: String): Seq[String] = {
+  val base = Seq("-encoding", "UTF-8", "-feature", "-unchecked", "-deprecation")
+  CrossVersion.partialVersion(v) match {
+    case Some((2, 12)) => base ++ Seq("-Ywarn-unused:imports", "-language:higherKinds")
+    case Some((2, _))  => base ++ Seq("-Wunused:imports")
+    case _             => base ++ Seq("-Wunused:imports")
+  }
+}
 
 lazy val commonSettings = Seq(
-
-  organization := "com.github.andyglow",
-
-  homepage := Some(new URL("http://github.com/andyglow/scaladoc")),
-
-  startYear := Some(2017),
-
-  organizationName := "andyglow",
-
-  scalaVersion := scala212,
-
-  crossScalaVersions := Seq(scala211, scala212, scala213),
-
-  licenses := Seq(("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))),
-
-  sonatypeProfileName := "com.github.andyglow",
-
+  scalacOptions := compilerOptions(scalaVersion.value),
+  Compile / doc / scalacOptions := scalacOptions.value.filterNot(_.startsWith("-W")).filterNot(_.startsWith("-Ywarn")),
+  javacOptions ++= Seq("-source", "8", "-target", "8"),
   publishMavenStyle := true,
-
-  sonatypeProjectHosting := Some(
-    GitHubHosting(
-      "andyglow",
-      "scaladoc",
-      "andyglow@gmail.com")),
-
-  scmInfo := Some(
-    ScmInfo(
-      url("https://github.com/andyglow/scaladoc"),
-      "scm:git@github.com:andyglow/scaladoc.git")),
-
-  developers := List(
-    Developer(
-      id    = "andyglow",
-      name  = "Andriy Onyshchuk",
-      email = "andyglow@gmail.com",
-      url   = url("https://ua.linkedin.com/in/andyglow"))),
-
-  releaseCrossBuild := true,
-
+  releaseCrossBuild             := true,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
@@ -63,115 +64,108 @@ lazy val commonSettings = Seq(
     ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
     setNextVersion,
     commitNextVersion,
-    ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true),
-    pushChanges),
-
-  javacOptions ++= Seq("-source", "1.8"),
-
-  libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.2.20" % Test),
-
-  Compile / unmanagedSourceDirectories ++= {
-    val bd = baseDirectory.value
-    def extraDirs(suffix: String): Seq[File] = Seq(bd / "src" / "main" / s"scala$suffix")
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, y)) if y <= 12 => extraDirs("-2.12-")
-      case Some((2, y)) if y >= 13 => extraDirs("-2.13+")
-      case _                       => Nil
-    }
-  },
-
-  Test / unmanagedSourceDirectories ++= {
-    val bd = baseDirectory.value
-    def extraDirs(suffix: String): Seq[File] = Seq(bd / "src" / "test" / s"scala$suffix")
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, y)) if y <= 12 => extraDirs("-2.12-")
-      case Some((2, y)) if y >= 13 => extraDirs("-2.13+")
-      case _                       => Nil
-    }
-  }
+    ReleaseStep(action = Command.process("sonaRelease", _)),
+    pushChanges
+  ),
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.20" % Test,
+  // `scala-2` / `scala-3` (language) dirs are sbt built-ins; these are the collection-API ranges
+  Compile / unmanagedSourceDirectories ++= versionRangeDirs(baseDirectory.value / "src" / "main", scalaVersion.value),
+  Test / unmanagedSourceDirectories ++= versionRangeDirs(baseDirectory.value / "src" / "test", scalaVersion.value)
 )
 
-// a scaladoc ast
-// and parses a string representation of a scaladoc into a scaladoc ast
+def versionRangeDirs(base: File, v: String): Seq[File] = CrossVersion.partialVersion(v) match {
+  case Some((2, y)) if y <= 12 => Seq(base / "scala-2.12-")
+  case _                       => Seq(base / "scala-2.13+")
+}
+
+lazy val noPublish = Seq(
+  publish / skip  := true,
+  publishArtifact := false
+)
+
+// Scala 2-only module: on Scala 3 it has no sources, no dependencies and publishes nothing
+lazy val scala2Only = Seq(
+  Compile / unmanagedSourceDirectories := { if (isScala3(scalaVersion.value)) Nil else (Compile / unmanagedSourceDirectories).value },
+  Test / unmanagedSourceDirectories    := { if (isScala3(scalaVersion.value)) Nil else (Test / unmanagedSourceDirectories).value },
+  Compile / unmanagedResourceDirectories := {
+    if (isScala3(scalaVersion.value)) Nil else (Compile / unmanagedResourceDirectories).value
+  },
+  publish / skip := { (publish / skip).value || isScala3(scalaVersion.value) }
+)
+
+// scaladoc AST
 lazy val ast = (project in file("ast"))
   .settings(
     commonSettings,
-    name := "scaladoc-ast")
+    name := "scaladoc-ast"
+  )
 
+// parses a string representation of a scaladoc into a scaladoc ast.
+// Shared code (src/main/scala) is plain Scala over String. Scala 2 adds the `Scaladoc.of[T]` macro, source
+// extraction and the `ScaladocCarrier` annotation (src/main/{scala-2,java-2}, needs scala-reflect); Scala 3
+// adds `Scaladoc.of[T]` on top of `Symbol.docstring` (src/main/scala-3, no extra dependencies).
 lazy val parser = (project in file("parser"))
   .dependsOn(ast % "compile->compile;test->test")
   .settings(
     commonSettings,
     name := "scaladoc-parser",
-    scalacOptions += "-language:experimental.macros",
-    libraryDependencies += scalaOrganization.value % "scala-reflect" % scalaVersion.value)
-
+    libraryDependencies ++= {
+      if (isScala3(scalaVersion.value)) Nil
+      else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)
+    },
+    Compile / unmanagedSourceDirectories ++= {
+      if (isScala3(scalaVersion.value)) Nil else Seq(baseDirectory.value / "src" / "main" / "java-2")
+    }
+  )
 
 // attaches scaladoc to tree
 lazy val compilerPlugin = (project in file("compiler-plugin"))
   .dependsOn(ast, parser)
   .settings(
     commonSettings,
-    libraryDependencies += scalaOrganization.value % "scala-compiler" % scalaVersion.value,
+    scala2Only,
     name := "scaladoc-compiler-plugin",
-    //    Compile / scalacOptions += "-Ydebug",
-    //    Test / scalacOptions ++= {
-    //      val coreJar = (core / Compile / packageBin).value
-    //      val pluginJar = (Compile / packageBin).value
-    //      Seq(
-    //        s"-Xplugin:${pluginJar.getAbsolutePath}:${coreJar.getAbsolutePath}",
-    //        s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
-    //         "-Yrangepos")
-    //    },
-    //    console / initialCommands := "import scaladocx",
-    //    Compile / console / scalacOptions := Seq("-language:_", "-Xplugin:" + (Compile / packageBin).value),
-    //    Test / console / scalacOptions := (Compile / console / scalacOptions).value,
-    //    libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % Test,
-    //    testOptions += Tests.Argument(TestFrameworks.JUnit, "-a", "-v"),
-    //    Test / fork := true,
-
-    //Test / scalacOptions ++= Seq("-Xprint:typer", "-Xprint-pos"), // Useful for debugging
+    libraryDependencies ++= {
+      if (isScala3(scalaVersion.value)) Nil
+      else Seq(scalaOrganization.value % "scala-compiler" % scalaVersion.value)
+    }
   )
 
 lazy val itExternal = (project in file("integration-tests/external-models"))
   .settings(
     commonSettings,
+    scala2Only,
+    noPublish,
     name := "scaladoc-integration-test-external-models",
     Compile / scalacOptions ++= {
-      val astJar    = (ast            / Compile / packageBin).value
-      val parserJar = (parser         / Compile / packageBin).value
-      val pluginJar = (compilerPlugin / Compile / packageBin).value
-      Seq(
-        s"-Xplugin:${pluginJar.getAbsolutePath}:${parserJar.getAbsolutePath}:${astJar.getAbsolutePath}",
-        s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
-        // https://github.com/sbt/zinc/issues/621
-        // "-Xshow-phases",
-        "-Yrangepos")
-    },
-    Keys.`package` := { new File("") },
-    publish / skip := true,
-    publishArtifact := false,
-    update / aggregate := false)
+      if (isScala3(scalaVersion.value)) Nil
+      else {
+        val astJar    = (ast / Compile / packageBin).value
+        val parserJar = (parser / Compile / packageBin).value
+        val pluginJar = (compilerPlugin / Compile / packageBin).value
+        Seq(
+          s"-Xplugin:${pluginJar.getAbsolutePath}:${parserJar.getAbsolutePath}:${astJar.getAbsolutePath}",
+          s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
+          // https://github.com/sbt/zinc/issues/621
+          "-Yrangepos"
+        )
+      }
+    }
+  )
 
 lazy val it = (project in file("integration-tests/suites"))
   .dependsOn(ast, parser, itExternal)
   .settings(
     commonSettings,
-    name := "scaladoc-integration-tests",
-    Keys.`package` := { new File("") },
-    publish / skip := true,
-    publishArtifact := false,
-    update / aggregate := false,
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.8" % Test)
+    scala2Only,
+    noPublish,
+    name := "scaladoc-integration-tests"
+  )
 
 lazy val root = (project in file("."))
   .aggregate(ast, parser, compilerPlugin, itExternal, it)
   .settings(
     commonSettings,
-    name := "scaladoc-root",
-    // crossScalaVersions := Nil,
-    Keys.`package` := { new File("") },
-    publish / skip := true,
-    publishArtifact := false,
-    update / aggregate := false)
+    noPublish,
+    name := "scaladoc-root"
+  )

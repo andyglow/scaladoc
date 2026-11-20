@@ -1,8 +1,6 @@
 package scaladoc.utils
 
-import scaladoc.Markup.Span
 
-import scala.annotation.tailrec
 
 
 trait StringUtils {

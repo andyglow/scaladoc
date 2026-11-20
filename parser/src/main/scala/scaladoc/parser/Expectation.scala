@@ -15,9 +15,9 @@ private[scaladoc] object Expectation {
     override def toString = s"one of ${chars map { _.q } mkString ", "}"
   }
 
-  final case object EOF extends Expectation
+  case object EOF extends Expectation
 
-  final case object Whitespace extends Expectation
+  case object Whitespace extends Expectation
 
   final case class Non(char: Char) extends Expectation {
     override def toString: String = s"anything but ${char.q}"

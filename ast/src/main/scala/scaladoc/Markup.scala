@@ -86,14 +86,8 @@ object Markup {
     type Self = Paragraph
     override def isBlank: Boolean = markup.forall(_.isBlank)
     override def plainString: String = {
-      val sb = new StringBuilder
-      markup.zipWithIndex foreach {
-        case (m: Span with HasValue, _) => sb.append(m.plainString)
-        case (m, i) =>
-          sb.append(m.plainString)
-          if (i < markup.size) sb.append("\n")
-      }
-      sb.toString
+      // every `Span` is a `HasValue`, so spans are simply concatenated
+      markup.map(_.plainString).mkString
     }
     def trimmed: Self with Trimmed = {
       def trim(markup: List[Span]): List[Span] = markup match {
@@ -105,7 +99,7 @@ object Markup {
     }
   }
 
-  final object Paragraph {
+  object Paragraph {
     def apply(x: Span, xs: Span*): Paragraph = Paragraph(x +: xs.toList)
   }
 
@@ -146,21 +140,21 @@ object Markup {
     def trimmed: Self with Trimmed = new Heading(level, text.trim) with Trimmed
   }
 
-  final object Heading {
+  object Heading {
 
     sealed trait Level extends Product { def value: Int }
 
-    final case object One extends Level { def value = 1 }
+    case object One extends Level { def value = 1 }
 
-    final case object Two extends Level { def value = 2 }
+    case object Two extends Level { def value = 2 }
 
-    final case object Three extends Level { def value = 3 }
+    case object Three extends Level { def value = 3 }
 
-    final case object Four extends Level { def value = 4 }
+    case object Four extends Level { def value = 4 }
 
-    final case object Five extends Level { def value = 5 }
+    case object Five extends Level { def value = 5 }
 
-    final case object Six extends Level { def value = 6 }
+    case object Six extends Level { def value = 6 }
 
     def apply(l: Int, text: String): Heading = l match {
       case 1 => Heading(One, text)

@@ -1,0 +1,122 @@
+package scaladoc.ofmodels
+
+// The documented models live in this file on purpose: Scala 2 reads the doc comment from the source text,
+// which is only available when the model's file is compiled in the same run as the `Scaladoc.of` call site
+// (Scala 3 without `-Yread-docs` has the same limitation). `Undocumented` has its own file, see there.
+
+/** = Kitchen sink =
+  *
+  * Description with ''italic'', '''bold''', `monospace`, __underline__, ^sup^, ,,sub,, and [[scala.Option]].
+  *
+  * {{{
+  * val x = 1
+  * }}}
+  *
+  * @tparam T the type param
+  * @param a the a param
+  *   continued on the next line
+  * @param b the b param
+  * @constructor the constructor
+  * @return nothing really
+  * @throws java.lang.IllegalStateException when broken
+  * @see [[scala.Option]]
+  * @note a note
+  * @example an example
+  * @usecase a use case
+  * @author someone
+  * @version 1.0
+  * @since 0.1
+  * @todo a todo
+  * @deprecated deprecated
+  * @migration a migration
+  * @group g1
+  * @groupname g1 Group One
+  * @groupdesc g1 the group description
+  * @groupprio g1 10
+  * @documentable
+  * @inheritdoc
+  * @custom a custom tag
+  */
+case class KitchenSink[T](a: String, b: T)
+
+/** A plain class.
+  *
+  * Second paragraph.
+  *
+  * @param x the x param
+  * @param y the y param
+  */
+class Plain(x: Int, y: Int)
+
+/**
+ * Javadoc style.
+ *
+ * @param a the a
+ */
+case class JavadocStyle(a: Int)
+
+/** A trait. */
+trait SomeTrait
+
+object Outer {
+
+  /** Nested, so indented.
+    *
+    * @param a the a
+    *   continued
+    * @param b the b
+    */
+  case class Nested(a: String, b: Int)
+
+  object Deeper {
+
+    /**
+     * Javadoc style, nested.
+     *
+     * @param a the a
+     */
+    case class Nested2(a: String)
+  }
+}
+
+// `Scaladoc.of[T]` reads the source text on Scala 2 and `Symbol.docstring` on Scala 3. Both must give what
+// parsing the docstring gives.
+class OfSpec extends scaladoc.FSpec {
+  import scaladoc._
+
+  private def parsed(docstring: String): Scaladoc =
+    Scaladoc.fromDocstring(docstring, strict = true).fold(err => fail(err.getMessage), identity)
+
+  test("undocumented") {
+    Scaladoc.of[Undocumented] mustBe None
+  }
+
+  test("all tags and markup") {
+    val doc = Scaladoc.of[KitchenSink[Int]]
+    doc mustBe Some(parsed(Docstrings.KitchenSink))
+    doc.get.tags.size mustBe 24
+    doc.get.textParams mustBe Map("a" -> "the a param\ncontinued on the next line", "b" -> "the b param")
+  }
+
+  test("plain class") {
+    val doc = Scaladoc.of[Plain]
+    doc mustBe Some(parsed(Docstrings.Plain))
+    doc.get.textDescriptions mustBe Seq("A plain class.\nSecond paragraph.")
+    doc.get.textParams mustBe Map("x" -> "the x param", "y" -> "the y param")
+  }
+
+  test("javadoc style") {
+    Scaladoc.of[JavadocStyle] mustBe Some(parsed(Docstrings.JavadocStyle))
+  }
+
+  test("trait") {
+    Scaladoc.of[SomeTrait] mustBe Some(parsed(Docstrings.SomeTrait))
+    Scaladoc.of[SomeTrait].get.textDescriptions mustBe Seq("A trait.")
+  }
+
+  test("nested (indented) classes") {
+    Scaladoc.of[Outer.Nested] mustBe Some(parsed(Docstrings.Nested))
+    Scaladoc.of[Outer.Nested].get.textParams mustBe Map("a" -> "the a\ncontinued", "b" -> "the b")
+    Scaladoc.of[Outer.Deeper.Nested2] mustBe Some(parsed(Docstrings.Nested2))
+  }
+}

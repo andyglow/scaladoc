@@ -43,9 +43,9 @@ object Tag {
 
   final case class GroupPriority(id: String, value: Int) extends Tag
 
-  final case object Documentable extends Tag
+  case object Documentable extends Tag
 
-  final case object InheritDoc extends Tag
+  case object InheritDoc extends Tag
 
   final case class OtherTag(label: String, markup: Markup) extends Tag
 

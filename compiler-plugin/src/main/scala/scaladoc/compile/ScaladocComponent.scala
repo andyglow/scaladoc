@@ -1,5 +1,7 @@
 package scaladoc.compile
 
+import java.io.File
+
 import scaladoc.Scaladoc
 import scaladoc.annotation.ScaladocCarrier
 import scaladoc.utils.SourceCodeUtils
@@ -21,7 +23,18 @@ class ScaladocComponent(
   override val runsBefore = "namer" :: Nil
   override val phaseName  = plugin.name
 
-  override def newTransformer(unit: CompilationUnit): Trans = new Trans(unit)
+  // make sure compiler class path contains plugin and all prerequisite entries in it.
+  // Done once, when the phase first runs: on scala 2.13 extending the class path while the plugin is being
+  // instantiated (as it used to be done) fails with an NPE, as there is no compiler run yet.
+  private lazy val extendCompilerClassPath: Unit = {
+    val entries = global.settings.plugin.value flatMap { x => if (x.contains(':')) x.split(':').toList else List(x) }
+    global.extendCompilerClassPath(entries.map(e => new File(e).toURI.toURL): _*)
+  }
+
+  override def newTransformer(unit: CompilationUnit): Trans = {
+    extendCompilerClassPath
+    new Trans(unit)
+  }
 
   class Trans(unit: CompilationUnit) extends TypingTransformer(unit) {
     private val carrierTpe = typeOf[ScaladocCarrier]
