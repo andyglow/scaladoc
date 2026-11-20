@@ -23,7 +23,7 @@ ThisBuild / versionScheme      := Some("pvp")
 ThisBuild / scalaVersion       := scala212
 ThisBuild / crossScalaVersions := allScalaVersions
 
-ThisBuild / organization     := "com.github.andyglow"
+ThisBuild / organization     := "io.github.andyglow"
 ThisBuild / organizationName := "andyglow"
 ThisBuild / homepage         := Some(url("https://github.com/andyglow/scaladoc"))
 ThisBuild / startYear        := Some(2017)
@@ -64,9 +64,10 @@ lazy val commonSettings = Seq(
     commitReleaseVersion,
     tagRelease,
     ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
+    // upload while the version is still the release one: the Central Portal rejects SNAPSHOT versions
+    ReleaseStep(action = Command.process("sonaRelease", _)),
     setNextVersion,
     commitNextVersion,
-    ReleaseStep(action = Command.process("sonaRelease", _)),
     pushChanges
   ),
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.20" % Test,
