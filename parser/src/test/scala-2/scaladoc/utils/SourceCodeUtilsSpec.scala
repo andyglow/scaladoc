@@ -237,6 +237,41 @@ class SourceCodeUtilsSpec extends FSpec {
   test("last of several doc comments") {
     extract("/** x */\n/** y */\nclass A", "A") mustBe Some("/** y */")
   }
+
+  test("a doc comment at the end of a body belongs to nothing") {
+    extract("object O {\n  def f = 1\n  /** dangling */\n}\nclass A", "A") mustBe None
+    extract("val xs = List(1 /** dangling */)\nclass A", "A") mustBe None
+  }
+
+  test("escaped quotes in string literals") {
+    val src =
+      """object O {
+        |  /** Doc of x. */
+        |  @deprecated("a \" quote, /** not a doc", "1.0") val x = 1; class A
+        |}
+        |""".stripMargin
+    extract(src, "x") mustBe Some("  /** Doc of x. */")
+    extract(src, "A") mustBe None
+  }
+
+  test("character literals with escapes, symbol literals") {
+    // 'A' (written with a double backslash here, so that it stays an escape in the test source)
+    extract("/** x */ @ann('\\u0041', '\\n', '\\\\', '\\'') class A", "A") mustBe Some("/** x */")
+    extract("/** x */ @Tag('fast) @ann('sym, '\"', 'a') class A", "A") mustBe Some("/** x */")
+    extract("object O { val s = Set('a, 'b) }\n/** x */\nclass A", "A") mustBe Some("/** x */")
+    // the literals end where they end, so the annotation's `)` is found and `val x` after it detaches the comment
+    extract("/** x */ @ann('\\u0041'+'\"') val x = 1; class A", "A") mustBe None
+    extract("/** x */ @ann('s) val x = 1; class A", "A") mustBe None
+  }
+
+  test("code the lexer doesn't understand (XML literals) can't hide a later doc comment or make it loop") {
+    // the `"` in the XML text opens a string literal for the lexer: it ends at the end of the line
+    extract("object O { val q = <q>\"</q> }\n/** x */\nclass A", "A") mustBe Some("/** x */")
+    // the `(` in the XML text opens a group that never closes: it ends at the end of the file
+    extract("/** x */ @ann(<a>(</a>) class A", "A") mustBe Some("/** x */")
+    // ... and a quote at the very end of the file, inside that group, is looked past safely
+    extract("/** x */ @ann(<a>(</a>) class A(c: Char = '", "A") mustBe Some("/** x */")
+  }
 }
 
 object SourceCodeUtilsSpec {

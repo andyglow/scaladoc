@@ -61,31 +61,13 @@ object SourceCodeUtils {
     * comments follow.
     */
   private final class DocCommentScanner(chars: Array[Char], limit: Int) {
+    import DocCommentScanner._
+
     private val n = chars.length
     private var i = 0
 
-    // tokens
-    private final val Eof     = 0
-    private final val Word    = 1 // identifier or keyword, `wordStart` until `i`
-    private final val Literal = 2 // string, interpolated string or character literal
-    private final val Open    = 3 // ( [ {
-    private final val Close   = 4 // ) ] }
-    private final val At      = 5
-    private final val Dot     = 6
-    private final val Other   = 7
-    private final val Comment = 8 // line or block comment
-    private final val Doc     = 9 // doc comment, `commentStart` until `i`
-
     private var wordStart    = 0
     private var commentStart = 0
-
-    // what follows the last doc comment
-    private final val Ready  = 0 // nothing, or modifiers, keywords and complete annotations
-    private final val AtSign = 1 // `@`: the annotation's name comes next
-    private final val Annot  = 2 // annotation name, or its type or value arguments: more of them may follow
-    private final val Path   = 3 // `@a.`: the rest of the name comes next
-    private final val Access = 4 // `private` or `protected`: a qualifier may follow
-    private final val Broken = 5 // anything else: the doc comment documents something else
 
     def scan(): Option[(Int, Int)] = {
       var doc: Option[(Int, Int)] = None
@@ -236,5 +218,29 @@ object SourceCodeUtils {
         }
       }
     }
+  }
+
+  // Plain `val`s, not constants (`final val`), so they're initialized once here instead of inlined at every use: an
+  // inlined constant's own definition never runs, and coverage would count it as untested.
+  private object DocCommentScanner {
+    // tokens
+    val Eof     = 0
+    val Word    = 1 // identifier or keyword, `wordStart` until `i`
+    val Literal = 2 // string, interpolated string or character literal
+    val Open    = 3 // ( [ {
+    val Close   = 4 // ) ] }
+    val At      = 5
+    val Dot     = 6
+    val Other   = 7
+    val Comment = 8 // line or block comment
+    val Doc     = 9 // doc comment, `commentStart` until `i`
+
+    // what follows the last doc comment
+    val Ready  = 0 // nothing, or modifiers, keywords and complete annotations
+    val AtSign = 1 // `@`: the annotation's name comes next
+    val Annot  = 2 // annotation name, or its type or value arguments: more of them may follow
+    val Path   = 3 // `@a.`: the rest of the name comes next
+    val Access = 4 // `private` or `protected`: a qualifier may follow
+    val Broken = 5 // anything else: the doc comment documents something else
   }
 }
