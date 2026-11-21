@@ -57,5 +57,5 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/scala-2.13/coverage-report/cobertura.xml
+          files: target/out/jvm/scala-2.13.18/scaladoc-root/coverage-report/cobertura.xml
           fail_ci_if_error: true
