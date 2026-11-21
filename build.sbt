@@ -87,18 +87,18 @@ lazy val commonSettings = Seq(
   // `-Xlint:-options`: JDK 21 warns that release 8 is obsolete
   javacOptions ++= Seq("--release", "8", "-Xlint:-options"),
   publishMavenStyle := true,
-  releaseCrossBuild             := true,
+  // sbt-release's cross build puts every project on each Scala version, including sbt-scaladoc, which has no 2.13
+  // or 3.3 build; sbt's own `+` keeps each project to its crossScalaVersions, so the steps below use it instead
+  releaseCrossBuild             := false,
   releasePublishArtifactsAction := PgpKeys.publishSigned.value,
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
     runClean,
-    runTest,
+    releaseStepCommandAndRemaining("+test"),
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    // `+` covers every project's own crossScalaVersions; sbt-release's cross build only uses the root's, which
-    // would leave out sbt-scaladoc's sbt 2 build (Scala 3.8.4)
     releaseStepCommandAndRemaining("+publishSigned"),
     // upload while the version is still the release one: the Central Portal rejects SNAPSHOT versions
     releaseStepCommand("sonaRelease"),
