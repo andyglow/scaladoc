@@ -59,17 +59,17 @@ The libraries get the plugin's own version; override it with `scaladocVersion` i
 ### By hand
 
 ```sbt
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.1"
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.1"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.2.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.2.0"
 ```
 
 To embed scaladocs into bytecode (Scala 2 only), also add the compiler plugin:
 
 ```sbt
-addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.1.1")
+addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.2.0")
 
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.1"
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.1" % Provided
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.2.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.2.0" % Provided
 ```
 
 ## Scaladoc AST
