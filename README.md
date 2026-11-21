@@ -1,6 +1,7 @@
 # Scaladoc
 
 [![CI](https://github.com/andyglow/scaladoc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/andyglow/scaladoc/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/andyglow/scaladoc/branch/master/graph/badge.svg)](https://codecov.io/gh/andyglow/scaladoc)
 [![scala 2.12](https://img.shields.io/maven-central/v/io.github.andyglow/scaladoc-parser_2.12?label=scala%202.12)](https://central.sonatype.com/artifact/io.github.andyglow/scaladoc-parser_2.12)
 [![scala 2.13](https://img.shields.io/maven-central/v/io.github.andyglow/scaladoc-parser_2.13?label=scala%202.13)](https://central.sonatype.com/artifact/io.github.andyglow/scaladoc-parser_2.13)
 [![scala 3](https://img.shields.io/maven-central/v/io.github.andyglow/scaladoc-parser_3?label=scala%203)](https://central.sonatype.com/artifact/io.github.andyglow/scaladoc-parser_3)

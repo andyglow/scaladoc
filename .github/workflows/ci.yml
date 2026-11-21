@@ -47,3 +47,15 @@ jobs:
 
       - name: Build project
         run: sbt '++ ${{ matrix.scala }}; test'
+
+      - name: Measure coverage
+        if: matrix.scala == '2.13.18'
+        run: sbt '++ ${{ matrix.scala }}; coverage; ast/test; parser/test; coverageAggregate'
+
+      - name: Upload coverage to Codecov
+        if: matrix.scala == '2.13.18'
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/scala-2.13/coverage-report/cobertura.xml
+          fail_ci_if_error: true
