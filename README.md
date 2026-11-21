@@ -154,3 +154,33 @@ descriptions taken from the scaladoc.
 The plugin (Scala 2.12 and 2.13):
 - validates the scaladoc
 - packs it into a Java annotation, so that it is carried over in the bytecode
+
+### Choosing what to embed
+By default the plugin embeds the scaladoc of every documented class. Plugin options narrow that down. Each option
+can be given several times:
+
+```sbt
+scalacOptions ++= Seq(
+  "-P:scaladoc-compiler-plugin:include:path:**/model/**",
+  "-P:scaladoc-compiler-plugin:include:class:com.acme.api.*",
+  "-P:scaladoc-compiler-plugin:exclude:path:**/generated/**",
+  "-P:scaladoc-compiler-plugin:exclude:class:com.acme.**.internal.*"
+)
+```
+
+| Option                    | Matches                                                                      |
+|---------------------------|------------------------------------------------------------------------------|
+| `include:path:<glob>`     | source files whose path matches the glob                                     |
+| `exclude:path:<glob>`     | the same, to leave out                                                       |
+| `include:class:<pattern>` | classes whose fully-qualified name matches the pattern                       |
+| `exclude:class:<pattern>` | the same, to leave out                                                       |
+
+- Without any `include` option every class is included. With some, a class is included if its file matches an
+  `include:path` or its name matches an `include:class`.
+- An `exclude` always wins over an `include`.
+- Path globs use [`java.nio` glob syntax](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-)
+  and are matched against the absolute source path, so they usually start with `**/`.
+- In class patterns, `*` matches within one name segment, `**` across segments, and `**.` zero or more packages
+  (`com.acme.**.internal.*` matches `com.acme.internal.Secret` and `com.acme.a.b.internal.Secret`). Classes nested in
+  objects are written with dots: `com.acme.Outer.Inner`.
+- A malformed option fails the compilation.

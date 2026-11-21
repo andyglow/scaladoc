@@ -158,6 +158,22 @@ lazy val compilerPlugin = (project in file("compiler-plugin"))
     }
   )
 
+// compiles the module with the scaladoc compiler plugin built from this repo, passing it `pluginOptions`
+def withScaladocPlugin(pluginOptions: String*) = Compile / scalacOptions ++= {
+  if (isScala3(scalaVersion.value)) Nil
+  else {
+    val astJar    = (ast / Compile / packageBin).value
+    val parserJar = (parser / Compile / packageBin).value
+    val pluginJar = (compilerPlugin / Compile / packageBin).value
+    Seq(
+      s"-Xplugin:${pluginJar.getAbsolutePath}:${parserJar.getAbsolutePath}:${astJar.getAbsolutePath}",
+      s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
+      // https://github.com/sbt/zinc/issues/621
+      "-Yrangepos"
+    ) ++ pluginOptions.map(o => s"-P:scaladoc-compiler-plugin:$o")
+  }
+}
+
 lazy val itExternal = (project in file("integration-tests/external-models"))
   .settings(
     commonSettings,
@@ -165,24 +181,27 @@ lazy val itExternal = (project in file("integration-tests/external-models"))
     noCoverage,
     noPublish,
     name := "scaladoc-integration-test-external-models",
-    Compile / scalacOptions ++= {
-      if (isScala3(scalaVersion.value)) Nil
-      else {
-        val astJar    = (ast / Compile / packageBin).value
-        val parserJar = (parser / Compile / packageBin).value
-        val pluginJar = (compilerPlugin / Compile / packageBin).value
-        Seq(
-          s"-Xplugin:${pluginJar.getAbsolutePath}:${parserJar.getAbsolutePath}:${astJar.getAbsolutePath}",
-          s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
-          // https://github.com/sbt/zinc/issues/621
-          "-Yrangepos"
-        )
-      }
-    }
+    withScaladocPlugin()
+  )
+
+// models compiled with include/exclude options; see FilteredClassesSpec for what is expected to be embedded
+lazy val itFiltered = (project in file("integration-tests/filtered-models"))
+  .settings(
+    commonSettings,
+    scala2Only,
+    noCoverage,
+    noPublish,
+    name := "scaladoc-integration-test-filtered-models",
+    withScaladocPlugin(
+      "include:path:**/filtered/model/**",
+      "include:class:scaladoc.test.filtered.extra.Kept*",
+      "exclude:path:**/Skipped.scala",
+      "exclude:class:scaladoc.test.filtered.**.internal.*"
+    )
   )
 
 lazy val it = (project in file("integration-tests/suites"))
-  .dependsOn(ast, parser, itExternal)
+  .dependsOn(ast, parser, itExternal, itFiltered)
   .settings(
     commonSettings,
     scala2Only,
@@ -192,7 +211,7 @@ lazy val it = (project in file("integration-tests/suites"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(ast, parser, compilerPlugin, itExternal, it)
+  .aggregate(ast, parser, compilerPlugin, itExternal, itFiltered, it)
   .settings(
     commonSettings,
     noPublish,
