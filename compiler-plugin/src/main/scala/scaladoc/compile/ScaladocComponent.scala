@@ -8,14 +8,14 @@ import scaladoc.utils.SourceCodeUtils
 
 import scala.tools.nsc
 import nsc.Global
-import nsc.plugins.{Plugin, PluginComponent}
+import nsc.plugins.PluginComponent
 import nsc.ast.TreeDSL
 import nsc.transform.{Transform, TypingTransformers}
 import scala.collection.immutable.ListMap
 
 
 class ScaladocComponent(
-  plugin: Plugin,
+  plugin: ScaladocCompilerPlugin,
   val global: Global) extends PluginComponent with Transform with TypingTransformers with TreeDSL with CrossVersionSupport  {
   import global._
 
@@ -38,14 +38,41 @@ class ScaladocComponent(
 
   class Trans(unit: CompilationUnit) extends TypingTransformer(unit) {
     private val carrierTpe = typeOf[ScaladocCarrier]
+    private val filter     = plugin.filter
+    private val path       = unit.source.file.path
 
-//    inform("COOKED DOC COMMENTS " + show(global.cookedDocComments))
+    // enclosing packages and objects, innermost first. This phase runs before the namer, so there are no symbols
+    // to get the fully-qualified name from.
+    private var owners: List[String] = Nil
+
+    private def withOwner[T](name: String)(f: => T): T = {
+      val saved = owners
+      owners = name :: owners
+      try f finally owners = saved
+    }
+
+    private def refName(ref: Tree): String = ref match {
+      case Select(qual, name) => refName(qual) + "." + name.decoded
+      case Ident(name)        => name.decoded
+      case other              => other.toString
+    }
+
+    private def fullName(name: Name): String = (name.decoded :: owners).reverse.mkString(".")
+
+    // skip the whole compile unit if none of its classes can be embedded
+    override def transformUnit(unit: CompilationUnit): Unit =
+      if (filter.acceptsFile(path)) super.transformUnit(unit)
 
     override def transform(tree: global.Tree): global.Tree = {
       tree match {
-//        case doc @ DocDef(comment, definition) =>
-//          inform(s"DocDef [${comment.raw}] for ${show(definition)}")
-//          doc
+        case pkg: PackageDef if pkg.name == nme.EMPTY_PACKAGE_NAME =>
+          super.transform(pkg)
+        case pkg: PackageDef =>
+          withOwner(refName(pkg.pid))(super.transform(pkg))
+        case obj: ModuleDef =>
+          withOwner(obj.name.decoded)(super.transform(obj))
+        case cls @ ClassDef(_, name, _, _) if !filter.accepts(path, fullName(name)) =>
+          cls
         case cls @ ClassDef(mods, name, tparams, impl) =>
           val scd = for {
             str <- SourceCodeUtils.extractComment(tree.pos)
