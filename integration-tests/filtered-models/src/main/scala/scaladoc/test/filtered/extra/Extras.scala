@@ -11,3 +11,29 @@ case class KeptExtra(k: Int)
   * @param d the d
   */
 case class DroppedExtra(d: Int)
+
+/** Not included: only its nested class is
+  *
+  * @param b the b
+  */
+case class Box(b: Int) {
+
+  /** Included by class name, nested in a class
+    *
+    * @param i the i
+    */
+  case class Inner(i: Int)
+}
+
+/** Included by class name
+  *
+  * @param o the o
+  */
+case class KeptOuter(o: Int) {
+
+  /** Not included: `Kept*` doesn't match across the dot
+    *
+    * @param n the n
+    */
+  case class Nested(n: Int)
+}

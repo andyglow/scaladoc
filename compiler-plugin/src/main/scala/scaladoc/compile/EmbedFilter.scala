@@ -12,7 +12,7 @@ import scala.util.Try
   *     The path is absolute, so patterns usually start with a double-star segment, e.g. a double star followed by
   *     `/model/` and another double star.
   *   - `include:class:<pattern>` / `exclude:class:<pattern>`: a pattern over the fully-qualified class name, with
-  *     classes nested in objects written with dots (`com.acme.Outer.Inner`). `*` matches within one name segment,
+  *     nested classes written with dots (`com.acme.Outer.Inner`). `*` matches within one name segment,
   *     `**` across segments (`com.acme.**`), and `**.` matches zero or more packages (`com.acme.**.internal.*`).
   *
   * A class is embedded if it is included and not excluded. With no include options everything is included;

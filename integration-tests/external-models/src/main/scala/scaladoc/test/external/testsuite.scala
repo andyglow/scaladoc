@@ -13,3 +13,33 @@ case class ExternalClass1(a: String, b: String)
   * @param d D Param
   */
 case class ExternalClass2(c: String, d: String)
+
+/** External Outer
+  *
+  * @param a A Param
+  */
+case class ExternalOuter(a: String) {
+
+  /** Nested in a class
+    *
+    * @param b B Param
+    */
+  case class Inner(b: String)
+}
+
+/** External Trait */
+trait ExternalTrait {
+
+  /** Nested in a trait
+    *
+    * @param c C Param
+    */
+  class Member(val c: String) {
+
+    /** Two levels deep
+      *
+      * @param d D Param
+      */
+    case class Deeper(d: String)
+  }
+}

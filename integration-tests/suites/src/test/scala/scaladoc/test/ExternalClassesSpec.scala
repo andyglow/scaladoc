@@ -27,4 +27,22 @@ class ExternalClassesSpec extends AnyFunSuite {
         Param("d", Document(PlainText("D Param"))))
     }
   }
+
+  test("class nested in a class") {
+    Scaladoc.of[ExternalOuter#Inner] mustBe Some {
+      Scaladoc(Description(Document(Paragraph(PlainText("Nested in a class")))), Param("b", Document(PlainText("B Param"))))
+    }
+  }
+
+  test("class nested in a trait") {
+    Scaladoc.of[ExternalTrait#Member] mustBe Some {
+      Scaladoc(Description(Document(Paragraph(PlainText("Nested in a trait")))), Param("c", Document(PlainText("C Param"))))
+    }
+  }
+
+  test("class nested two levels deep") {
+    Scaladoc.of[ExternalTrait#Member#Deeper] mustBe Some {
+      Scaladoc(Description(Document(Paragraph(PlainText("Two levels deep")))), Param("d", Document(PlainText("D Param"))))
+    }
+  }
 }

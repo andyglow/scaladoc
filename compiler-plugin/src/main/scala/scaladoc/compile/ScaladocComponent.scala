@@ -41,7 +41,7 @@ class ScaladocComponent(
     private val filter     = plugin.filter
     private val path       = unit.source.file.path
 
-    // enclosing packages and objects, innermost first. This phase runs before the namer, so there are no symbols
+    // enclosing packages, objects and classes, innermost first. This phase runs before the namer, so there are no symbols
     // to get the fully-qualified name from.
     private var owners: List[String] = Nil
 
@@ -59,6 +59,32 @@ class ScaladocComponent(
 
     private def fullName(name: Name): String = (name.decoded :: owners).reverse.mkString(".")
 
+    // adds the class's scaladoc as a `ScaladocCarrier` annotation (and as an attachment, for macros of the same run)
+    private def embed(cls: ClassDef): ClassDef = {
+      val embedded = for {
+        str <- SourceCodeUtils.extractComment(cls.pos)
+        doc <- Scaladoc.fromString(str, strict = true) match {
+                 case Left(err) =>
+                   reportError(cls.pos, err.getMessage, cls.symbol)
+                   None
+                 case Right(doc) =>
+                   Some(doc)
+               }
+      } yield {
+        val Modifiers(flags, privateWithin, annos) = cls.mods
+        val carrier = Annotation(
+          carrierTpe,
+          Nil,
+          ListMap(
+            TermName("text") -> LiteralAnnotArg(Constant(str)),
+            TermName("tags") -> LiteralAnnotArg(Constant(true)))).tree
+
+        cls.copy(mods = Modifiers(flags, privateWithin, annos :+ carrier)).updateAttachment(doc).setPos(cls.pos)
+      }
+
+      embedded getOrElse cls
+    }
+
     // skip the whole compile unit if none of its classes can be embedded
     override def transformUnit(unit: CompilationUnit): Unit =
       if (filter.acceptsFile(path)) super.transformUnit(unit)
@@ -71,43 +97,11 @@ class ScaladocComponent(
           withOwner(refName(pkg.pid))(super.transform(pkg))
         case obj: ModuleDef =>
           withOwner(obj.name.decoded)(super.transform(obj))
-        case cls @ ClassDef(_, name, _, _) if !filter.accepts(path, fullName(name)) =>
-          cls
-        case cls @ ClassDef(mods, name, tparams, impl) =>
-          val scd = for {
-            str <- SourceCodeUtils.extractComment(tree.pos)
-            scd <- Scaladoc.fromString(str, strict = true) match {
-                     case Left(err)  =>
-                       reportError(tree.pos, err.getMessage, tree.symbol)
-                       Some(tree)
-                     case Right(doc) =>
-//                       inform(tree.pos, s"Scaladoc AST {\n${doc.pseudoCode}}")
-                       Some {
-                         val Modifiers(flags, privateWithin, annos) = mods
-                         val newAnno = Annotation(
-                           carrierTpe,
-                           Nil,
-                           ListMap(
-                             TermName("text") -> LiteralAnnotArg(Constant(str)),
-                             TermName("tags") -> LiteralAnnotArg(Constant(true)))).tree
-
-                         val effectiveMods = Modifiers(
-                           flags,
-                           privateWithin,
-                           annos :+ newAnno)
-
-                         val res = cls.copy(mods = effectiveMods).updateAttachment(doc)
-//                         inform(showRaw(effectiveMods))
-////                         inform(showCode(newAnno))
-//                         inform("---\n"+showCode(res)+"\n---")
-
-                         // scala 2.11 requirement
-                         res.setPos(tree.pos)
-                       }
-                    }
-          } yield scd
-
-          scd getOrElse tree
+        case cls: ClassDef =>
+          // nested classes first, with this class as their owner; they are visited even if this class is not embedded
+          val body = withOwner(cls.name.decoded)(transformTemplate(cls.impl))
+          val res  = treeCopy.ClassDef(cls, cls.mods, cls.name, cls.tparams, body)
+          if (filter.accepts(path, fullName(cls.name))) embed(res) else res
         case _ =>
           super.transform(tree)
       }
