@@ -43,6 +43,8 @@ ThisBuild / developers := List(
 )
 
 // GitHub Actions (sbt-github-actions): `githubWorkflowGenerate` writes .github/workflows/*.yml
+// push builds only for master; feature branches are built by their pull_request run
+ThisBuild / githubWorkflowTargetBranches        := Seq("master")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("21"))
 // Tests on every Scala version; coverage of ast and parser measured once, on 2.13, and uploaded to Codecov
