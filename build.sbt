@@ -25,12 +25,12 @@ ThisBuild / crossScalaVersions := allScalaVersions
 
 ThisBuild / organization     := "io.github.andyglow"
 ThisBuild / organizationName := "andyglow"
-ThisBuild / homepage         := Some(url("https://github.com/andyglow/scaladoc"))
+ThisBuild / homepage         := Some(uri("https://github.com/andyglow/scaladoc"))
 ThisBuild / startYear        := Some(2017)
-ThisBuild / licenses         := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
-ThisBuild / scmInfo          := Some(ScmInfo(url("https://github.com/andyglow/scaladoc"), "scm:git@github.com:andyglow/scaladoc.git"))
+ThisBuild / licenses         := Seq("Apache-2.0" -> uri("http://www.apache.org/licenses/LICENSE-2.0"))
+ThisBuild / scmInfo          := Some(ScmInfo(uri("https://github.com/andyglow/scaladoc"), "scm:git@github.com:andyglow/scaladoc.git"))
 ThisBuild / developers := List(
-  Developer(id = "andyglow", name = "Andriy Onyshchuk", email = "andyglow@gmail.com", url = url("https://ua.linkedin.com/in/andyglow"))
+  Developer(id = "andyglow", name = "Andriy Onyshchuk", email = "andyglow@gmail.com", url = uri("https://ua.linkedin.com/in/andyglow"))
 )
 
 // GitHub Actions (sbt-github-actions): `githubWorkflowGenerate` writes .github/workflows/*.yml
@@ -49,7 +49,7 @@ ThisBuild / githubWorkflowBuild := Seq(
     name = Some("Upload coverage to Codecov"),
     params = Map(
       "token"            -> "${{ secrets.CODECOV_TOKEN }}",
-      "files"            -> s"target/scala-${CrossVersion.binaryScalaVersion(scala213)}/coverage-report/cobertura.xml",
+      "files"            -> s"target/out/jvm/scala-$scala213/scaladoc-root/coverage-report/cobertura.xml",
       "fail_ci_if_error" -> "true"
     ),
     cond = Some(s"matrix.scala == '$scala213'")
@@ -82,9 +82,9 @@ lazy val commonSettings = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
+    ReleaseStep(releaseStepCommand("publishSigned"), enableCrossBuild = true),
     // upload while the version is still the release one: the Central Portal rejects SNAPSHOT versions
-    ReleaseStep(action = Command.process("sonaRelease", _)),
+    releaseStepCommand("sonaRelease"),
     setNextVersion,
     commitNextVersion,
     pushChanges
@@ -162,12 +162,14 @@ lazy val compilerPlugin = (project in file("compiler-plugin"))
 def withScaladocPlugin(pluginOptions: String*) = Compile / scalacOptions ++= {
   if (isScala3(scalaVersion.value)) Nil
   else {
+    val conv      = fileConverter.value
     val astJar    = (ast / Compile / packageBin).value
     val parserJar = (parser / Compile / packageBin).value
     val pluginJar = (compilerPlugin / Compile / packageBin).value
+    val jars      = Seq(pluginJar, parserJar, astJar).map(conv.toPath(_).toAbsolutePath)
     Seq(
-      s"-Xplugin:${pluginJar.getAbsolutePath}:${parserJar.getAbsolutePath}:${astJar.getAbsolutePath}",
-      s"-Jdummy=${pluginJar.lastModified}", // ensures recompile
+      s"-Xplugin:${jars.mkString(":")}",
+      s"-Jdummy=${pluginJar.contentHashStr}", // recompiles when the plugin changes
       // https://github.com/sbt/zinc/issues/621
       "-Yrangepos"
     ) ++ pluginOptions.map(o => s"-P:scaladoc-compiler-plugin:$o")
