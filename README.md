@@ -23,12 +23,40 @@ A toolset for working with scaladoc comments from Scala code:
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |
 
+`sbt-scaladoc` (from 0.2.0) works with sbt 1.5.8+ and sbt 2.x.
+
 All artifacts target Java 8 and work on any later JDK. Scala 2.11 is supported up to version 0.0.14.
 
 > **The groupId changed in 0.1.0** from `com.github.andyglow` to `io.github.andyglow`. Versions up to 0.0.14 stay
 > available under `com.github.andyglow`. To upgrade, change the groupId along with the version.
 
 ## Usage
+
+### With the sbt plugin
+`sbt-scaladoc` (from 0.2.0) sets a module up for you. Add it to `project/plugins.sbt`:
+
+```sbt
+addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.2.0")
+```
+
+and enable it on the modules that need it:
+
+```sbt
+lazy val model = project
+  .enablePlugins(ScaladocPlugin)
+  .settings(
+    scaladocExcludeClasses := Seq("com.acme.**.internal.*") // optional, see "Choosing what to embed"
+  )
+```
+
+- **Scala 2:** it adds the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode, plus
+  `scaladoc-ast` and `scaladoc-parser`. Set `scaladocEmbed := false` on modules that only read scaladoc.
+- **Scala 3:** the compiler plugin doesn't exist there, so it adds `scaladoc-ast`, `scaladoc-parser` and `-Yread-docs`.
+  That lets `Scaladoc.of` read doc comments from other modules and jars.
+
+The libraries get the plugin's own version; override it with `scaladocVersion` if needed.
+
+### By hand
 
 ```sbt
 libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.1"
@@ -156,8 +184,17 @@ The plugin (Scala 2.12 and 2.13):
 - packs it into a Java annotation, so that it is carried over in the bytecode
 
 ### Choosing what to embed
-By default the plugin embeds the scaladoc of every documented class. Plugin options narrow that down. Each option
-can be given several times:
+By default the plugin embeds the scaladoc of every documented class. Include and exclude patterns narrow that down.
+With `sbt-scaladoc`, set them as settings:
+
+```sbt
+scaladocIncludePaths   := Seq("**/model/**")
+scaladocIncludeClasses := Seq("com.acme.api.*")
+scaladocExcludePaths   := Seq("**/generated/**")
+scaladocExcludeClasses := Seq("com.acme.**.internal.*")
+```
+
+Without it, pass them to the compiler plugin as options. Each option can be given several times:
 
 ```sbt
 scalacOptions ++= Seq(

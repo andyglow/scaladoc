@@ -48,6 +48,10 @@ jobs:
       - name: Build project
         run: sbt '++ ${{ matrix.scala }}; test'
 
+      - name: sbt plugin scripted tests
+        if: matrix.scala == '2.13.18'
+        run: sbt '++ ${{ matrix.scala }}; +publishLocal; +sbtScaladoc/scripted'
+
       - name: Measure coverage
         if: matrix.scala == '2.13.18'
         run: sbt '++ ${{ matrix.scala }}; coverage; ast/test; parser/test; coverageAggregate'
