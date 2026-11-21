@@ -8,5 +8,5 @@
 - [x] Cross Scala Version build
 - [x] Scala 3 (ast and parser)
 - [x] GitHub Actions CI
-- [ ] Codecov integration (sbt-scoverage + upload from CI)
+- [x] Codecov integration (sbt-scoverage, measured on 2.13 in CI)
 - [ ] Stabilize alignments (leading trims, etc)

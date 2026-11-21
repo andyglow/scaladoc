@@ -36,6 +36,25 @@ ThisBuild / developers := List(
 // GitHub Actions (sbt-github-actions): `githubWorkflowGenerate` writes .github/workflows/*.yml
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("21"))
+// Tests on every Scala version; coverage of ast and parser measured once, on 2.13, and uploaded to Codecov
+ThisBuild / githubWorkflowBuild := Seq(
+  WorkflowStep.Sbt(List("test"), name = Some("Build project")),
+  WorkflowStep.Sbt(
+    List("coverage", "ast/test", "parser/test", "coverageAggregate"),
+    name = Some("Measure coverage"),
+    cond = Some(s"matrix.scala == '$scala213'")
+  ),
+  WorkflowStep.Use(
+    UseRef.Public("codecov", "codecov-action", "v7"),
+    name = Some("Upload coverage to Codecov"),
+    params = Map(
+      "token"            -> "${{ secrets.CODECOV_TOKEN }}",
+      "files"            -> s"target/scala-${CrossVersion.binaryScalaVersion(scala213)}/coverage-report/cobertura.xml",
+      "fail_ci_if_error" -> "true"
+    ),
+    cond = Some(s"matrix.scala == '$scala213'")
+  )
+)
 
 // Built on JDK 21, but bytecode and JDK API are pinned to Java 8 so the artifacts keep working on older JDKs
 def compilerOptions(v: String): Seq[String] = {
@@ -86,6 +105,10 @@ lazy val noPublish = Seq(
   publishArtifact := false
 )
 
+// The compiler plugin is loaded into scalac with `-Xplugin`, where instrumented classes can't find the scoverage
+// runtime; the integration tests compile with that plugin. Neither is measured.
+lazy val noCoverage = Seq(coverageEnabled := false)
+
 // Scala 2-only module: on Scala 3 it has no sources, no dependencies and publishes nothing
 lazy val scala2Only = Seq(
   Compile / unmanagedSourceDirectories := { if (isScala3(scalaVersion.value)) Nil else (Compile / unmanagedSourceDirectories).value },
@@ -127,6 +150,7 @@ lazy val compilerPlugin = (project in file("compiler-plugin"))
   .settings(
     commonSettings,
     scala2Only,
+    noCoverage,
     name := "scaladoc-compiler-plugin",
     libraryDependencies ++= {
       if (isScala3(scalaVersion.value)) Nil
@@ -138,6 +162,7 @@ lazy val itExternal = (project in file("integration-tests/external-models"))
   .settings(
     commonSettings,
     scala2Only,
+    noCoverage,
     noPublish,
     name := "scaladoc-integration-test-external-models",
     Compile / scalacOptions ++= {
@@ -161,6 +186,7 @@ lazy val it = (project in file("integration-tests/suites"))
   .settings(
     commonSettings,
     scala2Only,
+    noCoverage,
     noPublish,
     name := "scaladoc-integration-tests"
   )
