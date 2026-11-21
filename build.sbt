@@ -97,7 +97,9 @@ lazy val commonSettings = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    ReleaseStep(releaseStepCommand("publishSigned"), enableCrossBuild = true),
+    // `+` covers every project's own crossScalaVersions; sbt-release's cross build only uses the root's, which
+    // would leave out sbt-scaladoc's sbt 2 build (Scala 3.8.4)
+    releaseStepCommandAndRemaining("+publishSigned"),
     // upload while the version is still the release one: the Central Portal rejects SNAPSHOT versions
     releaseStepCommand("sonaRelease"),
     setNextVersion,
