@@ -6,7 +6,9 @@ val scala3   = "3.3.9"
 
 // sbt-scaladoc is built for sbt 2 (Scala 3) and sbt 1 (Scala 2.12), against the oldest sbt of each line it supports.
 // Scala 3 reads TASTy only from the same or older compilers, so the sbt 2 build uses sbt 2.0.0's Scala.
-val sbt2Scala         = "3.8.4"
+// Bumping it breaks the plugin on every sbt 2 that runs an older Scala (sbt 2.1.0 runs 3.9.0, which can't read 3.10
+// TASTy), so Scala Steward is told to leave it alone.
+val sbt2Scala         = "3.8.4" // scala-steward:off
 val sbt2Version       = "2.0.0"
 val sbt1Version       = "1.5.8"
 // scripted tests run on the latest of each line (older sbt 1 releases don't start on JDK 21)
