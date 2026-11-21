@@ -181,6 +181,6 @@ scalacOptions ++= Seq(
 - Path globs use [`java.nio` glob syntax](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-)
   and are matched against the absolute source path, so they usually start with `**/`.
 - In class patterns, `*` matches within one name segment, `**` across segments, and `**.` zero or more packages
-  (`com.acme.**.internal.*` matches `com.acme.internal.Secret` and `com.acme.a.b.internal.Secret`). Classes nested in
-  objects are written with dots: `com.acme.Outer.Inner`.
+  (`com.acme.**.internal.*` matches `com.acme.internal.Secret` and `com.acme.a.b.internal.Secret`). Nested classes are
+  written with dots: `com.acme.Outer.Inner`.
 - A malformed option fails the compilation.

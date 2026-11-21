@@ -12,6 +12,7 @@ import scaladoc.test.filtered.model.internal._
 // `filtered-models` is compiled with
 //   include:path:**/filtered/model/**
 //   include:class:scaladoc.test.filtered.extra.Kept*
+//   include:class:scaladoc.test.filtered.extra.Box.Inner
 //   exclude:path:**/Skipped.scala
 //   exclude:class:scaladoc.test.filtered.**.internal.*
 // Its classes come from a jar without sources, so `Scaladoc.of` finds a scaladoc only if the plugin embedded it.
@@ -43,5 +44,15 @@ class FilteredClassesSpec extends AnyFunSuite {
 
   test("excluded by class name") {
     Scaladoc.of[Secret] mustBe None
+  }
+
+  test("nested in a class: included by its own name, while the outer class is not") {
+    Scaladoc.of[Box] mustBe None
+    Scaladoc.of[Box#Inner] mustBe doc("Included by class name, nested in a class", "i", "the i")
+  }
+
+  test("nested in a class: the outer class's pattern doesn't cover it") {
+    Scaladoc.of[KeptOuter] mustBe doc("Included by class name", "o", "the o")
+    Scaladoc.of[KeptOuter#Nested] mustBe None
   }
 }

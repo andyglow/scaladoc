@@ -195,6 +195,7 @@ lazy val itFiltered = (project in file("integration-tests/filtered-models"))
     withScaladocPlugin(
       "include:path:**/filtered/model/**",
       "include:class:scaladoc.test.filtered.extra.Kept*",
+      "include:class:scaladoc.test.filtered.extra.Box.Inner",
       "exclude:path:**/Skipped.scala",
       "exclude:class:scaladoc.test.filtered.**.internal.*"
     )
