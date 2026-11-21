@@ -31,17 +31,17 @@ All artifacts target Java 8 and work on any later JDK. Scala 2.11 is supported u
 ## Usage
 
 ```sbt
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.0"
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.1"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.1"
 ```
 
 To embed scaladocs into bytecode (Scala 2 only), also add the compiler plugin:
 
 ```sbt
-addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.1.0")
+addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.1.1")
 
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.0"
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.0" % Provided
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.1.1"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.1.1" % Provided
 ```
 
 ## Scaladoc AST
