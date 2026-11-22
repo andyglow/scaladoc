@@ -120,4 +120,10 @@ class ParseScaladocTagsSpec extends FSpec {
   test("text of a tag keeps the spacing around inline markup") {
     ParseScaladocTags("@param a an `a@b` value").textParams must contain only ("a" -> "an `a@b` value")
   }
+
+  test("no tags inside <pre>") {
+    val doc = ParseScaladocTags("Desc\n<PRE>\n@Override\npublic void run()\n</pre>\n@param a A")
+    doc.textParams must contain only ("a" -> "A")
+    doc.tags.size mustBe 2
+  }
 }

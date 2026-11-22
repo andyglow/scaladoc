@@ -134,6 +134,14 @@ object Markup {
     private val SchemeUri                              = "[a-z][a-z0-9+.-]*:.*".r
   }
 
+  /** An HTML tag with no equivalent in the model, like `<span class="x">` or `</td>`, as it was written. */
+  case class HtmlTag(data: String) extends Span {
+    type Self = HtmlTag
+    override def isBlank: Boolean    = false
+    override def plainString: String = data
+    def trimmed: Self with Trimmed   = new HtmlTag(data) with Trimmed
+  }
+
   case class CodeBlock(value: String) extends Markup with HasValue  {
     override type Self = CodeBlock
     override def plainString: String = s"{{{$value}}}"

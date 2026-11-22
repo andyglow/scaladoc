@@ -76,6 +76,9 @@ class Lists(a: String)
   */
 class Tables
 
+/** <b>Bold</b>, <code>a &lt; b</code>, <a href="https://x.y">a link</a> and <span>a span</span>. */
+class Html
+
 /** A plain class.
   *
   * Second paragraph.
@@ -185,6 +188,15 @@ class OfSpec extends scaladoc.FSpec {
         List(Table.Row(List(cell(PlainText("S")), cell(Monospace("1")))), Table.Row(List(cell(PlainText("M")), cell())))),
       HorizontalRule,
       Paragraph(PlainText("The end."))))
+  }
+
+  test("HTML") {
+    val doc = Scaladoc.of[Html]
+    doc mustBe Some(parsed(Docstrings.Html))
+    import Markup._
+    doc.get.descriptions mustBe List(Document(Paragraph(List(
+      Bold("Bold"), PlainText(", "), Monospace("a < b"), PlainText(", "), Link("https://x.y", "a link"),
+      PlainText(" and "), HtmlTag("<span>"), PlainText("a span"), HtmlTag("</span>"), PlainText(".")))))
   }
 
   test("plain class") {

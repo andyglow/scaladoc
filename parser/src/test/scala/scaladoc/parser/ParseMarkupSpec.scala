@@ -324,6 +324,49 @@ class ParseMarkupSpec extends WSpec {
       ParseMarkup("---- more") mustBe Document(Paragraph(PlainText("---- more")))
     }
 
+    "parse inline HTML into the model" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+
+      ParseMarkup("<b>a</b> <strong>b</strong> <i>c</i> <em>d</em> <u>e</u> x<sup>2</sup> y<sub>i</sub>") mustBe p(
+        Bold("a"), PlainText(" "), Bold("b"), PlainText(" "), Italic("c"), PlainText(" "), Italic("d"), PlainText(" "),
+        Underline("e"), PlainText(" x"), Superscript("2"), PlainText(" y"), Subscript("i"))
+      ParseMarkup("<B>a <i>b</i></B>") mustBe p(Bold(PlainText("a "), Italic("b")))
+      ParseMarkup("<code>List&lt;A&gt;</code> and <tt>x</tt>") mustBe p(Monospace("List<A>"), PlainText(" and "), Monospace("x"))
+      ParseMarkup("""see <a href="https://x.y?a=1&amp;b=2">the <b>site</b></a>""") mustBe p(
+        PlainText("see "), Link("https://x.y?a=1&b=2", List(PlainText("the "), Bold("site"))))
+      ParseMarkup("a<br>b<br/>c") mustBe p(PlainText("a\nb\nc"))
+    }
+
+    "keep other safe HTML tags, and anything else as text" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+
+      ParseMarkup("""<span class="x">a</span>""") mustBe p(HtmlTag("""<span class="x">"""), PlainText("a"), HtmlTag("</span>"))
+      ParseMarkup("<b>unclosed") mustBe p(HtmlTag("<b>"), PlainText("unclosed"))
+      ParseMarkup("<a name=\"x\">anchor</a>") mustBe p(HtmlTag("<a name=\"x\">"), PlainText("anchor"), HtmlTag("</a>"))
+      ParseMarkup("<code>unclosed") mustBe p(HtmlTag("<code>"), PlainText("unclosed"))
+      ParseMarkup("List<String> and a < b and </nope>") mustBe p(PlainText("List<String> and a < b and </nope>"))
+    }
+
+    "decode entities" in {
+      ParseMarkup("a &lt; b &amp;&amp; c &gt; d &quot;&apos;&nbsp;&#65;&#x42; &unknown; & x") mustBe Document(Paragraph(
+        PlainText("a < b && c > d \"' AB &unknown; & x")))
+      ParseMarkup.decodeEntities("&#xZZ; &#99999999999;") mustBe "&#xZZ; &#99999999999;"
+    }
+
+    "turn HTML blocks into their markup" in {
+      ParseMarkup("One<p>Two</p><div>Three</div>") mustBe Document(
+        Paragraph(PlainText("One")), Paragraph(PlainText("Two")), Paragraph(PlainText("Three")))
+      ParseMarkup("<h1>Title</h1>Text<h3 id=\"x\">Sub</h3>") mustBe Document(
+        Heading(One, "Title"), Paragraph(PlainText("Text")), Heading(Three, "Sub"))
+      ParseMarkup("Items:<ul><li>a</li><li>b</li></ul>") mustBe Document(
+        Paragraph(PlainText("Items:")),
+        UnorderedList(List(Document(Paragraph(PlainText("a"))), Document(Paragraph(PlainText("b"))))))
+      ParseMarkup("Code:<pre><code>if (a &lt; b) x</code></pre>") mustBe Document(
+        Paragraph(PlainText("Code:")), CodeBlock("if (a < b) x"))
+      ParseMarkup("a<!-- hidden -->b") mustBe Document(Paragraph(PlainText("ab")))
+      ParseMarkup("{{{<p>&lt;</p>}}}") mustBe Document(CodeBlock("<p>&lt;</p>"))
+    }
+
     "end a paragraph at a heading line" in {
       ParseMarkup("text\n= Title =\nmore") mustBe Document(
         Paragraph(PlainText("text")), Heading(One, "Title"), Paragraph(PlainText("more")))

@@ -136,4 +136,10 @@ class MarkupSpec extends FSpec {
     Markup.HorizontalRule.trimmed mustBe Markup.HorizontalRule
     Markup.Document(Markup.Paragraph(Markup.PlainText(" a ")), Markup.HorizontalRule).trimmed.plainString mustBe "a\n----"
   }
+
+  test("HTML tags") {
+    Markup.HtmlTag("<span>").plainString mustBe "<span>"
+    Markup.HtmlTag("<span>").isBlank mustBe false
+    Markup.HtmlTag("<span>").trimmed mustBe Markup.HtmlTag("<span>")
+  }
 }

@@ -37,6 +37,10 @@ class DumpAstSpec extends FSpec {
     out must include("<li>")
   }
 
+  test("HTML") {
+    dump(Docstrings.Html) must include("<span>a span</span>")
+  }
+
   test("tables") {
     val out = dump(Docstrings.Tables)
     out must include("<table>")
