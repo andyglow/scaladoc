@@ -154,6 +154,10 @@ val text = """/** = Title =
 val scaladoc: Either[ScaladocException, Scaladoc] = Scaladoc.fromString(text)
 ```
 
+`Scaladoc` has helpers for the common parts: `descriptions`, `params`, `typeParams`, `throws`, `returns` and
+`summary`, which is the first sentence of the description (or the `@shortDescription`), as scaladoc shows it in member
+lists. Each has a `text*` variant that gives plain text, like `textParams` or `textSummary`.
+
 Scala 3's `Symbol.docstring` returns the comment as written, except that the indentation of its first line is
 gone. `Scaladoc.fromDocstring` parses that form. With `strict = true` it also checks that the `*` border is
 aligned, the same way the Scala 2 extractor does.
