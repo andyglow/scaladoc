@@ -63,6 +63,15 @@ class NestedMarkup
   */
 class Lists(a: String)
 
+/** Sizes:
+  *
+  * | Size | Price |
+  * |:-----|------:|
+  * | S    | `1`   |
+  * | M    |
+  */
+class Tables
+
 /** A plain class.
   *
   * Second paragraph.
@@ -157,6 +166,19 @@ class OfSpec extends scaladoc.FSpec {
     doc.get.params("a") mustBe Document(
       Paragraph(PlainText("one of")),
       OrderedList(List(Document(Paragraph(PlainText("x"))), Document(Paragraph(PlainText("y")))), OrderedList.UpperRoman))
+  }
+
+  test("tables") {
+    val doc = Scaladoc.of[Tables]
+    doc mustBe Some(parsed(Docstrings.Tables))
+    import Markup._
+    def cell(spans: Span*) = Paragraph(spans.toList)
+    doc.get.descriptions mustBe List(Document(
+      Paragraph(PlainText("Sizes:")),
+      Table(
+        Table.Row(List(cell(PlainText("Size")), cell(PlainText("Price")))),
+        List(Table.Alignment.Left, Table.Alignment.Right),
+        List(Table.Row(List(cell(PlainText("S")), cell(Monospace("1")))), Table.Row(List(cell(PlainText("M")), cell()))))))
   }
 
   test("plain class") {

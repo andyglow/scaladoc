@@ -117,4 +117,16 @@ class MarkupSpec extends FSpec {
     UnorderedList(List(item(" "))).isBlank mustBe true
     OrderedList.styles.map(_.marker) mustBe List("1", "i", "I", "a", "A")
   }
+  test("tables") {
+    import Markup._
+    import Markup.Table.Alignment._
+
+    def row(cells: String*) = Table.Row(cells.toList.map(c => Paragraph(PlainText(c))))
+    val table = Table(row(" a ", "b", "c"), List(Left, Center, Right), List(row("1", " 2 ", "3")))
+
+    table.plainString mustBe "|  a  | b | c |\n| --- | :-: | --: |\n| 1 |  2  | 3 |"
+    table.trimmed mustBe Table(row("a", "b", "c"), List(Left, Center, Right), List(row("1", "2", "3")))
+    table.isBlank mustBe false
+    Table(row(" "), List(Left), List(row(""))).isBlank mustBe true
+  }
 }

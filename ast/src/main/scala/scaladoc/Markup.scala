@@ -227,6 +227,40 @@ object Markup {
     val styles: List[Style] = List(Decimal, LowerRoman, UpperRoman, LowerAlpha, UpperAlpha)
   }
 
+  /** A table: a header row, the alignment of each column and the data rows, all as wide as the header. */
+  case class Table(header: Table.Row, alignments: List[Table.Alignment], rows: List[Table.Row]) extends Markup {
+    type Self = Table
+    override def isBlank: Boolean = (header :: rows).forall(_.cells.forall(_.isBlank))
+    // `| a | b |` lines, with the alignment line after the header
+    override def plainString: String = {
+      def line(cells: List[String]) = cells.mkString("| ", " | ", " |")
+      val delimiter = alignments.map {
+        case Table.Alignment.Left   => "---"
+        case Table.Alignment.Center => ":-:"
+        case Table.Alignment.Right  => "--:"
+      }
+      (line(header.cells.map(_.plainString)) :: line(delimiter) :: rows.map(r => line(r.cells.map(_.plainString))))
+        .mkString("\n")
+    }
+    def trimmed: Self with Trimmed = new Table(header.trimmed, alignments, rows.map(_.trimmed)) with Trimmed
+  }
+
+  object Table {
+
+    /** A row; each of its cells is a paragraph. */
+    final case class Row(cells: List[Paragraph]) {
+      def trimmed: Row = Row(cells.map(_.trimmed))
+    }
+
+    sealed trait Alignment extends Product with Serializable
+
+    object Alignment {
+      case object Left   extends Alignment
+      case object Center extends Alignment
+      case object Right  extends Alignment
+    }
+  }
+
   case class Heading(level: Heading.Level, spans: List[Span]) extends Markup {
     type Self = Heading
     override def isBlank: Boolean = spans.forall(_.isBlank)

@@ -281,6 +281,41 @@ class ParseMarkupSpec extends WSpec {
         UnorderedList(List(Document(Paragraph(PlainText("a"))), Document(Paragraph(PlainText("b")))))))
     }
 
+    "parse tables" in {
+      import Table.Alignment._
+      def row(cells: String*) = Table.Row(cells.toList.map(c => Paragraph(if (c.isEmpty) Nil else List(PlainText(c)))))
+
+      ParseMarkup(
+        """Sizes:
+          || Size | Price    | Notes |
+          ||:-----|:--------:|------:|
+          || S    | `1 \| 2` | ''a'' |
+          || M    | 3        |
+          || L    | 4        | b | extra |
+          |After""".stripMargin) mustBe Document(
+        Paragraph(PlainText("Sizes:")),
+        Table(
+          row("Size", "Price", "Notes"),
+          List(Left, Center, Right),
+          List(
+            Table.Row(List(Paragraph(PlainText("S")), Paragraph(Monospace("1 | 2")), Paragraph(Italic("a")))),
+            row("M", "3", ""),
+            row("L", "4", "b"))),
+        Paragraph(PlainText("After")))
+    }
+
+    "not take rows without a delimiter row as a table" in {
+      ParseMarkup("| a | b |\n| c | d |") mustBe Document(Paragraph(PlainText("| a | b |\n| c | d |")))
+      ParseMarkup("| a | b |\n|---|") mustBe Document(Paragraph(PlainText("| a | b |\n|---|")))
+      ParseMarkup("| a |") mustBe Document(Paragraph(PlainText("| a |")))
+      ParseMarkup("| a |\n") mustBe Document(Paragraph(PlainText("| a |")))
+    }
+
+    "parse a table of a header only, and an indented one" in {
+      ParseMarkup("  | a |\n  |---|") mustBe Document(
+        Table(Table.Row(List(Paragraph(PlainText("a")))), List(Table.Alignment.Left), Nil))
+    }
+
     "end a paragraph at a heading line" in {
       ParseMarkup("text\n= Title =\nmore") mustBe Document(
         Paragraph(PlainText("text")), Heading(One, "Title"), Paragraph(PlainText("more")))

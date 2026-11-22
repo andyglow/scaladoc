@@ -31,6 +31,16 @@ object Docstrings {
     "  */"
   ).mkString("\n")
 
+  val Tables: String = Seq(
+    "/** Sizes:",
+    "  *",
+    "  * | Size | Price |",
+    "  * |:-----|------:|",
+    "  * | S    | `1`   |",
+    "  * | M    |",
+    "  */"
+  ).mkString("\n")
+
   val KitchenSink: String = Seq(
     "/** = Kitchen sink =",
     "  *",
