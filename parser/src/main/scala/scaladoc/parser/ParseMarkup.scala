@@ -122,7 +122,7 @@ class ParseMarkup private (
       } else if (isAtString("'''")) {
         span("'''", "'''")(Bold(_))
       } else if (isAtString("{{{")) {
-        span("{{{", "}}}", sameParagraph = false)(CodeBlock(_))
+        span("{{{", "}}}", sameParagraph = false)(code => CodeBlock(ParseMarkup.normalizeCode(code)))
       } else if (isAtString("''")) {
         span("''", "''")(Italic(_))
       } else if (isAtString("__")) {
@@ -177,6 +177,16 @@ class ParseMarkup private (
 }
 
 object ParseMarkup {
+
+  /** The code of a code block as scaladoc has it: no blank lines at the start, no whitespace at the end, and without
+    * the indentation that all of its non-blank lines share.
+    */
+  private[scaladoc] def normalizeCode(code: String): String = {
+    val lines    = code.replaceAll("\\s+$", "").split("\n", -1).toList.dropWhile(_.trim.isEmpty)
+    val nonBlank = lines.filter(_.trim.nonEmpty)
+    val indent   = if (nonBlank.isEmpty) 0 else nonBlank.map(_.takeWhile(_ == ' ').length).min
+    lines.map(line => if (line.trim.isEmpty) "" else line.drop(indent)).mkString("\n")
+  }
 
   def apply(chars: Array[Char], log: Log): Document = new ParseMarkup(chars, log).run()
 

@@ -100,7 +100,7 @@ class ParseScaladocTagsSpec extends FSpec {
     val codeBlocks = doc.tags.collect { case scaladoc.Tag.Example(scaladoc.Markup.Document(els)) =>
       els.collect { case scaladoc.Markup.CodeBlock(code) => code }
     }
-    codeBlocks must contain only (List("\n@main def run(): Unit = ()\n@param x not a tag\n"))
+    codeBlocks must contain only (List("@main def run(): Unit = ()\n@param x not a tag"))
   }
 
   test("@throws with a fully qualified exception type") {
