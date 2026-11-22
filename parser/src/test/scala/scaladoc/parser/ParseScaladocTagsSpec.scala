@@ -100,4 +100,11 @@ class ParseScaladocTagsSpec extends FSpec {
     }
     codeBlocks must contain only (List("\n@main def run(): Unit = ()\n@param x not a tag\n"))
   }
+
+  test("@throws with a fully qualified exception type") {
+    val doc = ParseScaladocTags("@throws java.io.IOException if it can't read\n@throws IllegalStateException never")
+    doc.tags mustBe List(
+      scaladoc.Tag.Throws("java.io.IOException", scaladoc.Markup.Document(scaladoc.Markup.PlainText("if it can't read\n"))),
+      scaladoc.Tag.Throws("IllegalStateException", scaladoc.Markup.Document(scaladoc.Markup.PlainText("never"))))
+  }
 }
