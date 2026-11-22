@@ -261,6 +261,14 @@ object Markup {
     }
   }
 
+  /** A `----` line. */
+  case object HorizontalRule extends Markup with Trimmed {
+    type Self = HorizontalRule.type
+    override def isBlank: Boolean      = false
+    override def plainString: String   = "----"
+    def trimmed: Self with Trimmed     = this
+  }
+
   case class Heading(level: Heading.Level, spans: List[Span]) extends Markup {
     type Self = Heading
     override def isBlank: Boolean = spans.forall(_.isBlank)
