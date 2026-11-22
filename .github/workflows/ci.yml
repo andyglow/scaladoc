@@ -52,6 +52,10 @@ jobs:
         if: matrix.scala == '2.13.18'
         run: sbt '++ ${{ matrix.scala }}; +publishLocal; +sbtScaladoc/scripted'
 
+      - name: Gradle plugin tests
+        if: matrix.scala == '2.13.18'
+        run: sbt '++ ${{ matrix.scala }}; +publishM2; gradlePluginCheck'
+
       - name: Build the documentation site
         if: matrix.scala == '2.13.18'
         run: sbt '++ ${{ matrix.scala }}; docs/makeSite'

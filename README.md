@@ -47,8 +47,18 @@ lazy val model = project.enablePlugins(ScaladocPlugin)
 ```
 
 It sets each module up for its Scala version: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3, the `_sjs1`
-libraries on Scala.js. To add the dependencies by hand instead, see
-[Getting started](https://andyglow.github.io/scaladoc/getting-started.html).
+libraries on Scala.js.
+
+From 0.4.0, Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
+
+```kotlin
+plugins {
+    scala
+    id("io.github.andyglow.scaladoc") version "0.4.0"
+}
+```
+
+To add the dependencies by hand instead, see [Getting started](https://andyglow.github.io/scaladoc/getting-started.html).
 
 | Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.3+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|
@@ -56,7 +66,7 @@ libraries on Scala.js. To add the dependencies by hand instead, see
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |   JVM one    |
 
-`sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x. All artifacts target Java 8. The groupId is `io.github.andyglow`
+`sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, the Gradle plugin with Gradle 8.5+. All artifacts target Java 8. The groupId is `io.github.andyglow`
 from 0.1.0; versions up to 0.0.14 are under `com.github.andyglow`.
 
 ## Documentation
