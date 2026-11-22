@@ -49,5 +49,8 @@ object Tag {
 
   final case class OtherTag(label: String, markup: Markup) extends Tag
 
-  final case class Description(makrup: Markup) extends Tag
+  final case class Description(markup: Markup) extends Tag {
+    @deprecated("misspelled; use `markup`", "0.3.1")
+    def makrup: Markup = markup
+  }
 }
