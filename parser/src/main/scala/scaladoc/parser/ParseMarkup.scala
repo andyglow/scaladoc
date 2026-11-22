@@ -144,7 +144,8 @@ class ParseMarkup private (
               if (effectiveText.nonEmpty) ml += PlainText(effectiveText)
             case _ =>
           }
-          handle(Heading(level, clTrim.substring(tag.length, clTrim.length - tag.length)))
+          // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
+          handle(Heading(math.min(level, 6), clTrim.substring(tag.length, clTrim.length - tag.length)))
           skipWhile(_ => !isNL)
         } else {
           buf append c

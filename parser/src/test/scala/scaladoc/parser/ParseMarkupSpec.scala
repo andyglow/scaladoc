@@ -48,6 +48,7 @@ class ParseMarkupSpec extends WSpec {
       "h4" in headingTestSuite("====abc====", Heading(Four, "abc"))
       "h5" in headingTestSuite("=====abc=====", Heading(Five, "abc"))
       "h6" in headingTestSuite("======abc======", Heading(Six, "abc"))
+      "h7 and deeper are h6" in headingTestSuite("=======abc=======", Heading(Six, "abc"))
     }
 
     "handle paragraphs" in {
