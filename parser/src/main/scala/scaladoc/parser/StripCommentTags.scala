@@ -33,17 +33,14 @@ final class StripCommentTags private (strictlyAlligned: Boolean, val chars: Arra
         }
         if (!break) {
           val (_, prefixLen) = skipWhile(_.isSpace)
-          if (lin == 1 && prefixLen == ident + 1) {
-            ident += 1
-          }
-          while (!isEOF && isNL) next()
           if (isEOF) throwUnexpectedEOF(None)
-          if (!isStar) {
-            if (strictlyAlligned && prefixLen != ident) throwUnexpected(Expectation.Exact(' '))
-            else throwUnexpected(Expectation.Exact('*'))
-          }
-          if (strictlyAlligned && prefixLen != ident) throwBrokenIndentation(prefixLen, ident)
-          if (!isEOF) {
+          // as in scaladoc, the `*` border is optional: a line without one is text from its first non-blank
+          // character on, and a blank line is a blank line. Only a border that is there gets its alignment checked.
+          if (isStar) {
+            if (lin == 1 && prefixLen == ident + 1) {
+              ident += 1
+            }
+            if (strictlyAlligned && prefixLen != ident) throwBrokenIndentation(prefixLen, ident)
             next()
             if (isSlash) break = true
           }

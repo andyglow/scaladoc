@@ -7,10 +7,6 @@ private[scaladoc] sealed trait Expectation
 
 private[scaladoc] object Expectation {
 
-  final case class Exact(char: Char) extends Expectation {
-    override def toString: String = char.q
-  }
-
   final case class OneOf(chars: ::[Char]) extends Expectation {
     override def toString = s"one of ${chars map { _.q } mkString ", "}"
   }

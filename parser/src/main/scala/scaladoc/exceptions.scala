@@ -24,7 +24,7 @@ final case class UnexpectedEOF(
   position: Int,
   expected: Option[Expectation]) extends ParseException {
 
-  def message = s"Unexpected EOF${expected map { e => s"Expected: $e" } getOrElse ""}"
+  def message = s"Unexpected EOF${expected map { e => s". Expected: $e" } getOrElse ""}"
 }
 
 final case class UnexpectedChar(
