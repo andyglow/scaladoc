@@ -58,4 +58,39 @@ class MarkupSpec extends FSpec {
     val m = Markup.PlainText("x")
     Tag.Description(m).markup mustBe m
   }
+  test("plainString and trimmed of every span") {
+    import Markup._
+
+    val spans: List[(Span, String)] = List(
+      PlainText(" a ")                     -> " a ",
+      Monospace("a")                       -> "`a`",
+      Italic(PlainText(" a "), Bold("b"))  -> "'' a '''b'''''",
+      Bold(" a ")                          -> "''' a '''",
+      Underline(" a ")                     -> "__ a __",
+      Superscript(" a ")                   -> "^ a ^",
+      Subscript(" a ")                     -> ",, a ,,",
+      Link("scala.Option")                 -> "[[scala.Option]]")
+    spans foreach { case (span, plain) => span.plainString mustBe plain }
+
+    PlainText(" a ").trimmed mustBe PlainText("a")
+    Italic(PlainText(" a "), Bold("b")).trimmed mustBe Italic(PlainText("a "), Bold("b"))
+    Underline(" a ").trimmed mustBe Underline("a")
+    Superscript(" a ").trimmed mustBe Superscript("a")
+    Link(" x ").trimmed mustBe Link("x")
+    Paragraph(Bold("a"), PlainText("   "), Italic("b")).trimmed mustBe Paragraph(Bold("a"), PlainText(" "), Italic("b"))
+    Italic(PlainText(" ")).isBlank mustBe true
+    Bold(PlainText(" "), Monospace("x")).isBlank mustBe false
+  }
+
+  test("headings") {
+    import Markup._
+    import Markup.Heading._
+
+    (1 to 6).map(levelOf).map(_.value) mustBe (1 to 6)
+    an[IllegalArgumentException] mustBe thrownBy(levelOf(7))
+    Heading(3, "a") mustBe Heading(Three, List(PlainText("a")))
+    Heading(Two, List(PlainText(" a "), Monospace("b"))).plainString mustBe " a `b`"
+    Heading(Two, List(PlainText(" a "), Monospace("b"))).trimmed mustBe Heading(Two, List(PlainText("a "), Monospace("b")))
+    Heading(One, " ").isBlank mustBe true
+  }
 }

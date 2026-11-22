@@ -36,21 +36,28 @@ object DumpAst {
       w.dump(nested.toString)
       w.dec()
       w.writeln("</p>")
-    case Monospace(text) => w.write(s"<pre>$text</pre>")
-    case Italic(text) => w.write(s"<i>$text</i>")
-    case Bold(text) => w.write(s"<b>$text</b>")
-    case Underline(text) => w.write(s"<u>$text</u>")
-    case Superscript(text) => w.write(s"<sup>$text</sup>")
-    case Subscript(text) => w.write(s"<sub>$text</sub>")
-    case Link(text) => w.write(s"<a>$text</a>")
+    case x: Span => w.write(inlineString(x))
     case CodeBlock(text) =>
       w.writeln("<code>")
       w.inc()
       w.dump(text)
       w.dec()
       w.writeln("</code>")
-    case PlainText(text) => w.write(text)
-    case Heading(level, text) => val hh = s"h${level.value}"; w.write(s"<$hh>$text</$hh>")
+    case Heading(level, spans) => val hh = s"h${level.value}"; w.write(s"<$hh>${spans.map(inlineString).mkString}</$hh>")
+  }
+
+  private def inlineString(x: Span): String = {
+    def tag(name: String, spans: List[Span]) = s"<$name>${spans.map(inlineString).mkString}</$name>"
+    x match {
+      case PlainText(text)    => text
+      case Monospace(text)    => s"<pre>$text</pre>"
+      case Italic(spans)      => tag("i", spans)
+      case Bold(spans)        => tag("b", spans)
+      case Underline(spans)   => tag("u", spans)
+      case Superscript(spans) => tag("sup", spans)
+      case Subscript(spans)   => tag("sub", spans)
+      case Link(text)         => s"<a>$text</a>"
+    }
   }
 
   def apply(x: Tag, w: IdentWriter): Unit = {

@@ -18,21 +18,28 @@ trait MarkupMatchers {
         MatchResult(matches = expect == actual, s"Expected: '$expect' but got '$actual' at $pathS", pathS)
       }
 
+      def spans(path: List[String], l: List[Span], r: List[Span]): MatchResult =
+        if (l.size != r.size) fail(path, s"children size are not equal (expect ${r.size}, got ${l.size})")
+        else l.zip(r).foldLeft(ok()) {
+          case (acc, (l, r)) if acc.matches => traverse(path, l, r)
+          case (acc, _)                     => acc
+        }
+
       def traverse(path: List[String], l: Markup, r: Markup): MatchResult = {
         (l, r) match {
           case (PlainText(l), PlainText(r))       => result(path :+ "plain-text", l, r)
           case (Monospace(l), Monospace(r))       => result(path :+ "monospace", l, r)
-          case (Italic(l), Italic(r))             => result(path :+ "italic", l, r)
-          case (Bold(l), Bold(r))                 => result(path :+ "bold", l, r)
-          case (Underline(l), Underline(r))       => result(path :+ "underline", l, r)
-          case (Superscript(l), Superscript(r))   => result(path :+ "superscript", l, r)
-          case (Subscript(l), Subscript(r))       => result(path :+ "subscript", l, r)
+          case (Italic(l), Italic(r))          => spans(path :+ "italic", l, r)
+          case (Bold(l), Bold(r))              => spans(path :+ "bold", l, r)
+          case (Underline(l), Underline(r))    => spans(path :+ "underline", l, r)
+          case (Superscript(l), Superscript(r)) => spans(path :+ "superscript", l, r)
+          case (Subscript(l), Subscript(r))    => spans(path :+ "subscript", l, r)
           case (Link(l), Link(r))                 => result(path :+ "link", l, r)
           case (CodeBlock(l), CodeBlock(r))       => result(path :+ "code-block", l, r)
           case (Heading(ll, l), Heading(rr, r))   =>
             if (ll != rr) fail(
               path :+ s"heading",
-              s"Expected heading level is $rr, but got $ll") else result(path :+ s"heading-${ll.productPrefix.toLowerCase}", l, r)
+              s"Expected heading level is $rr, but got $ll") else spans(path :+ s"heading-${ll.productPrefix.toLowerCase}", l, r)
           case (Paragraph(l), Paragraph(r))       =>
             if (l.size != r.size) fail(path :+ "paragraph", s"children size are not equal (expect ${r.size}, got ${l.size})") else {
               l.zip(r).foldLeft(ok()) {

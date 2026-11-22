@@ -41,7 +41,7 @@ scaladoc
     |</p>
     |<h2>Caveats</h2>
     |<p>
-    |  <b>It should be noted that this trait is implemented using the [[DelayedInit]]
+    |  <b>It should be noted that this trait is implemented using the <a>DelayedInit</a>
     |   functionality, which means that fields of the object will not have been initialized
     |   before the main method has been executed.</b>
     |</p>

@@ -52,37 +52,66 @@ object Markup {
 
   }
 
-  case class Italic(value: String) extends Span with HasValue {
+  /** A span made of other spans: `''italic''`, `'''bold'''` and the like, which can nest. */
+  sealed trait HasSpans { this: Span =>
+    def spans: List[Span]
+    override def isBlank: Boolean = spans.forall(_.isBlank)
+    protected def spansString: String = spans.map(_.plainString).mkString
+  }
+
+  case class Italic(spans: List[Span]) extends Span with HasSpans {
     type Self = Italic
-    override def plainString: String = s"''$value''"
-    def trimmed: Self with Trimmed = new Italic(trimML(value)) with Trimmed
-
+    override def plainString: String = s"''$spansString''"
+    def trimmed: Self with Trimmed = new Italic(trimSpans(spans)) with Trimmed
   }
 
-  case class Bold(value: String) extends Span with HasValue {
+  object Italic {
+    def apply(text: String): Italic        = Italic(List(PlainText(text)))
+    def apply(x: Span, xs: Span*): Italic  = Italic(x :: xs.toList)
+  }
+
+  case class Bold(spans: List[Span]) extends Span with HasSpans {
     type Self = Bold
-    override def plainString: String = s"'''$value'''"
-    def trimmed: Self with Trimmed = new Bold(trimML(value)) with Trimmed
-
+    override def plainString: String = s"'''$spansString'''"
+    def trimmed: Self with Trimmed = new Bold(trimSpans(spans)) with Trimmed
   }
 
-  case class Underline(value: String) extends Span with HasValue {
+  object Bold {
+    def apply(text: String): Bold       = Bold(List(PlainText(text)))
+    def apply(x: Span, xs: Span*): Bold = Bold(x :: xs.toList)
+  }
+
+  case class Underline(spans: List[Span]) extends Span with HasSpans {
     type Self = Underline
-    override def plainString: String = s"__${value}__"
-    def trimmed: Self with Trimmed = new Underline(trimML(value)) with Trimmed
+    override def plainString: String = s"__${spansString}__"
+    def trimmed: Self with Trimmed = new Underline(trimSpans(spans)) with Trimmed
   }
 
-  case class Superscript(value: String) extends Span with HasValue {
+  object Underline {
+    def apply(text: String): Underline       = Underline(List(PlainText(text)))
+    def apply(x: Span, xs: Span*): Underline = Underline(x :: xs.toList)
+  }
+
+  case class Superscript(spans: List[Span]) extends Span with HasSpans {
     type Self = Superscript
-    override def plainString: String = s"^$value^"
-    def trimmed: Self with Trimmed = new Superscript(trimML(value)) with Trimmed
-
+    override def plainString: String = s"^$spansString^"
+    def trimmed: Self with Trimmed = new Superscript(trimSpans(spans)) with Trimmed
   }
 
-  case class Subscript(value: String) extends Span with HasValue {
+  object Superscript {
+    def apply(text: String): Superscript       = Superscript(List(PlainText(text)))
+    def apply(x: Span, xs: Span*): Superscript = Superscript(x :: xs.toList)
+  }
+
+  case class Subscript(spans: List[Span]) extends Span with HasSpans {
     type Self = Subscript
-    override def plainString: String = s",,$value,,"
-    def trimmed: Self with Trimmed = new Subscript(trimML(value)) with Trimmed
+    override def plainString: String = s",,$spansString,,"
+    def trimmed: Self with Trimmed = new Subscript(trimSpans(spans)) with Trimmed
+  }
+
+  object Subscript {
+    def apply(text: String): Subscript       = Subscript(List(PlainText(text)))
+    def apply(x: Span, xs: Span*): Subscript = Subscript(x :: xs.toList)
   }
 
   case class Link(value: String) extends Span with HasValue {
@@ -102,7 +131,6 @@ object Markup {
     type Self = Paragraph
     override def isBlank: Boolean = markup.forall(_.isBlank)
     override def plainString: String = {
-      // every `Span` is a `HasValue`, so spans are simply concatenated
       markup.map(_.plainString).mkString
     }
     def trimmed: Self with Trimmed = new Paragraph(trimSpans(markup)) with Trimmed
@@ -145,14 +173,16 @@ object Markup {
     def apply(x: Markup, xs: Markup*): Document = Document(x +: xs.toList)
   }
 
-  case class Heading(level: Heading.Level, text: String) extends Markup {
+  case class Heading(level: Heading.Level, spans: List[Span]) extends Markup {
     type Self = Heading
-    override def isBlank: Boolean = text.isEmpty
-    override def plainString: String = text
-    def trimmed: Self with Trimmed = new Heading(level, text.trim) with Trimmed
+    override def isBlank: Boolean = spans.forall(_.isBlank)
+    override def plainString: String = spans.map(_.plainString).mkString
+    def trimmed: Self with Trimmed = new Heading(level, trimSpans(spans)) with Trimmed
   }
 
   object Heading {
+
+    def apply(level: Level, text: String): Heading = Heading(level, List(PlainText(text)))
 
     sealed trait Level extends Product { def value: Int }
 
@@ -168,15 +198,17 @@ object Markup {
 
     case object Six extends Level { def value = 6 }
 
-    def apply(l: Int, text: String): Heading = l match {
-      case 1 => Heading(One, text)
-      case 2 => Heading(Two, text)
-      case 3 => Heading(Three, text)
-      case 4 => Heading(Four, text)
-      case 5 => Heading(Five, text)
-      case 6 => Heading(Six, text)
+    def levelOf(l: Int): Level = l match {
+      case 1 => One
+      case 2 => Two
+      case 3 => Three
+      case 4 => Four
+      case 5 => Five
+      case 6 => Six
       case _ => throw new IllegalArgumentException(s"Level $l is not supported")
     }
+
+    def apply(l: Int, text: String): Heading = Heading(levelOf(l), text)
   }
 
   // TODO: list blocks

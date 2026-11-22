@@ -114,12 +114,12 @@ class ParseMarkupSpec extends WSpec {
           |Did you know: The [[com.acme.foo.Employee]] extends this class.""".stripMargin)
 
       doc must (coincideWith (Document(
-        Heading(One, " A Title "),
+        Heading(One, "A Title"),
         Paragraph(
           PlainText("A class to represent a "),
           Italic("human being"),
           PlainText(".")),
-        Heading(Two, " A Subtitle "),
+        Heading(Two, "A Subtitle"),
         Paragraph(
           PlainText("Specify the "),
           Monospace("name"),
@@ -164,6 +164,37 @@ class ParseMarkupSpec extends WSpec {
     "drop the indentation that all lines of a code block share" in {
       ParseMarkup("{{{\n\n    def f =\n      1\n\n    f   \n  }}}") mustBe Document(CodeBlock("def f =\n  1\n\nf"))
       ParseMarkup("{{{ x }}}") mustBe Document(CodeBlock("x"))
+    }
+
+    "nest inline markup" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+
+      ParseMarkup("'''bold ''italic'' bold'''") mustBe p(Bold(PlainText("bold "), Italic("italic"), PlainText(" bold")))
+      ParseMarkup("'''a ''b'''''") mustBe p(Bold(PlainText("a "), Italic("b")))
+      ParseMarkup("''a '''b''' c''") mustBe p(Italic(PlainText("a "), Bold("b"), PlainText(" c")))
+      ParseMarkup("__see [[Foo]]__") mustBe p(Underline(PlainText("see "), Link("Foo")))
+      ParseMarkup("x^''i''^ y,,`n`,,") mustBe p(PlainText("x"), Superscript(Italic("i")), PlainText(" y"), Subscript(Monospace("n")))
+      ParseMarkup("'''a ''b c'''") mustBe p(Bold("a ''b c"))
+      ParseMarkup("`a ''b'' c`") mustBe p(Monospace("a ''b'' c"))
+    }
+
+    "parse the markup of a heading" in {
+      ParseMarkup("= The `App` trait =") mustBe Document(Heading(One, List(PlainText("The "), Monospace("App"), PlainText(" trait"))))
+      ParseMarkup("== ''a'' ==") mustBe Document(Heading(Two, List(Italic("a"))))
+    }
+
+    "parse a char array like a string" in {
+      ParseMarkup("a ''b''".toCharArray, Log.Noop) mustBe ParseMarkup("a ''b''")
+    }
+
+    "drop whitespace between blocks and empty code" in {
+      ParseMarkup("{{{a}}}   {{{b}}}") mustBe Document(CodeBlock("a"), CodeBlock("b"))
+      ParseMarkup("{{{ \n }}}") mustBe Document(CodeBlock(""))
+    }
+
+    "end a paragraph at a heading line" in {
+      ParseMarkup("text\n= Title =\nmore") mustBe Document(
+        Paragraph(PlainText("text")), Heading(One, "Title"), Paragraph(PlainText("more")))
     }
   }
 }

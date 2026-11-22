@@ -52,21 +52,23 @@ object ScaladocMacro {
     x match {
       case PlainText(v)   => '{ Markup.PlainText(${ Expr(v) }) }
       case Monospace(v)   => '{ Markup.Monospace(${ Expr(v) }) }
-      case Italic(v)      => '{ Markup.Italic(${ Expr(v) }) }
-      case Bold(v)        => '{ Markup.Bold(${ Expr(v) }) }
-      case Underline(v)   => '{ Markup.Underline(${ Expr(v) }) }
-      case Superscript(v) => '{ Markup.Superscript(${ Expr(v) }) }
-      case Subscript(v)   => '{ Markup.Subscript(${ Expr(v) }) }
+      case Italic(v)      => '{ Markup.Italic(${ spansExpr(v) }) }
+      case Bold(v)        => '{ Markup.Bold(${ spansExpr(v) }) }
+      case Underline(v)   => '{ Markup.Underline(${ spansExpr(v) }) }
+      case Superscript(v) => '{ Markup.Superscript(${ spansExpr(v) }) }
+      case Subscript(v)   => '{ Markup.Subscript(${ spansExpr(v) }) }
       case Link(v)        => '{ Markup.Link(${ Expr(v) }) }
     }
   }
+
+  private def spansExpr(xs: List[Markup.Span])(using Quotes): Expr[List[Markup.Span]] = Expr.ofList(xs.map(spanExpr))
 
   private def markupExpr(x: Markup)(using Quotes): Expr[Markup] = {
     import Markup.*
     x match {
       case x: Span           => spanExpr(x)
       case CodeBlock(v)      => '{ Markup.CodeBlock(${ Expr(v) }) }
-      case Heading(l, v)     => '{ Markup.Heading(${ levelExpr(l) }, ${ Expr(v) }) }
+      case Heading(l, v)     => '{ Markup.Heading(${ levelExpr(l) }, ${ spansExpr(v) }) }
       case Paragraph(spans)  => '{ Markup.Paragraph(${ Expr.ofList(spans.map(spanExpr)) }) }
       case Document(elems)   => '{ Markup.Document(${ Expr.ofList(elems.map(markupExpr)) }) }
     }

@@ -1,178 +1,185 @@
 package scaladoc.parser
 
-import scaladoc._
 import scaladoc.Markup._
 import scaladoc.utils._
 
-import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
+/** Parses scaladoc's wiki markup into a `Markup.Document`.
+  *
+  * A recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
+  * blocks), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
+  * marker that isn't closed within its paragraph is text, so `x^2` and an unclosed backtick parse.
+  *
+  * @param codeBlocks whether `{{{ ... }}}` is a code block; a heading's title is parsed without
+  */
+final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
 
-class ParseMarkup private (
-  val chars: Array[Char],
-  log: Log) extends Tokenizer {
+  private var pos = 0
+  private val len = text.length
 
-  private val ml = mutable.ArrayBuffer.empty[Markup]
+  private def eof: Boolean                    = pos >= len
+  private def at(x: String, i: Int): Boolean = text.startsWith(x, i)
 
-  private val buf = new StringBuilder
-
-  // text always ends up in a paragraph: the spans before a block element (a heading, a code block) or at the end
-  // make one, so a one-paragraph comment has the same shape as a longer one
-  def handle(m: Markup): Unit = {
-    m match {
-      case _: Span =>
-      case _       => wrapIntoParagraphs(force = true)
-    }
-    push(m)
+  private def lineEnd(i: Int): Int = {
+    var j = i
+    while (j < len && !text.charAt(j).isNL) j += 1
+    j
   }
 
-  private def push(m: Markup): Unit = {
-    log.info(s"-  push: $m")
-    ml += m
+  private def firstNonSpace(i: Int): Int = {
+    var j = i
+    while (j < len && text.charAt(j).isSpace) j += 1
+    j
   }
 
-  def wrapIntoParagraphs(force: Boolean): Unit = {
-    // find most recent non SPAN element
-    //
-    var from  = ml.length - 1
-    var brake = false
-    while (!brake && from >= 0) {
-      ml(from) match {
-        case x: Span => log.info(s" - wrapp: $x => roll down"); from -= 1
-        case x       => log.info(s" - wrapp: $x => brake at position $from"); from += 1; brake = true
+  private def isBlankLine(i: Int): Boolean = firstNonSpace(i) >= lineEnd(i)
+
+  private def codeBlockAt(i: Int): Boolean = codeBlocks && at("{{{", i) && text.indexOf("}}}", i + 3) >= 0
+
+  // a heading is a line of its own: `=`s, the title and as many `=`s again. Returns the level, the title and where
+  // the line ends.
+  private def headingAt(i: Int): Option[(Int, String, Int)] = {
+    val start = firstNonSpace(i)
+    val end   = lineEnd(start)
+    val line  = text.substring(start, end).trim
+    val level = line.takeWhile(_ == '=').length
+    if (level > 0 && line.length > 2 * level && line.endsWith("=" * level))
+      Some((level, line.substring(level, line.length - level), end))
+    else None
+  }
+
+  // a paragraph ends with the text, at a paragraph separator, and at a line break before a blank line or a heading
+  private def paragraphBreakAt(i: Int): Boolean =
+    i >= len || text.charAt(i).isParSep || (text.charAt(i).isNL && {
+      val next = i + 1
+      next >= len || isBlankLine(next) || headingAt(next).isDefined
+    })
+
+  // ... and also where a code block starts, even in the middle of a line
+  private def paragraphEndsAt(i: Int): Boolean = paragraphBreakAt(i) || codeBlockAt(i)
+
+  def document(): Document = {
+    val blocks = ListBuffer.empty[scaladoc.Markup]
+    while (!eof) {
+      skipBlankLines()
+      if (!eof) {
+        val from = pos
+        block() foreach { b => log.info(s"- block: $b"); blocks += b }
+        if (pos == from) pos += 1 // can't happen, but never loop forever
       }
     }
+    Document(blocks.toList)
+  }
 
-    // make all elements following by the most recent non-span elements a paragraph
-    if (force || from >= 0) {
-      val slice = ml.slice(from, ml.length).toList map {_.asInstanceOf[Span]}
-      if (slice.nonEmpty) {
-        log.info(s" - wrapp: make paragraph from:")
-        slice foreach { e =>
-          log.info(s"   - $e")
-        }
-        if (from <= 0) ml.clear() else ml.remove(from, ml.length - from)
-        // whitespace around the text isn't part of it, and a paragraph of only whitespace isn't one
-        val spans = slice.trim.filterNot { case PlainText(text) => text.isEmpty; case _ => false }
-        if (spans.exists(_.nonBlank)) push(Paragraph(spans))
-        log.info(s" - wrapp: result:")
-        ml foreach { e =>
-          log.info(s"   - $e")
-        }
-      }
+  private def skipBlankLines(): Unit = {
+    var more = true
+    while (more && !eof) {
+      if (text.charAt(pos).isNL) pos += 1
+      else if (isBlankLine(pos)) pos = lineEnd(pos)
+      else more = false
     }
   }
 
-  def flush(): Unit = {
-    if (buf.nonEmpty) {
-      log.info(s"- flushing: [${buf.toString}]")
+  private def block(): Option[scaladoc.Markup] = {
+    val start = firstNonSpace(pos)
+    if (codeBlockAt(start)) Some(code(start))
+    else headingAt(pos) match {
+      case Some((level, title, end)) =>
+        pos = end
+        // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
+        Some(Heading(Heading.levelOf(math.min(level, 6)), ParseMarkup.spans(title, log)))
+      case None =>
+        paragraph()
+    }
+  }
 
-      // compact spans into a paragraph if paragraph separator found
-      buf.toString.parSepTokenized foreach {
-        case ParSep.Text(text) =>
-          if (text.isEmpty) {
-            log.info(s"- flush: text: empty: skipping")
-          } else {
-            log.info(s"- flush: text: [$text]")
-            handle(PlainText(text))
-          }
-        case ParSep.Separator  => log.info(s"- flush: paragraph separator"); wrapIntoParagraphs(true)
-      }
+  private def code(start: Int): CodeBlock = {
+    val end = text.indexOf("}}}", start + 3)
+    pos = end + 3
+    CodeBlock(ParseMarkup.normalizeCode(text.substring(start + 3, end)))
+  }
 
+  private def paragraph(): Option[Paragraph] = {
+    // whitespace around the text isn't part of it, and a paragraph of only whitespace isn't one
+    val spans = spansUntil(None)._1.trim
+    if (spans.exists(_.nonBlank)) Some(Paragraph(spans)) else None
+  }
+
+  // inline markup up to `stop` (which is left for the caller) or the end of the paragraph. `true` if it got to `stop`.
+  // `outer` are the markers the enclosing markup waits for.
+  private[parser] def spansUntil(stop: Option[String], outer: List[String] = Nil): (List[Span], Boolean) = {
+    val spans = ListBuffer.empty[Span]
+    val buf   = new StringBuilder
+
+    def flush(): Unit = if (buf.nonEmpty) {
+      spans += PlainText(buf.toString)
       buf.setLength(0)
     }
-  }
 
-  private def isAtString(x: String): Boolean =
-    remaining >= x.length && x.indices.forall(i => chars(pos + i) == x.charAt(i))
-
-  private def advanceTo(target: Int): Unit = while (pos < target && !isEOF) next()
-
-  // where `close` starts, looking from `from` on: within the paragraph, or anywhere for code blocks, which can have
-  // blank lines
-  private def findClose(from: Int, close: String, sameParagraph: Boolean): Option[Int] = {
-    val limit =
-      if (!sameParagraph) chars.length
-      else new String(chars, from, chars.length - from).firstParSep.fold(chars.length)(from + _._1)
-    val idx = new String(chars, 0, limit).indexOf(close, from)
-    if (idx < 0) None else Some(idx)
-  }
-
-  // the markup from `open` to `close`. Without a `close` the `open` marker is text, so a comment with `x^2` or an
-  // unclosed backtick still parses
-  private def span(open: String, close: String, sameParagraph: Boolean = true)(make: String => Markup): Unit = {
-    val from = pos + open.length
-    findClose(from, close, sameParagraph) match {
-      case Some(end) =>
+    // markup that can have markup inside, if its closing marker is in the paragraph
+    def tryNested(marker: String)(make: List[Span] => Span): Boolean = {
+      val from            = pos
+      pos += marker.length
+      val (inner, closed) = spansUntil(Some(marker), stop.toList ++ outer)
+      if (closed) {
         flush()
-        handle(make(new String(chars, from, end - from)))
-        advanceTo(end + close.length)
-      case None =>
-        buf append open
-        advanceTo(from)
+        spans += make(inner)
+        pos += marker.length
+      } else pos = from
+      closed
     }
-  }
 
-  def run(): Document = {
-    while (!isEOF) {
-      val c = chars(pos)
-      if (c == '`') {
-        span("`", "`")(Monospace(_))
-      } else if (c == '^') {
-        span("^", "^")(Superscript(_))
-      } else if (isAtString("'''")) {
-        span("'''", "'''")(Bold(_))
-      } else if (isAtString("{{{")) {
-        span("{{{", "}}}", sameParagraph = false)(code => CodeBlock(ParseMarkup.normalizeCode(code)))
-      } else if (isAtString("''")) {
-        span("''", "''")(Italic(_))
-      } else if (isAtString("__")) {
-        span("__", "__")(Underline(_))
-      } else if (isAtString(",,")) {
-        span(",,", ",,")(Subscript(_))
-      } else if (isAtString("[[")) {
-        span("[[", "]]")(Link(_))
-      } else if (c == '=' && isLineStart) {
-        log.info("-> [" + new String(chars) + "]")
-        val level = scanWhile(_ == '=') + 1
-        val cl = currentLine
-        val clTrim = cl.trim
-        val tag = "=" * level
-        val wsPrefix = {
-          val eqIdx = cl.indexOf('=')
-          cl.substring(0, eqIdx)
-        }
-        if (clTrim.endsWith(tag)) {
-          flush()
-          log.info("  -> curr line: [" + currentLine + "]")
-          log.info("  -> trimmed  : [" + clTrim + "]")
-          log.info("  -> tag      : [" + tag + "]")
-          log.info("  -> wsPrefix : [" + wsPrefix + "]")
+    // ... without its closing marker, the opening one is text
+    def nested(marker: String)(make: List[Span] => Span): Unit =
+      if (!tryNested(marker)(make)) {
+        buf ++= marker
+        pos += marker.length
+      }
 
-          // drop leading WS
-          ml.lastOption match {
-            case Some(PlainText(text)) if text.endsWith(wsPrefix) =>
-              ml.remove(ml.length - 1)
-              val effectiveText = text.dropRight(wsPrefix.length)
-              if (effectiveText.nonEmpty) ml += PlainText(effectiveText)
-            case _ =>
-          }
-          // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
-          handle(Heading(math.min(level, 6), clTrim.substring(tag.length, clTrim.length - tag.length)))
-          skipWhile(_ => !isNL)
-        } else {
-          buf append c
-          next()
-        }
+    // markup whose content is taken as is
+    def literal(open: String, close: String)(make: String => Span): Unit = {
+      val from = pos + open.length
+      var j    = from
+      while (!paragraphBreakAt(j) && !at(close, j)) j += 1
+      if (j < len && at(close, j)) {
+        flush()
+        spans += make(text.substring(from, j))
+        pos = j + close.length
       } else {
-        buf append c
-        next()
+        buf ++= open
+        pos = from
+      }
+    }
+
+    var closed = false
+    var done   = false
+    while (!done) {
+      if (paragraphEndsAt(pos)) done = true
+      else if (stop.exists(at(_, pos))) {
+        // in `''...''`, a `'''` is bold if it gets closed. Otherwise it ends the italic, unless it ends an enclosing
+        // bold: `'''a ''b'''` is bold with a stray `''`, while in `'''a ''b'''''` the italic closes first.
+        val tripleQuote = stop.contains("''") && at("'''", pos)
+        if (!(tripleQuote && tryNested("'''")(Bold(_)))) {
+          val quotes = text.iterator.drop(pos).takeWhile(_ == '\'').size
+          closed = !(tripleQuote && outer.contains("'''") && quotes < 5)
+          done = true
+        }
+      }
+      else if (at("`", pos)) literal("`", "`")(Monospace(_))
+      else if (at("'''", pos)) nested("'''")(Bold(_))
+      else if (at("''", pos)) nested("''")(Italic(_))
+      else if (at("__", pos)) nested("__")(Underline(_))
+      else if (at("^", pos)) nested("^")(Superscript(_))
+      else if (at(",,", pos)) nested(",,")(Subscript(_))
+      else if (at("[[", pos)) literal("[[", "]]")(Link(_))
+      else {
+        buf += text.charAt(pos)
+        pos += 1
       }
     }
     flush()
-
-    wrapIntoParagraphs(force = true)
-
-    Document(ml.toList)
+    (spans.toList, closed)
   }
 }
 
@@ -188,7 +195,11 @@ object ParseMarkup {
     lines.map(line => if (line.trim.isEmpty) "" else line.drop(indent)).mkString("\n")
   }
 
-  def apply(chars: Array[Char], log: Log): Document = new ParseMarkup(chars, log).run()
+  // the inline markup of a line, like a heading's title
+  private[parser] def spans(line: String, log: Log): List[Span] =
+    new ParseMarkup(line, log, codeBlocks = false).spansUntil(None)._1.trim
 
-  def apply(chars: String, log: Log = Log.Noop): Document = ParseMarkup(chars.toCharArray, log)
+  def apply(chars: Array[Char], log: Log): Document = ParseMarkup(new String(chars), log)
+
+  def apply(text: String, log: Log = Log.Noop): Document = new ParseMarkup(text, log, codeBlocks = true).document()
 }
