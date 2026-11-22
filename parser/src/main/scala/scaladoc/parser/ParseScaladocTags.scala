@@ -64,7 +64,8 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
           case "tparam" =>
             skipSpaces()
             tags += TypeParam(takeId(), null)
-          case "returns" =>
+          // `@return` is scaladoc's tag; `@returns` is accepted too, as before
+          case "return" | "returns" =>
             skipSpaces()
             tags += Returns(null)
           case "throws" =>
