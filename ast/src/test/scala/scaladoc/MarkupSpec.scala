@@ -129,4 +129,11 @@ class MarkupSpec extends FSpec {
     table.isBlank mustBe false
     Table(row(" "), List(Left), List(row(""))).isBlank mustBe true
   }
+
+  test("horizontal rule") {
+    Markup.HorizontalRule.plainString mustBe "----"
+    Markup.HorizontalRule.isBlank mustBe false
+    Markup.HorizontalRule.trimmed mustBe Markup.HorizontalRule
+    Markup.Document(Markup.Paragraph(Markup.PlainText(" a ")), Markup.HorizontalRule).trimmed.plainString mustBe "a\n----"
+  }
 }

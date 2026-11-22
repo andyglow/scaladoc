@@ -95,6 +95,7 @@ object ScaladocMacro {
       case CodeBlock(v)      => '{ Markup.CodeBlock(${ Expr(v) }) }
       case UnorderedList(items)      => '{ Markup.UnorderedList(${ Expr.ofList(items.map(documentExpr)) }) }
       case OrderedList(items, style) => '{ Markup.OrderedList(${ Expr.ofList(items.map(documentExpr)) }, ${ styleExpr(style) }) }
+      case HorizontalRule    => '{ Markup.HorizontalRule }
       case Table(header, alignments, rows) =>
         '{ Markup.Table(${ rowExpr(header) }, ${ Expr.ofList(alignments.map(alignmentExpr)) }, ${ Expr.ofList(rows.map(rowExpr)) }) }
       case Heading(l, v)     => '{ Markup.Heading(${ levelExpr(l) }, ${ spansExpr(v) }) }

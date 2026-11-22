@@ -316,6 +316,14 @@ class ParseMarkupSpec extends WSpec {
         Table(Table.Row(List(Paragraph(PlainText("a")))), List(Table.Alignment.Left), Nil))
     }
 
+    "parse a horizontal rule at the start of a block" in {
+      ParseMarkup("Above\n\n----\n\nBelow") mustBe Document(Paragraph(PlainText("Above")), HorizontalRule, Paragraph(PlainText("Below")))
+      ParseMarkup("  -------\nBelow") mustBe Document(HorizontalRule, Paragraph(PlainText("Below")))
+      ParseMarkup("Above\n----") mustBe Document(Paragraph(PlainText("Above\n----")))
+      ParseMarkup("---") mustBe Document(Paragraph(PlainText("---")))
+      ParseMarkup("---- more") mustBe Document(Paragraph(PlainText("---- more")))
+    }
+
     "end a paragraph at a heading line" in {
       ParseMarkup("text\n= Title =\nmore") mustBe Document(
         Paragraph(PlainText("text")), Heading(One, "Title"), Paragraph(PlainText("more")))

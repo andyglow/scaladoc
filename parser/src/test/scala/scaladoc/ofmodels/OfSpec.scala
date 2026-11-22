@@ -69,6 +69,10 @@ class Lists(a: String)
   * |:-----|------:|
   * | S    | `1`   |
   * | M    |
+  *
+  * ----
+  *
+  * The end.
   */
 class Tables
 
@@ -178,7 +182,9 @@ class OfSpec extends scaladoc.FSpec {
       Table(
         Table.Row(List(cell(PlainText("Size")), cell(PlainText("Price")))),
         List(Table.Alignment.Left, Table.Alignment.Right),
-        List(Table.Row(List(cell(PlainText("S")), cell(Monospace("1")))), Table.Row(List(cell(PlainText("M")), cell()))))))
+        List(Table.Row(List(cell(PlainText("S")), cell(Monospace("1")))), Table.Row(List(cell(PlainText("M")), cell())))),
+      HorizontalRule,
+      Paragraph(PlainText("The end."))))
   }
 
   test("plain class") {

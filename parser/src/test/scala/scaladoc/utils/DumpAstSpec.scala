@@ -42,5 +42,6 @@ class DumpAstSpec extends FSpec {
     out must include("<table>")
     out must include("<tr><th align=left>Size</th><th align=right>Price</th></tr>")
     out must include("<tr><td align=left>M</td><td align=right></td></tr>")
+    out must include("<hr>")
   }
 }

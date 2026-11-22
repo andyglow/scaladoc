@@ -100,6 +100,7 @@ Markup   = Span
          | UnorderedList (List Document)          -- an item: its text and nested lists
          | OrderedList (List Document Style)      -- Style: 1. i. I. a. A.
          | Table (Row (List Alignment) (List Row))  -- a Row is a List Paragraph, one a cell
+         | HorizontalRule
          | Document (List Markup)
 
 Tag      = Description       (Markup)

@@ -43,6 +43,7 @@ object DumpAst {
       w.dump(text)
       w.dec()
       w.writeln("</code>")
+    case HorizontalRule => w.writeln("<hr>")
     case Table(header, alignments, rows) =>
       def row(r: Table.Row, cell: String): Unit = w.writeln(r.cells.zip(alignments).map { case (c, a) =>
         s"<$cell align=${a.toString.toLowerCase}>${c.markup.map(inlineString).mkString}</$cell>"

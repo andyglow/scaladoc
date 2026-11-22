@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
 /** Parses scaladoc's wiki markup into a `Markup.Document`.
   *
   * A recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
-  * blocks, lists, tables), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
+  * blocks, lists, tables, rules), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
   * marker that isn't closed within its paragraph is text, so `x^2` and an unclosed backtick parse.
   *
   * @param codeBlocks whether `{{{ ... }}}` is a code block; a heading's title is parsed without
@@ -47,6 +47,14 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
     if (level > 0 && line.length > 2 * level && line.endsWith("=" * level))
       Some((level, line.substring(level, line.length - level), end))
     else None
+  }
+
+  // a horizontal rule: a line of four or more `-`. As in scaladoc, it starts a block, but doesn't end a paragraph.
+  private def ruleAt(i: Int): Option[Int] = {
+    val start = firstNonSpace(i)
+    val end   = lineEnd(start)
+    val line  = text.substring(start, end).trim
+    if (line.length >= 4 && line.forall(_ == '-')) Some(end) else None
   }
 
   // a list item's line: indented, then `- `, `1. `, `i. `, `I. `, `a. ` or `A. `. Returns the indentation, the
@@ -142,6 +150,9 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
         pos = end
         // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
         Some(Heading(Heading.levelOf(math.min(level, 6)), ParseMarkup.spans(title, log)))
+      case None if ruleAt(pos).isDefined =>
+        pos = ruleAt(pos).get
+        Some(HorizontalRule)
       case None =>
         tableAt(pos) match {
           case Some((header, alignments, end)) => Some(table(header, alignments, end))
