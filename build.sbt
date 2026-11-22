@@ -328,9 +328,11 @@ lazy val docs = project
     Compile / paradox / sourceDirectory := mdocOut.value,
     // without it mdoc keeps the output of pages that are gone, which Paradox rejects as pages missing from the ToC
     mdocExtraArguments := Seq("--clean-target"),
-    // Paradox renders what mdoc writes, so it lists its pages once mdoc is done
-    Compile / paradoxMarkdownToHtml / mappings :=
-      (Compile / paradoxMarkdownToHtml / mappings).dependsOn(mdoc.toTask("")).value,
+    // Paradox renders what mdoc writes, so it lists its pages once mdoc is done. Uncached: sbt's cache only knows the
+    // directory, not what mdoc put in it, and an empty listing restored from the CI cache would stick
+    Compile / paradoxMarkdownToHtml / mappings := Def.uncached {
+      (Compile / paradoxMarkdownToHtml / mappings).dependsOn(mdoc.toTask("")).value
+    },
     Compile / paradoxProperties ++= Map(
       "project.name"    -> "Scaladoc",
       "github.base_url" -> "https://github.com/andyglow/scaladoc/tree/master"
