@@ -26,6 +26,6 @@ class DumpAstSpec extends FSpec {
     val out = dump(Docstrings.NestedMarkup)
     out must include("<h1>Level 1</h1>")
     out must include("<h6>Level <pre>6</pre></h6>")
-    out must include("<b>bold <i>italic</i> <a>scala.Option</a></b>, <u><i>a</i></u>, x<sup><i>2</i></sup> and y<sub><b>i</b></sub>.")
+    out must include("<b>bold <i>italic</i> <a>scala.Option</a></b>, <u><i>a</i></u>, x<sup><i>2</i></sup> and y<sub><b>i</b></sub>, see <a href=\"https://scala-lang.org\">the <i>Scala</i> site</a>.")
   }
 }

@@ -67,6 +67,6 @@ scaladoc
     |</p>
   [see]
     |<p>
-    |  See <a>http://alvinalexander.com alvinalexander.com</a> for more information.
+    |  See <a href="http://alvinalexander.com">alvinalexander.com</a> for more information.
     |</p>
 -# --

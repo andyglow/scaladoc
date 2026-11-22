@@ -152,6 +152,39 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       }
     }
 
+    // `[[target]]` or `[[target title]]`, where the title can have markup. More brackets let the target have `]]`:
+    // `[[[f(x:List[List[A]])*]]]` ends at `]]]`. Without its closing brackets in the paragraph, `[[` is text.
+    def link(): Unit = {
+      val from = pos
+      var j    = pos
+      while (j < len && text.charAt(j) == '[') j += 1
+      val close  = "]" * (j - from)
+      val target = j
+      while (!paragraphBreakAt(j) && !at(close, j) && !text.charAt(j).isWhitespace) j += 1
+      val closesRightAway = j > target && j < len && at(close, j)
+      val hasTitle        = j > target && j < len && !paragraphBreakAt(j) && text.charAt(j).isWhitespace
+      if (closesRightAway) {
+        flush()
+        spans += Link(text.substring(target, j), Nil)
+        pos = j + close.length
+      } else if (hasTitle) {
+        pos = j
+        while (!paragraphBreakAt(pos) && text.charAt(pos).isWhitespace) pos += 1
+        val (title, closed) = spansUntil(Some(close), stop.toList ++ outer)
+        if (closed) {
+          flush()
+          spans += Link(text.substring(target, j), title.trim)
+          pos += close.length
+        } else {
+          pos = from + 2
+          buf ++= "[["
+        }
+      } else {
+        pos = from + 2
+        buf ++= "[["
+      }
+    }
+
     var closed = false
     var done   = false
     while (!done) {
@@ -172,7 +205,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       else if (at("__", pos)) nested("__")(Underline(_))
       else if (at("^", pos)) nested("^")(Superscript(_))
       else if (at(",,", pos)) nested(",,")(Subscript(_))
-      else if (at("[[", pos)) literal("[[", "]]")(Link(_))
+      else if (at("[[", pos)) link()
       else {
         buf += text.charAt(pos)
         pos += 1

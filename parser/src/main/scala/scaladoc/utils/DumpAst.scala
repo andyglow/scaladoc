@@ -56,7 +56,8 @@ object DumpAst {
       case Underline(spans)   => tag("u", spans)
       case Superscript(spans) => tag("sup", spans)
       case Subscript(spans)   => tag("sub", spans)
-      case Link(text)         => s"<a>$text</a>"
+      case Link(target, Nil)  => s"<a>$target</a>"
+      case Link(target, title) => s"""<a href="$target">${title.map(inlineString).mkString}</a>"""
     }
   }
 

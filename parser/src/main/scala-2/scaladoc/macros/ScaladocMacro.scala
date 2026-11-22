@@ -49,7 +49,7 @@ class ScaladocMacro(val c: blackbox.Context) extends ExtractScaladoc with Annota
         case Underline(els)                     => q"$prefix.Markup.Underline(${spans(els)})"
         case Superscript(els)                   => q"$prefix.Markup.Superscript(${spans(els)})"
         case Subscript(els)                     => q"$prefix.Markup.Subscript(${spans(els)})"
-        case Link(text)                         => q"$prefix.Markup.Link($text)"
+        case Link(target, title)                => q"$prefix.Markup.Link($target, ${spans(title)})"
         case CodeBlock(text)                    => q"$prefix.Markup.CodeBlock($text)"
         case Heading(l, els)                    => q"$prefix.Markup.Heading(${levelTree(l)}, ${spans(els)})"
       }

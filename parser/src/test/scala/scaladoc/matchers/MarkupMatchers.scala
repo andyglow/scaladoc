@@ -34,7 +34,8 @@ trait MarkupMatchers {
           case (Underline(l), Underline(r))    => spans(path :+ "underline", l, r)
           case (Superscript(l), Superscript(r)) => spans(path :+ "superscript", l, r)
           case (Subscript(l), Subscript(r))    => spans(path :+ "subscript", l, r)
-          case (Link(l), Link(r))                 => result(path :+ "link", l, r)
+          case (Link(lt, l), Link(rt, r))     =>
+            if (lt != rt) result(path :+ "link", lt, rt) else spans(path :+ "link", l, r)
           case (CodeBlock(l), CodeBlock(r))       => result(path :+ "code-block", l, r)
           case (Heading(ll, l), Heading(rr, r))   =>
             if (ll != rr) fail(

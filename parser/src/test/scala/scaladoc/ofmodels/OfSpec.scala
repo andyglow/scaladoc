@@ -46,7 +46,7 @@ case class KitchenSink[T](a: String, b: T)
   * ===== Level 5 =====
   * ====== Level `6` ======
   *
-  * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,.
+  * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,, see [[https://scala-lang.org the ''Scala'' site]].
   */
 class NestedMarkup
 
@@ -123,6 +123,8 @@ class OfSpec extends scaladoc.FSpec {
           Markup.Superscript(Markup.Italic("2")),
           Markup.PlainText(" and y"),
           Markup.Subscript(Markup.Bold("i")),
+          Markup.PlainText(", see "),
+          Markup.Link("https://scala-lang.org", List(Markup.PlainText("the "), Markup.Italic("Scala"), Markup.PlainText(" site"))),
           Markup.PlainText("."))
       case other => fail(s"not a document: $other")
     }
