@@ -32,29 +32,41 @@ scaladoc
     |</p>
     |<p>
     |  Specify the <pre>name</pre>, <pre>age</pre>, and <pre>weight</pre> when creating a new <pre>Person</pre>,
-    |   then access the fields like this:
+    |  then access the fields like this:
     |</p>
     |<code>
-    |   val p = Person("Al", 42, 200.0)
-    |   p.name
-    |   p.age
-    |   p.weight
+    |  val p = Person("Al", 42, 200.0)
+    |  p.name
+    |  p.age
+    |  p.weight
     |</code>
     |<p>
     |  Did you know: The <a>com.acme.foo.Employee</a> extends this class.
     |</p>
   [constructor]
-    |Create a new person with a <pre>name</pre>, <pre>age</pre>, and <pre>weight</pre>.
+    |<p>
+    |  Create a new person with a <pre>name</pre>, <pre>age</pre>, and <pre>weight</pre>.
+    |</p>
   [param: name]
-    |The person's name.
+    |<p>
+    |  The person's name.
+    |</p>
   [param: age]
-    |The person's age.
+    |<p>
+    |  The person's age.
+    |</p>
   [param: weight]
-    |The person's weight.
+    |<p>
+    |  The person's weight.
+    |</p>
   [author: Alvin Alexander]
   [version: 1.0]
   [todo]
-    |Add more functionality.
+    |<p>
+    |  Add more functionality.
+    |</p>
   [see]
-    |See <a>http://alvinalexander.com alvinalexander.com</a> for more information.
+    |<p>
+    |  See <a>http://alvinalexander.com alvinalexander.com</a> for more information.
+    |</p>
 -# --

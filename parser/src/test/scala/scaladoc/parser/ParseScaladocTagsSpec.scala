@@ -5,6 +5,8 @@ import scaladoc.FSpec
 
 class ParseScaladocTagsSpec extends FSpec {
 
+  private def text(x: String) = scaladoc.Markup.Document(scaladoc.Markup.Paragraph(scaladoc.Markup.PlainText(x)))
+
   test("one-liner description with one-liner params") {
     val doc = ParseScaladocTags(
       """My perfect class
@@ -104,8 +106,8 @@ class ParseScaladocTagsSpec extends FSpec {
   test("@throws with a fully qualified exception type") {
     val doc = ParseScaladocTags("@throws java.io.IOException if it can't read\n@throws IllegalStateException never")
     doc.tags mustBe List(
-      scaladoc.Tag.Throws("java.io.IOException", scaladoc.Markup.Document(scaladoc.Markup.PlainText("if it can't read\n"))),
-      scaladoc.Tag.Throws("IllegalStateException", scaladoc.Markup.Document(scaladoc.Markup.PlainText("never"))))
+      scaladoc.Tag.Throws("java.io.IOException", text("if it can't read")),
+      scaladoc.Tag.Throws("IllegalStateException", text("never")))
   }
 
   test("@deprecated and @throws without text are kept") {

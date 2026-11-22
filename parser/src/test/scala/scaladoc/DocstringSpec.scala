@@ -23,7 +23,7 @@ class DocstringSpec extends FSpec {
     val doc = right(Scaladoc.fromString(topLevel))
     doc mustBe Scaladoc(
       Description(Document(Paragraph(PlainText("Documented class.")), Paragraph(PlainText("Second line of description.")))),
-      Param("x", Document(PlainText("the x param")))
+      Param("x", Document(Paragraph(PlainText("the x param"))))
     )
     doc.textDescriptions mustBe Seq("Documented class.\nSecond line of description.")
     doc.textParams mustBe Map("x" -> "the x param")

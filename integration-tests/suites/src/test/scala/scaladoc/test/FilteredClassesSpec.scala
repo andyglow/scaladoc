@@ -19,7 +19,7 @@ import scaladoc.test.filtered.model.internal._
 class FilteredClassesSpec extends AnyFunSuite {
 
   private def doc(description: String, param: String, paramDoc: String) = Some {
-    Scaladoc(Description(Document(Paragraph(PlainText(description)))), Param(param, Document(PlainText(paramDoc))))
+    Scaladoc(Description(Document(Paragraph(PlainText(description)))), Param(param, Document(Paragraph(PlainText(paramDoc)))))
   }
 
   test("included by path") {

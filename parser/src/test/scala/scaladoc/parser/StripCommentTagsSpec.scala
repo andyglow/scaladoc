@@ -95,8 +95,8 @@ class StripCommentTagsSpec extends WSpec {
         "non-empty" in {
           strip(Block, "/*abc*/") mustBe "abc"
           strip(Block, " /* abc*/") mustBe "abc"
-          strip(Block, " \t/*\ta\tb\tc */\t ") mustBe "a\tb\tc "
-          strip(Block, "\n\t\n /*abc */") mustBe "abc "
+          strip(Block, " \t/*\ta\tb\tc */\t ") mustBe "a\tb\tc"
+          strip(Block, "\n\t\n /*abc */") mustBe "abc"
         }
       }
 
@@ -108,21 +108,21 @@ class StripCommentTagsSpec extends WSpec {
             """/*
               | *
               | */
-              |""".stripMargin) mustBe "\n"
+              |""".stripMargin) mustBe EmptyString
 
           strip(
             Block,
             """  /*
               |   *
               |   */
-              |""".stripMargin) mustBe "\n"
+              |""".stripMargin) mustBe EmptyString
 
           strip(
             Block,
             """ /*
               |  *
               |  */
-              |""".stripMargin) mustBe "\n"
+              |""".stripMargin) mustBe EmptyString
 
           strip(
             Block,
@@ -130,7 +130,7 @@ class StripCommentTagsSpec extends WSpec {
               |  *
               |  *
               |  */
-              |""".stripMargin) mustBe "\n\n"
+              |""".stripMargin) mustBe EmptyString
         }
 
         "for non-empty cases" in {
@@ -146,7 +146,7 @@ class StripCommentTagsSpec extends WSpec {
             """ /*abc
               |  *  def
               |  */
-              |""".stripMargin) mustBe "abc\n  def"
+              |""".stripMargin) mustBe "abc\n def"
 
           strip(
             Block,
@@ -193,8 +193,8 @@ class StripCommentTagsSpec extends WSpec {
         "for non-empty cases" in {
           strip(Scaladoc, "/**abc*/") mustBe "abc"
           strip(Scaladoc, " /** abc*/") mustBe "abc"
-          strip(Scaladoc, " \t/**\ta\tb\tc */\t ") mustBe "a\tb\tc "
-          strip(Scaladoc, "\n\t\n /**abc */") mustBe "abc "
+          strip(Scaladoc, " \t/**\ta\tb\tc */\t ") mustBe "a\tb\tc"
+          strip(Scaladoc, "\n\t\n /**abc */") mustBe "abc"
         }
       }
 
@@ -206,21 +206,21 @@ class StripCommentTagsSpec extends WSpec {
             """/**
               | *
               | */
-              |""".stripMargin) mustBe "\n"
+              |""".stripMargin) mustBe EmptyString
 
           strip(
             Scaladoc,
             """  /**
               |   *
               |   */
-              |""".stripMargin) mustBe "\n"
+              |""".stripMargin) mustBe EmptyString
 
           strip(
             Scaladoc,
             """ /**
               |  *
               |  */
-              |""".stripMargin) mustBe "\n"
+              |""".stripMargin) mustBe EmptyString
 
           strip(
             Scaladoc,
@@ -228,7 +228,7 @@ class StripCommentTagsSpec extends WSpec {
               |  *
               |  *
               |  */
-              |""".stripMargin) mustBe "\n\n"
+              |""".stripMargin) mustBe EmptyString
         }
 
         "for non-empty cases" in {
@@ -244,7 +244,7 @@ class StripCommentTagsSpec extends WSpec {
             """ /**abc
               |  *  def
               |  */
-              |""".stripMargin) mustBe "abc\n  def"
+              |""".stripMargin) mustBe "abc\n def"
 
           strip(
             Scaladoc,
@@ -265,7 +265,7 @@ class StripCommentTagsSpec extends WSpec {
                 |
                 |   * ghi
                 |   */
-                |""".stripMargin) mustBe "abc\n def\ngap gap gap\n\n ghi"
+                |""".stripMargin) mustBe "abc\ndef\ngap gap gap\n\nghi"
           }
 
           "strict alignment" in {
@@ -277,7 +277,7 @@ class StripCommentTagsSpec extends WSpec {
                 |   * ghi
                 |   */
                 |""".stripMargin,
-              strict = true) mustBe "abc\n def\ngap gap gap\n ghi"
+              strict = true) mustBe "abc\ndef\ngap gap gap\nghi"
           }
 
           "no borders at all" in {
@@ -288,7 +288,7 @@ class StripCommentTagsSpec extends WSpec {
                 |
                 |    third line
                 | */""".stripMargin,
-              strict = true) mustBe " First line\nsecond line\n\nthird line"
+              strict = true) mustBe "First line\nsecond line\n\nthird line"
           }
         }
 
@@ -311,7 +311,7 @@ class StripCommentTagsSpec extends WSpec {
                 |   * def
                 |   */
                 |""".stripMargin,
-              strict = true) mustBe "abc\n def"
+              strict = true) mustBe "abc\ndef"
         }
 
         "for scaladoc style #2" in {
