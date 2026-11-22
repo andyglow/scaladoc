@@ -13,8 +13,8 @@ class InternalClassesSpec extends AnyFunSuite {
     Scaladoc.of[InternalClass1] mustBe Some {
       Scaladoc(
         Description(Document(Paragraph(PlainText("Internal Class 1")))),
-        Param("a", Document(PlainText("A Param\n "))),
-        Param("b", Document(PlainText("B Param"))))
+        Param("a", Document(Paragraph(PlainText("A Param")))),
+        Param("b", Document(Paragraph(PlainText("B Param")))))
     }
   }
 
@@ -22,8 +22,8 @@ class InternalClassesSpec extends AnyFunSuite {
     Scaladoc.of[InternalClass2] mustBe Some {
       Scaladoc(
         Description(Document(Paragraph(PlainText("Internal Class 2")))),
-        Param("c", Document(PlainText("C Param\n "))),
-        Param("d", Document(PlainText("D Param"))))
+        Param("c", Document(Paragraph(PlainText("C Param")))),
+        Param("d", Document(Paragraph(PlainText("D Param")))))
     }
   }
 }

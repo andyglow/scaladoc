@@ -15,7 +15,17 @@ class ParseMarkup private (
 
   private val buf = new StringBuilder
 
+  // text always ends up in a paragraph: the spans before a block element (a heading, a code block) or at the end
+  // make one, so a one-paragraph comment has the same shape as a longer one
   def handle(m: Markup): Unit = {
+    m match {
+      case _: Span =>
+      case _       => wrapIntoParagraphs(force = true)
+    }
+    push(m)
+  }
+
+  private def push(m: Markup): Unit = {
     log.info(s"-  push: $m")
     ml += m
   }
@@ -41,7 +51,9 @@ class ParseMarkup private (
           log.info(s"   - $e")
         }
         if (from <= 0) ml.clear() else ml.remove(from, ml.length - from)
-        handle(Paragraph(slice.trim))
+        // whitespace around the text isn't part of it, and a paragraph of only whitespace isn't one
+        val spans = slice.trim.filterNot { case PlainText(text) => text.isEmpty; case _ => false }
+        if (spans.exists(_.nonBlank)) push(Paragraph(spans))
         log.info(s" - wrapp: result:")
         ml foreach { e =>
           log.info(s"   - $e")
@@ -158,7 +170,7 @@ class ParseMarkup private (
     }
     flush()
 
-    wrapIntoParagraphs(false)
+    wrapIntoParagraphs(force = true)
 
     Document(ml.toList)
   }

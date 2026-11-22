@@ -13,7 +13,14 @@ class ParseMarkupSpec extends WSpec {
 
     "handle empty docs" in {
       ParseMarkup("") mustBe Document(Nil)
-      ParseMarkup("   ") mustBe Document(PlainText("   "))
+      ParseMarkup("   ") mustBe Document(Nil)
+      ParseMarkup("\n  \n") mustBe Document(Nil)
+    }
+
+    "put text into paragraphs, also a single one and the one next to a block" in {
+      ParseMarkup("one\nparagraph") mustBe Document(Paragraph(PlainText("one\nparagraph")))
+      ParseMarkup("Before\n{{{x}}}\nAfter") mustBe Document(
+        Paragraph(PlainText("Before")), CodeBlock("x"), Paragraph(PlainText("After")))
     }
 
     "handle basic markup" when {
@@ -21,9 +28,10 @@ class ParseMarkupSpec extends WSpec {
         withClue(s"[$str]") { ParseMarkup(str) mustBe expectation }
       }
 
-      def testSuite(str: String, expectation: Markup): Unit = {
-        testMatching(str, Document(expectation))
-        testMatching(s" $str ", Document(PlainText(" "), expectation, PlainText(" ")))
+      def testSuite(str: String, expectation: Span): Unit = {
+        testMatching(str, Document(Paragraph(expectation)))
+        testMatching(s" $str ", Document(Paragraph(expectation)))
+        testMatching(s"a $str b", Document(Paragraph(PlainText("a "), expectation, PlainText(" b"))))
       }
 
       def headingTestSuite(str: String, expectation: Heading): Unit = {
@@ -136,18 +144,19 @@ class ParseMarkupSpec extends WSpec {
     }
 
     "keep an unclosed marker as text" in {
-      ParseMarkup("x^2 is square") mustBe Document(PlainText("x^2 is square"))
-      ParseMarkup("a `b c") mustBe Document(PlainText("a `b c"))
-      ParseMarkup("it''s fine") mustBe Document(PlainText("it''s fine"))
-      ParseMarkup("'''a'' b") mustBe Document(PlainText("'''a'' b"))
-      ParseMarkup("[[open link") mustBe Document(PlainText("[[open link"))
-      ParseMarkup("{{{ never closed") mustBe Document(PlainText("{{{ never closed"))
-      ParseMarkup("x^2 and ^sup^") mustBe Document(PlainText("x"), Superscript("2 and "), PlainText("sup^"))
+      def text(x: String) = Document(Paragraph(PlainText(x)))
+      ParseMarkup("x^2 is square") mustBe text("x^2 is square")
+      ParseMarkup("a `b c") mustBe text("a `b c")
+      ParseMarkup("it''s fine") mustBe text("it''s fine")
+      ParseMarkup("'''a'' b") mustBe text("'''a'' b")
+      ParseMarkup("[[open link") mustBe text("[[open link")
+      ParseMarkup("{{{ never closed") mustBe text("{{{ never closed")
+      ParseMarkup("x^2 and ^sup^") mustBe Document(Paragraph(PlainText("x"), Superscript("2 and "), PlainText("sup^")))
     }
 
     "not close a marker in the next paragraph" in {
       ParseMarkup("a `b\n\nc` d") mustBe Document(Paragraph(PlainText("a `b")), Paragraph(PlainText("c` d")))
-      ParseMarkup("a ''b\nc'' d") mustBe Document(PlainText("a "), Italic("b\nc"), PlainText(" d"))
+      ParseMarkup("a ''b\nc'' d") mustBe Document(Paragraph(PlainText("a "), Italic("b\nc"), PlainText(" d")))
     }
 
     "let a code block span paragraphs" in {

@@ -22,9 +22,13 @@ final class StripCommentTags private (strictlyAlligned: Boolean, val chars: Arra
 
   def run(): Option[Comment] = {
 
+    // as in scaladoc, one space after the opening marker or a `*` border is part of the border
+    def skipOneSpace(): Unit = if (!isEOF && chars(pos).isSpace) next()
+
     def readBlockCommentTail(style: Style): Option[Comment] = {
       var ident = col - (if (style == Style.Scaladoc) 2 else 1)
       var break = false
+      skipOneSpace()
       while (!break) {
         if (isEOF) throwUnexpectedEOF(None)
         ml += takeUntil2 {
@@ -42,11 +46,11 @@ final class StripCommentTags private (strictlyAlligned: Boolean, val chars: Arra
             }
             if (strictlyAlligned && prefixLen != ident) throwBrokenIndentation(prefixLen, ident)
             next()
-            if (isSlash) break = true
+            if (isSlash) break = true else skipOneSpace()
           }
         }
       }
-      Some(Comment(style, ml))
+      Some(Comment.block(style, ml))
     }
 
     skipUntilChar('/')
@@ -105,6 +109,14 @@ private[scaladoc] object StripCommentTags {
 
     def apply(style: Style, lines: Iterable[String]): Comment = {
       Comment(style, lines.trim.mkString("\n"))
+    }
+
+    /** The body of a block comment: no trailing whitespace on a line, and no blank lines at the start or the end. The
+      * indentation past the border is kept, as lists and code depend on it.
+      */
+    def block(style: Style, lines: Iterable[String]): Comment = {
+      val trimmed = lines.toList.map(_.replaceAll("\\s+$", ""))
+      Comment(style, trimmed.dropWhile(_.isEmpty).reverse.dropWhile(_.isEmpty).reverse.mkString("\n"))
     }
   }
 

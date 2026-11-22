@@ -6,6 +6,6 @@ import scaladoc._
 object Main {
   def main(args: Array[String]): Unit = {
     val user = Scaladoc.of[User]
-    require(user.exists(_.tags.contains(Tag.Param("name", Markup.Document(Markup.PlainText("the name"))))), s"User: $user")
+    require(user.exists(_.textParams.get("name").contains("the name")), s"User: $user")
   }
 }
