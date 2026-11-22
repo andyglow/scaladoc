@@ -135,6 +135,10 @@ Scaladoc = List Tag
 The parser takes comment text and returns either the parsed model or an error. It is plain Scala over `String`;
 on Scala 3 its only dependency is `scaladoc-ast`.
 
+It reads scaladoc's wiki markup, HTML and javadoc's inline tags (`{@code x}`, `{@link X}`), and expands the comment's
+own `@define` variables (`$name`). Scaladoc also takes the defines of enclosing and parent classes, which only the
+compiler knows about.
+
 ```scala
 import scaladoc._
 
