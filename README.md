@@ -39,7 +39,7 @@ All artifacts target Java 8 and work on any later JDK. Scala 2.11 is supported u
 `sbt-scaladoc` (from 0.2.0) sets a module up for you. Add it to `project/plugins.sbt`:
 
 ```sbt
-addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.2.0")
+addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.3.0")
 ```
 
 and enable it on the modules that need it:
@@ -63,17 +63,17 @@ The libraries get the plugin's own version; override it with `scaladocVersion` i
 ### By hand
 
 ```sbt
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.2.0"
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.2.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.3.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.3.0"
 ```
 
 To embed scaladocs into bytecode (Scala 2 only), also add the compiler plugin:
 
 ```sbt
-addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.2.0")
+addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.3.0")
 
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.2.0"
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.2.0" % Provided
+libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.3.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.3.0" % Provided
 ```
 
 On Scala.js, use `%%%` for `scaladoc-ast` and `scaladoc-parser`. The compiler plugin stays `%%`.
