@@ -107,4 +107,11 @@ class ParseScaladocTagsSpec extends FSpec {
       scaladoc.Tag.Throws("java.io.IOException", scaladoc.Markup.Document(scaladoc.Markup.PlainText("if it can't read\n"))),
       scaladoc.Tag.Throws("IllegalStateException", scaladoc.Markup.Document(scaladoc.Markup.PlainText("never"))))
   }
+
+  test("@deprecated and @throws without text are kept") {
+    val doc = ParseScaladocTags("Desc\n\n@deprecated\n@throws java.io.IOException\n@note")
+    doc.tags.drop(1) mustBe List(
+      scaladoc.Tag.Deprecated(scaladoc.Markup.Document(Nil)),
+      scaladoc.Tag.Throws("java.io.IOException", scaladoc.Markup.Document(Nil)))
+  }
 }
