@@ -254,45 +254,41 @@ class StripCommentTagsSpec extends WSpec {
               |""".stripMargin) mustBe "abc\ndef"
         }
 
-        "for gaps" when {
+        "for lines without a border" when {
 
           "non-strict alignment" in {
-            the[UnexpectedChar] thrownBy {
-              strip(
-                Scaladoc,
-                """  /**abc
-                  |   * def
-                  | gap gap gap
-                  |   * ghi
-                  |   */
-                  |""".stripMargin)
-            } mustBe scaladoc.UnexpectedChar(2, 1, 19, 'g', Expectation.Exact('*'))
+            strip(
+              Scaladoc,
+              """  /**abc
+                |   * def
+                | gap gap gap
+                |
+                |   * ghi
+                |   */
+                |""".stripMargin) mustBe "abc\n def\ngap gap gap\n\n ghi"
           }
 
           "strict alignment" in {
-            the[UnexpectedChar] thrownBy {
-              strip(
-                Scaladoc,
-                """  /**abc
-                  |   * def
-                  | gap gap gap
-                  |   * ghi
-                  |   */
-                  |""".stripMargin,
-                strict = true)
-            } mustBe scaladoc.UnexpectedChar(2, 1, 19, 'g', Expectation.Exact(' '))
+            strip(
+              Scaladoc,
+              """  /**abc
+                |   * def
+                |   gap gap gap
+                |   * ghi
+                |   */
+                |""".stripMargin,
+              strict = true) mustBe "abc\n def\ngap gap gap\n ghi"
+          }
 
-            the[UnexpectedChar] thrownBy {
-              strip(
-                Scaladoc,
-                """  /**abc
-                  |   * def
-                  |   gap gap gap
-                  |   * ghi
-                  |   */
-                  |""".stripMargin,
-                strict = true)
-            } mustBe scaladoc.UnexpectedChar(2, 3, 21, 'g', Expectation.Exact('*'))
+          "no borders at all" in {
+            strip(
+              Scaladoc,
+              """/** First line
+                |    second line
+                |
+                |    third line
+                | */""".stripMargin,
+              strict = true) mustBe " First line\nsecond line\n\nthird line"
           }
         }
 
