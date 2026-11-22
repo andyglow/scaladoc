@@ -76,7 +76,10 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
             tags += Returns(null)
           case "throws" =>
             skipSpaces()
-            tags += Throws(takeId(), null)
+            // the exception type is anything up to a whitespace, like `java.io.IOException`
+            val exceptionType = takeWhile(!_.isWhitespace)
+            skipSpaces()
+            tags += Throws(exceptionType, null)
           case "see" =>
             skipSpaces()
             tags += See(null)
