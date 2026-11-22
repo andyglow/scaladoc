@@ -1,0 +1,39 @@
+# Publishes the documentation site (the docs project) to the gh-pages branch, from a release tag or by hand.
+# Written by hand: sbt-github-actions only manages ci.yml and clean.yml.
+name: Docs
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish the site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Push the site to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sbt "++2.13.18 docs/ghpagesPushSite"
