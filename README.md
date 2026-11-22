@@ -97,6 +97,8 @@ Markup   = Span
          | Heading (Level (List Span))
          | Paragraph (List Span)
          | CodeBlock (String)
+         | UnorderedList (List Document)          -- an item: its text and nested lists
+         | OrderedList (List Document Style)      -- Style: 1. i. I. a. A.
          | Document (List Markup)
 
 Tag      = Description       (Markup)

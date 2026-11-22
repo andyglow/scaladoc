@@ -63,11 +63,27 @@ object ScaladocMacro {
 
   private def spansExpr(xs: List[Markup.Span])(using Quotes): Expr[List[Markup.Span]] = Expr.ofList(xs.map(spanExpr))
 
+  private def documentExpr(x: Markup.Document)(using Quotes): Expr[Markup.Document] =
+    '{ Markup.Document(${ Expr.ofList(x.elements.map(markupExpr)) }) }
+
+  private def styleExpr(x: Markup.OrderedList.Style)(using Quotes): Expr[Markup.OrderedList.Style] = {
+    import Markup.OrderedList.*
+    x match {
+      case Decimal    => '{ Markup.OrderedList.Decimal }
+      case LowerRoman => '{ Markup.OrderedList.LowerRoman }
+      case UpperRoman => '{ Markup.OrderedList.UpperRoman }
+      case LowerAlpha => '{ Markup.OrderedList.LowerAlpha }
+      case UpperAlpha => '{ Markup.OrderedList.UpperAlpha }
+    }
+  }
+
   private def markupExpr(x: Markup)(using Quotes): Expr[Markup] = {
     import Markup.*
     x match {
       case x: Span           => spanExpr(x)
       case CodeBlock(v)      => '{ Markup.CodeBlock(${ Expr(v) }) }
+      case UnorderedList(items)      => '{ Markup.UnorderedList(${ Expr.ofList(items.map(documentExpr)) }) }
+      case OrderedList(items, style) => '{ Markup.OrderedList(${ Expr.ofList(items.map(documentExpr)) }, ${ styleExpr(style) }) }
       case Heading(l, v)     => '{ Markup.Heading(${ levelExpr(l) }, ${ spansExpr(v) }) }
       case Paragraph(spans)  => '{ Markup.Paragraph(${ Expr.ofList(spans.map(spanExpr)) }) }
       case Document(elems)   => '{ Markup.Document(${ Expr.ofList(elems.map(markupExpr)) }) }

@@ -187,6 +187,46 @@ object Markup {
     def apply(x: Markup, xs: Markup*): Document = Document(x +: xs.toList)
   }
 
+  /** A list: its items are documents, with the item's text and the lists nested in it. */
+  sealed trait ListBlock extends Markup {
+    def items: List[Document]
+    override def isBlank: Boolean = items.forall(_.isBlank)
+    protected def marker(index: Int): String
+    // one item a line, nested lists indented
+    override def plainString: String = items.zipWithIndex.map { case (item, i) =>
+      val lines = item.plainString.linesIterator.toList
+      val first = s"${marker(i)} ${lines.headOption.getOrElse("")}"
+      (first :: lines.drop(1).map("  " + _)).mkString("\n")
+    }.mkString("\n")
+  }
+
+  /** `- item` lines. */
+  case class UnorderedList(items: List[Document]) extends ListBlock {
+    type Self = UnorderedList
+    protected def marker(index: Int): String = "-"
+    def trimmed: Self with Trimmed = new UnorderedList(items.map(_.trimmed)) with Trimmed
+  }
+
+  /** `1. item` lines, or `i.`, `I.`, `a.` and `A.` for the other numberings. */
+  case class OrderedList(items: List[Document], style: OrderedList.Style) extends ListBlock {
+    type Self = OrderedList
+    protected def marker(index: Int): String = s"${style.marker}."
+    def trimmed: Self with Trimmed = new OrderedList(items.map(_.trimmed), style) with Trimmed
+  }
+
+  object OrderedList {
+
+    sealed abstract class Style(val marker: String) extends Product with Serializable
+
+    case object Decimal    extends Style("1")
+    case object LowerRoman extends Style("i")
+    case object UpperRoman extends Style("I")
+    case object LowerAlpha extends Style("a")
+    case object UpperAlpha extends Style("A")
+
+    val styles: List[Style] = List(Decimal, LowerRoman, UpperRoman, LowerAlpha, UpperAlpha)
+  }
+
   case class Heading(level: Heading.Level, spans: List[Span]) extends Markup {
     type Self = Heading
     override def isBlank: Boolean = spans.forall(_.isBlank)
@@ -224,6 +264,4 @@ object Markup {
 
     def apply(l: Int, text: String): Heading = Heading(levelOf(l), text)
   }
-
-  // TODO: list blocks
 }

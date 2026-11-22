@@ -214,6 +214,73 @@ class ParseMarkupSpec extends WSpec {
       Link("scala.collection.immutable.List$.apply").isUrl mustBe false
     }
 
+    "parse lists" in {
+      def item(text: String, nested: scaladoc.Markup*) = Document(Paragraph(PlainText(text)) :: nested.toList)
+
+      // the example of the scaladoc guide
+      val doc = Scaladoc.fromString(
+        """/** Here is an unordered list:
+          |  *
+          |  *   - First item
+          |  *   - Second item
+          |  *     - Sub-item to the second
+          |  *     - Another sub-item
+          |  *   - Third item
+          |  *
+          |  * Here is an ordered list:
+          |  *
+          |  *   1. First numbered item
+          |  *   1. Second numbered item
+          |  *     i. Sub-item to the second
+          |  *     i. Another sub-item
+          |  *   1. Third item
+          |  */""".stripMargin).fold(e => fail(e.getMessage), identity)
+
+      doc.descriptions mustBe List(Document(
+        Paragraph(PlainText("Here is an unordered list:")),
+        UnorderedList(List(
+          item("First item"),
+          item("Second item", UnorderedList(List(item("Sub-item to the second"), item("Another sub-item")))),
+          item("Third item"))),
+        Paragraph(PlainText("Here is an ordered list:")),
+        OrderedList(List(
+          item("First numbered item"),
+          item("Second numbered item", OrderedList(List(item("Sub-item to the second"), item("Another sub-item")), OrderedList.LowerRoman)),
+          item("Third item")), OrderedList.Decimal)))
+    }
+
+    "parse list items with markup, over several lines and blank lines" in {
+      ParseMarkup("Items:\n - '''a''' item\n   continued\n\n - [[x]]\nafter") mustBe Document(
+        Paragraph(PlainText("Items:")),
+        UnorderedList(List(
+          Document(Paragraph(Bold("a"), PlainText(" item\n   continued"))),
+          // as in scaladoc, a line that isn't an item continues the item before it
+          Document(Paragraph(Link("x"), PlainText("\nafter"))))))
+    }
+
+    "end a list at another numbering" in {
+      ParseMarkup(" - a\n 1. b\n A. c") mustBe Document(
+        UnorderedList(List(Document(Paragraph(PlainText("a"))))),
+        OrderedList(List(Document(Paragraph(PlainText("b")))), OrderedList.Decimal),
+        OrderedList(List(Document(Paragraph(PlainText("c")))), OrderedList.UpperAlpha))
+    }
+
+    "not take a line as a list item without indentation or a space after the marker" in {
+      ParseMarkup("- a\n-b\n 1.c") mustBe Document(Paragraph(PlainText("- a\n-b\n 1.c")))
+    }
+
+    "parse a nested list without a parent item, and lists in a tag" in {
+      ParseMarkup("   - deep\n - top") mustBe Document(
+        UnorderedList(List(Document(Paragraph(PlainText("deep"))))),
+        UnorderedList(List(Document(Paragraph(PlainText("top"))))))
+      ParseMarkup(" - a\n   - deep\n - b") mustBe Document(UnorderedList(List(
+        Document(Paragraph(PlainText("a")), UnorderedList(List(Document(Paragraph(PlainText("deep")))))),
+        Document(Paragraph(PlainText("b"))))))
+      Scaladoc.fromString("/** @param x one of\n  *   - a\n  *   - b\n  */").map(_.params("x")) mustBe Right(Document(
+        Paragraph(PlainText("one of")),
+        UnorderedList(List(Document(Paragraph(PlainText("a"))), Document(Paragraph(PlainText("b")))))))
+    }
+
     "end a paragraph at a heading line" in {
       ParseMarkup("text\n= Title =\nmore") mustBe Document(
         Paragraph(PlainText("text")), Heading(One, "Title"), Paragraph(PlainText("more")))

@@ -51,6 +51,9 @@ class ScaladocMacro(val c: blackbox.Context) extends ExtractScaladoc with Annota
         case Subscript(els)                     => q"$prefix.Markup.Subscript(${spans(els)})"
         case Link(target, title)                => q"$prefix.Markup.Link($target, ${spans(title)})"
         case CodeBlock(text)                    => q"$prefix.Markup.CodeBlock($text)"
+        case UnorderedList(items)               => q"$prefix.Markup.UnorderedList(scala.List(..${trees(items)}))"
+        case OrderedList(items, style)          =>
+          q"$prefix.Markup.OrderedList(scala.List(..${trees(items)}), $prefix.Markup.OrderedList.${TermName(style.toString)})"
         case Heading(l, els)                    => q"$prefix.Markup.Heading(${levelTree(l)}, ${spans(els)})"
       }
     }

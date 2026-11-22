@@ -28,4 +28,12 @@ class DumpAstSpec extends FSpec {
     out must include("<h6>Level <pre>6</pre></h6>")
     out must include("<b>bold <i>italic</i> <a>scala.Option</a></b>, <u><i>a</i></u>, x<sup><i>2</i></sup> and y<sub><b>i</b></sub>, see <a href=\"https://scala-lang.org\">the <i>Scala</i> site</a>.")
   }
+
+  test("lists") {
+    val out = dump(Docstrings.Lists)
+    out must include("<ul>")
+    out must include("<ol type=a>")
+    out must include("<ol type=I>")
+    out must include("<li>")
+  }
 }

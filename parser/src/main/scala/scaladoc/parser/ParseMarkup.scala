@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
 /** Parses scaladoc's wiki markup into a `Markup.Document`.
   *
   * A recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
-  * blocks), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
+  * blocks, lists), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
   * marker that isn't closed within its paragraph is text, so `x^2` and an unclosed backtick parse.
   *
   * @param codeBlocks whether `{{{ ... }}}` is a code block; a heading's title is parsed without
@@ -49,11 +49,24 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
     else None
   }
 
-  // a paragraph ends with the text, at a paragraph separator, and at a line break before a blank line or a heading
+  // a list item's line: indented, then `- `, `1. `, `i. `, `I. `, `a. ` or `A. `. Returns the indentation, the
+  // numbering (none for `-`) and where the item's text starts.
+  private def listItemAt(i: Int): Option[(Int, Option[OrderedList.Style], Int)] = {
+    val start  = firstNonSpace(i)
+    val indent = start - i
+    if (indent == 0) None
+    else if (at("- ", start)) Some((indent, None, start + 2))
+    else OrderedList.styles.find(style => at(style.marker + ". ", start)).map { style =>
+      (indent, Some(style), start + style.marker.length + 2)
+    }
+  }
+
+  // a paragraph ends with the text, at a paragraph separator, and at a line break before a blank line, a heading or a
+  // list item
   private def paragraphBreakAt(i: Int): Boolean =
     i >= len || text.charAt(i).isParSep || (text.charAt(i).isNL && {
       val next = i + 1
-      next >= len || isBlankLine(next) || headingAt(next).isDefined
+      next >= len || isBlankLine(next) || headingAt(next).isDefined || listItemAt(next).isDefined
     })
 
   // ... and also where a code block starts, even in the middle of a line
@@ -90,8 +103,36 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
         // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
         Some(Heading(Heading.levelOf(math.min(level, 6)), ParseMarkup.spans(title, log)))
       case None =>
-        paragraph()
+        listItemAt(pos) match {
+          case Some((indent, style, _)) => Some(list(indent, style))
+          case None                     => paragraph()
+        }
     }
+  }
+
+  // the items with this indentation and numbering, and the lists nested in them. Blank lines between items don't
+  // end a list.
+  private def list(indent: Int, style: Option[OrderedList.Style]): ListBlock = {
+    val items = ListBuffer.empty[ListBuffer[scaladoc.Markup]]
+    var more  = true
+    while (more) {
+      val from = pos
+      skipBlankLines()
+      listItemAt(pos) match {
+        case Some((`indent`, `style`, textAt)) =>
+          pos = textAt
+          items += (ListBuffer.empty[scaladoc.Markup] ++= paragraph().toList)
+        case Some((deeper, nestedStyle, _)) if deeper > indent =>
+          val nested = list(deeper, nestedStyle)
+          if (items.isEmpty) items += ListBuffer.empty[scaladoc.Markup]
+          items.last += nested
+        case _ =>
+          pos = from
+          more = false
+      }
+    }
+    val documents = items.toList.map(item => Document(item.toList))
+    style.fold[ListBlock](UnorderedList(documents))(OrderedList(documents, _))
   }
 
   private def code(start: Int): CodeBlock = {
