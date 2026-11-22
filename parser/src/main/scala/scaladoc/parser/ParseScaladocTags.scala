@@ -10,7 +10,8 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
   private val tags = new mutable.ArrayBuffer[MutableTag]()
   private def top: Option[MutableTag] = tags.lastOption
   private val buf = new StringBuilder
-  private def parseMarkup(): Markup = ParseMarkup(buf.toString)
+  private def parseMarkup(): Markup =
+    if (buf.forall(_.isWhitespace)) Markup.Document(Nil) else ParseMarkup(buf.toString)
   private def flush(): Unit = top match {
     case None =>
       if (buf.nonEmpty) throwBufferFlushError(None, buf)

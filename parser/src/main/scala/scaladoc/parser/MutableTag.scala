@@ -9,6 +9,7 @@ sealed trait MutableTag {
   def nonBlank: Boolean = !isBlank
 }
 object MutableTag {
+  // as in scaladoc, `@deprecated` and `@throws <type>` count even without text; other tags without text are dropped
   sealed trait HasMarkup { this: MutableTag =>
     def markup: Markup
     override def isBlank: Boolean = markup.isBlank
@@ -27,12 +28,12 @@ object MutableTag {
   final case class Param(name: String, var markup: Markup)            extends MutableTag with HasMarkup { def toTag = Tag.Param(name, markup)            ; def isOpen = markup eq null }
   final case class TypeParam(name: String, var markup: Markup)        extends MutableTag with HasMarkup { def toTag = Tag.TypeParam(name, markup)        ; def isOpen = markup eq null }
   final case class Returns(var markup: Markup)                        extends MutableTag with HasMarkup { def toTag = Tag.Returns(markup)                ; def isOpen = markup eq null }
-  final case class Throws(exceptionType: String, var markup: Markup)  extends MutableTag with HasMarkup { def toTag = Tag.Throws(exceptionType, markup)  ; def isOpen = markup eq null }
+  final case class Throws(exceptionType: String, var markup: Markup)  extends MutableTag with HasMarkup { def toTag = Tag.Throws(exceptionType, markup)  ; def isOpen = markup eq null; override def isBlank = false }
   final case class Note(var markup: Markup)                           extends MutableTag with HasMarkup { def toTag = Tag.Note(markup)                   ; def isOpen = markup eq null }
   final case class Example(var markup: Markup)                        extends MutableTag with HasMarkup { def toTag = Tag.Example(markup)                ; def isOpen = markup eq null }
   final case class UseCase(var markup: Markup)                        extends MutableTag with HasMarkup { def toTag = Tag.UseCase(markup)                ; def isOpen = markup eq null }
   final case class Todo(var markup: Markup)                           extends MutableTag with HasMarkup { def toTag = Tag.Todo(markup)                   ; def isOpen = markup eq null }
-  final case class Deprecated(var markup: Markup)                     extends MutableTag with HasMarkup { def toTag = Tag.Deprecated(markup)             ; def isOpen = markup eq null }
+  final case class Deprecated(var markup: Markup)                     extends MutableTag with HasMarkup { def toTag = Tag.Deprecated(markup)             ; def isOpen = markup eq null; override def isBlank = false }
   final case class Migration(var markup: Markup)                      extends MutableTag with HasMarkup { def toTag = Tag.Migration(markup)              ; def isOpen = markup eq null }
   final case class OtherTag(label: String, var markup: Markup)        extends MutableTag with HasMarkup { def toTag = Tag.OtherTag(label, markup)        ; def isOpen = markup eq null }
   final case class Description(var markup: Markup)                    extends MutableTag with HasMarkup { def toTag = Tag.Description(markup)            ; def isOpen = markup eq null }
