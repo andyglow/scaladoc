@@ -342,7 +342,7 @@ lazy val docs = project
       "github.base_url" -> "https://github.com/andyglow/scaladoc/tree/master"
     ),
     Compile / paradoxMaterialTheme ~= {
-      _.withColor("indigo", "orange")
+      _.withColor("light-blue", "cyan")
         .withLogoIcon("description")
         .withRepository(uri("https://github.com/andyglow/scaladoc"))
         .withCopyright("Apache-2.0 · andyglow")
