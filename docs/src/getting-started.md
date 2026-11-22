@@ -4,8 +4,8 @@
 >
 > — Linus Torvalds
 
-There are two ways in: the sbt plugin, which knows what each kind of module needs, or adding the dependencies by
-hand. The plugin is the shorter road, so it comes first.
+There are three ways in: the sbt plugin and the Gradle plugin, which know what each kind of module needs, or adding
+the dependencies by hand. The plugins are the shorter road, so they come first.
 
 ## With the sbt plugin
 
@@ -47,6 +47,34 @@ compiler plugin embeds:
 | `scaladocExcludeClasses` | none     | Scala 2: don't embed classes whose name matches these patterns       |
 
 The patterns are explained in @ref:[Choosing what to embed](compiler-plugin.md#choosing-what-to-embed).
+
+## With the Gradle plugin
+
+Gradle builds get the same setup from a Gradle plugin. Apply it next to Gradle's `scala` plugin:
+
+```kotlin
+plugins {
+    scala
+    id("io.github.andyglow.scaladoc") version "@VERSION@"
+}
+```
+
+It reads the module's Scala version from its `scala-library` or `scala3-library_3` dependency, and then does what the
+sbt plugin does: the compiler plugin and the two libraries on Scala 2, the libraries and `-Yread-docs` on Scala 3. On
+Scala 2 the parser is only needed to compile, so it goes on `compileOnly` and `testImplementation`, not on the runtime
+classpath.
+
+A `scaladoc` block holds the settings, with the same meaning as the sbt plugin's:
+
+```kotlin
+scaladoc {
+    version.set("@VERSION@")                       // the plugin's own by default
+    embed.set(false)                               // Scala 2: read scaladoc, don't embed any
+    excludeClasses.add("com.acme.**.internal.*")   // also includePaths, excludePaths and includeClasses
+}
+```
+
+The plugin runs on Gradle 8.5 and later.
 
 ## By hand
 

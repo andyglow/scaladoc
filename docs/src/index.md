@@ -60,7 +60,8 @@ each field means. A schema generator needs nothing more to give every property a
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |  JVM one     |
 
-`sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x. All artifacts target Java 8 and run on any later JDK.
+`sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, and the Gradle plugin with Gradle 8.5+. All artifacts target
+Java 8 and run on any later JDK.
 
 ## Where to go next
 

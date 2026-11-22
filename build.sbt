@@ -58,6 +58,12 @@ ThisBuild / githubWorkflowBuild := Seq(
     name = Some("sbt plugin scripted tests"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
+  // the Gradle plugin against real Gradle builds; they resolve this build's libraries from the local Maven repository
+  WorkflowStep.Sbt(
+    List("+publishM2", "gradlePluginCheck"),
+    name = Some("Gradle plugin tests"),
+    cond = Some(s"matrix.scala == '$scala213'")
+  ),
   // the site: mdoc compiles and runs its snippets, Paradox checks its links
   WorkflowStep.Sbt(List("docs/makeSite"), name = Some("Build the documentation site"), cond = Some(s"matrix.scala == '$scala213'")),
   WorkflowStep.Sbt(
@@ -108,6 +114,8 @@ lazy val commonSettings = Seq(
     releaseStepCommandAndRemaining("+publishSigned"),
     // upload while the version is still the release one: the Central Portal rejects SNAPSHOT versions
     releaseStepCommand("sonaRelease"),
+    // the Gradle plugin goes out with the libraries it adds, in the same version
+    releaseStepTask(gradlePluginPublish),
     setNextVersion,
     commitNextVersion,
     pushChanges
@@ -358,6 +366,20 @@ lazy val docs = project
     }
   )
 
+// The Gradle plugin, in gradle-plugin/, is a Gradle build of its own. These tasks run it with this build's version,
+// so CI tests it (after `+publishM2`, as its test builds take the libraries from the local Maven repository) and the
+// release publishes it with everything else.
+lazy val gradlePluginCheck   = taskKey[Unit]("Builds and tests the Gradle plugin; needs `+publishM2` first")
+lazy val gradlePluginPublish = taskKey[Unit]("Publishes the Gradle plugin to the Gradle Plugin Portal")
+
+def gradlew(base: File, version: String, log: Logger, tasks: String*): Unit = {
+  val command = Seq("./gradlew", s"-PscaladocVersion=$version") ++ tasks
+  log.info(s"gradle-plugin: ${command.mkString(" ")}")
+  val exit = scala.sys.process.Process(command, base / "gradle-plugin").!(
+    scala.sys.process.ProcessLogger(line => log.info(line), line => log.warn(line)))
+  if (exit != 0) sys.error(s"gradle-plugin: ${tasks.mkString(" ")} failed with exit code $exit")
+}
+
 lazy val root = (project in file("."))
   .aggregate(
     astJVM, astJS, parserJVM, parserJS, compilerPlugin, sbtScaladoc,
@@ -366,5 +388,8 @@ lazy val root = (project in file("."))
   .settings(
     commonSettings,
     noPublish,
-    name := "scaladoc-root"
+    name := "scaladoc-root",
+    // uncached: they run Gradle, whose inputs sbt doesn't see
+    gradlePluginCheck   := Def.uncached(gradlew(baseDirectory.value, version.value, streams.value.log, "check")),
+    gradlePluginPublish := Def.uncached(gradlew(baseDirectory.value, version.value, streams.value.log, "publishPlugins"))
   )
