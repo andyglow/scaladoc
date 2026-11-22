@@ -131,12 +131,10 @@ class ParseMarkupSpec extends WSpec {
           Monospace("Person"),
           PlainText(",\nthen access the fields like this:")),
         CodeBlock(
-          """
-            | val p = Person("Al", 42, 200.0)
-            | p.name
-            | p.age
-            | p.weight
-            |""".stripMargin),
+          """val p = Person("Al", 42, 200.0)
+            |p.name
+            |p.age
+            |p.weight""".stripMargin),
         Paragraph(
           PlainText("Did you know: The "),
           Link("com.acme.foo.Employee"),
@@ -160,7 +158,12 @@ class ParseMarkupSpec extends WSpec {
     }
 
     "let a code block span paragraphs" in {
-      ParseMarkup("{{{\na\n\nb\n}}}") mustBe Document(CodeBlock("\na\n\nb\n"))
+      ParseMarkup("{{{\na\n\nb\n}}}") mustBe Document(CodeBlock("a\n\nb"))
+    }
+
+    "drop the indentation that all lines of a code block share" in {
+      ParseMarkup("{{{\n\n    def f =\n      1\n\n    f   \n  }}}") mustBe Document(CodeBlock("def f =\n  1\n\nf"))
+      ParseMarkup("{{{ x }}}") mustBe Document(CodeBlock("x"))
     }
   }
 }

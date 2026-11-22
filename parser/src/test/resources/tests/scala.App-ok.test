@@ -28,9 +28,9 @@ scaladoc
     |   into executable programs. Here is an example:
     |</p>
     |<code>
-    |   object Main extends App {
-    |     Console.println("Hello World: " + (args mkString ", "))
-    |   }
+    |  object Main extends App {
+    |    Console.println("Hello World: " + (args mkString ", "))
+    |  }
     |</code>
     |<p>
     |  No explicit <pre>main</pre> method is needed.  Instead,

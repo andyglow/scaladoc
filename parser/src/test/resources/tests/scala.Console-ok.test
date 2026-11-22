@@ -122,29 +122,29 @@ scaladoc
     |  Use the print methods to output text.
     |</p>
     |<code>
-    |    scala> Console.printf(
-    |      "Today the outside temperature is a balmy %.1f°C. %<.1f°C beats the previous record of %.1f°C.\n",
-    |      -137.0,
-    |      -135.05)
-    |    Today the outside temperature is a balmy -137.0°C. -137.0°C beats the previous record of -135.1°C.
+    |  scala> Console.printf(
+    |    "Today the outside temperature is a balmy %.1f°C. %<.1f°C beats the previous record of %.1f°C.\n",
+    |    -137.0,
+    |    -135.05)
+    |  Today the outside temperature is a balmy -137.0°C. -137.0°C beats the previous record of -135.1°C.
     |</code>
     |<h2> ANSI escape codes </h2>
     |<p>
     |  Use the ANSI escape codes for colorizing console output either to STDOUT or STDERR.
     |</p>
     |<code>
-    |     import Console.{GREEN, RED, RESET, YELLOW_B, UNDERLINED}
-    |     object PrimeTest {
-    |       def isPrime(): Unit = {
-    |         val candidate = io.StdIn.readInt().ensuring(_ > 1)
-    |         val prime = (2 to candidate - 1).forall(candidate % _ != 0)
-    |         if (prime)
-    |           Console.println(s"\${RESET}\${GREEN}yes\${RESET}")
-    |         else
-    |           Console.err.println(s"\${RESET}\${YELLOW_B}\${RED}\${UNDERLINED}NO!\${RESET}")
-    |       }
-    |       def main(args: Array[String]): Unit = isPrime()
-    |     }
+    |  import Console.{GREEN, RED, RESET, YELLOW_B, UNDERLINED}
+    |  object PrimeTest {
+    |    def isPrime(): Unit = {
+    |      val candidate = io.StdIn.readInt().ensuring(_ > 1)
+    |      val prime = (2 to candidate - 1).forall(candidate % _ != 0)
+    |      if (prime)
+    |        Console.println(s"\${RESET}\${GREEN}yes\${RESET}")
+    |      else
+    |        Console.err.println(s"\${RESET}\${YELLOW_B}\${RED}\${UNDERLINED}NO!\${RESET}")
+    |    }
+    |    def main(args: Array[String]): Unit = isPrime()
+    |  }
     |</code>
     |<p>
     |  <table style="border: 10px solid #000;width:100%">
@@ -162,30 +162,30 @@ scaladoc
     |   method above is wrapped into a function.
     |</p>
     |<code>
-    |     import java.io.{ByteArrayOutputStream, StringReader}
-    |     object FunctionalPrimeTest {
-    |       def isPrime(candidate: Int): Boolean = {
-    |         val input = new StringReader(s"\$candidate\n")
-    |         val outCapture = new ByteArrayOutputStream
-    |         val errCapture = new ByteArrayOutputStream
-    |         Console.withIn(input) {
-    |           Console.withOut(outCapture) {
-    |             Console.withErr(errCapture) {
-    |               PrimeTest.isPrime()
-    |             }
-    |           }
-    |         }
-    |         if (outCapture.toByteArray.nonEmpty) // "yes"
-    |           true
-    |         else if (errCapture.toByteArray.nonEmpty) // "NO!"
-    |           false
-    |         else throw new IllegalArgumentException(candidate.toString)
-    |       }
-    |       def main(args: Array[String]): Unit = {
-    |         val primes = (2 to 50) filter (isPrime)
-    |         println(s"First primes: \$primes")
-    |       }
-    |     }
+    |  import java.io.{ByteArrayOutputStream, StringReader}
+    |  object FunctionalPrimeTest {
+    |    def isPrime(candidate: Int): Boolean = {
+    |      val input = new StringReader(s"\$candidate\n")
+    |      val outCapture = new ByteArrayOutputStream
+    |      val errCapture = new ByteArrayOutputStream
+    |      Console.withIn(input) {
+    |        Console.withOut(outCapture) {
+    |          Console.withErr(errCapture) {
+    |            PrimeTest.isPrime()
+    |          }
+    |        }
+    |      }
+    |      if (outCapture.toByteArray.nonEmpty) // "yes"
+    |        true
+    |      else if (errCapture.toByteArray.nonEmpty) // "NO!"
+    |        false
+    |      else throw new IllegalArgumentException(candidate.toString)
+    |    }
+    |    def main(args: Array[String]): Unit = {
+    |      val primes = (2 to 50) filter (isPrime)
+    |      println(s"First primes: \$primes")
+    |    }
+    |  }
     |</code>
     |<p>
     |  <table style="border: 10px solid #000;width:100%">
