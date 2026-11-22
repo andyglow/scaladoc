@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="generator" content="Paradox, paradox-material-theme=0.8.0, mkdocs-material=3.0.3">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Scaladoc">
+
+<meta name="lang:clipboard.copy" content="Copy to clipboard">
+<meta name="lang:clipboard.copied" content="Copied to clipboard">
+<meta name="lang:search.language" content="">
+<meta name="lang:search.pipeline.stopwords" content="true">
+<meta name="lang:search.pipeline.trimmer" content="true">
+<meta name="lang:search.result.none" content="No matching documents">
+<meta name="lang:search.result.one" content="1 matching document">
+<meta name="lang:search.result.other" content="# matching documents">
+<meta name="lang:search.tokenizer" content="[\s\-]+">
+
+
+<meta name="description" content="scaladoc-docs">
+<meta property="og:description" content="scaladoc-docs">
+<meta name="twitter:card" content="summary">
+<link rel="shortcut icon" href="assets/images/favicon.png">
+<title>The model · Scaladoc</title>
+<meta property="og:title" content="The model · Scaladoc">
+<link rel="stylesheet" href="assets/stylesheets/application.451f80e5.css">
+<link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
+<meta name="theme-color" content="#3f51b5" />
+<link rel="stylesheet" href="lib/material__tabs/dist/mdc.tabs.min.css">
+<link rel="stylesheet" href="lib/prettify/prettify.css">
+<script src="assets/javascripts/modernizr.1aa3b519.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+<style>
+body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}
+code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}
+</style>
+<link rel="stylesheet" href="assets/fonts/font-awesome.css">
+<link rel="stylesheet" href="assets/fonts/material-icons.css">
+<link rel="stylesheet" href="assets/stylesheets/paradox-material-theme.css">
+</head>
+<body
+data-md-color-primary="indigo"
+data-md-color-accent="orange"
+>
+<input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+<input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+<label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
+<header class="md-header" data-md-component="header">
+<nav class="md-header-nav md-grid">
+<div class="md-flex">
+<div class="md-flex__cell md-flex__cell--shrink">
+<a href="index.html" title="Scaladoc" class="md-header-nav__button md-logo">
+<i class="md-icon">description</i>
+</a>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
+</div>
+<div class="md-flex__cell md-flex__cell--stretch">
+<div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+<span class="md-header-nav__topic">
+Scaladoc
+</span>
+<span class="md-header-nav__topic">
+The model
+</span>
+</div>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query" data-md-state="active">
+<label class="md-icon md-search__icon" for="__search"></label>
+<button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">&#xE5CD;</button>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix>
+<div class="md-search-result" data-md-component="result">
+<div class="md-search-result__meta">
+Type to start searching
+</div>
+<ol class="md-search-result__list"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<div class="md-header-nav__source">
+<a href="https://github.com/andyglow/scaladoc"
+title="Go to repository"
+class="md-source"
+data-md-source="github">
+<div class="md-source__icon">
+<i class="fa fa-github"></i>
+</div>
+<div class="md-source__repository">
+andyglow/scaladoc
+</div>
+</a>
+
+</div>
+</div>
+</div>
+</nav>
+</header>
+
+<div class="md-container">
+<main class="md-main">
+<div class="md-main__inner md-grid" data-md-component="container">
+<div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav class="md-nav md-nav--primary" data-md-level="0" style="visibility: hidden">
+<label class="md-nav__title md-nav__title--site" for="drawer">
+<a href="index.html" title="Scaladoc" class="md-nav__button md-logo">
+<span class="md-nav__button md-logo">
+<i class="md-icon">description</i>
+</a>
+<a href="index.html" title="Scaladoc">
+Scaladoc
+</a>
+</label>
+<div class="md-nav__source">
+<a href="https://github.com/andyglow/scaladoc"
+title="Go to repository"
+class="md-source"
+data-md-source="github">
+<div class="md-source__icon">
+<i class="fa fa-github"></i>
+</div>
+<div class="md-source__repository">
+andyglow/scaladoc
+</div>
+</a>
+
+</div>
+<ul>
+  <li><a href="getting-started.html" class="page">Getting started</a></li>
+  <li><a href="syntax.html" class="page">Comment syntax</a></li>
+  <li><a href="model.html" class="active page">The model</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
+  <li><a href="migration.html" class="page">Migrating to 0.4</a></li>
+</ul>
+<nav class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">Table of contents</label>
+<ul>
+  <li><a href="model.html#the-model" class="header">The model</a>
+  <ul>
+    <li><a href="model.html#scaladoc-and-its-tags" class="header">Scaladoc and its tags</a></li>
+    <li><a href="model.html#markup" class="header">Markup</a></li>
+    <li><a href="model.html#text-when-markup-is-too-much" class="header">Text, when markup is too much</a></li>
+  </ul></li>
+</ul>
+</nav>
+
+</nav>
+<ul style="display: none">
+<li class="md-nav__item md-version" id="project.version">
+<label class="md-nav__link" for="__version">
+<i class="md-icon" title="Version">label_outline</i> 0.3.1*
+</label>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">Table of contents</label>
+<ul>
+  <li><a href="model.html#the-model" class="header">The model</a>
+  <ul>
+    <li><a href="model.html#scaladoc-and-its-tags" class="header">Scaladoc and its tags</a></li>
+    <li><a href="model.html#markup" class="header">Markup</a></li>
+    <li><a href="model.html#text-when-markup-is-too-much" class="header">Text, when markup is too much</a></li>
+  </ul></li>
+</ul>
+</nav>
+
+</div>
+</div>
+</div>
+<div class="md-content">
+<article class="md-content__inner md-typeset">
+<div class="md-content__searchable">
+<h1><a href="#the-model" name="the-model" class="anchor"><span class="anchor-link"></span></a>The model</h1>
+<blockquote>
+  <p>The map is not the territory.</p>
+  <p>— Alfred Korzybski</p>
+</blockquote>
+<p>A parsed comment is a map of the comment, and like every map it leaves things out on purpose. The border is gone, and so are the exact spaces and how a list item was indented. What remains is what the comment <em>says</em>: which tags it has, and how its text is structured. This page is the legend of that map.</p>
+<h2><a href="#scaladoc-and-its-tags" name="scaladoc-and-its-tags" class="anchor"><span class="anchor-link"></span></a>Scaladoc and its tags</h2>
+<p>A <code>Scaladoc</code> is a list of tags, in the order they appear. The description, the text before the first tag, is a tag too. Most tags hold their text as <code>Markup</code>. A few, like <code>@author</code> or <code>@since</code>, hold plain strings, and some, like <code>@documentable</code>, hold nothing. The <a href="syntax.html#tags">syntax page</a> has the full list.</p>
+<pre><code>Tag      = Description       (Markup)
+         | Constructor       (Markup)
+         | Param             (String Markup)
+         | TypeParam         (String Markup)
+         | Returns           (Markup)
+         | Throws            (String Markup)
+         | See | Note | Example | UseCase | Todo | Deprecated | Migration   (Markup)
+         | Author | Version | Since                                       (String)
+         | Group             (String)
+         | GroupName         (String String)
+         | GroupDescription  (String Markup)
+         | GroupPriority     (String Int)
+         | Documentable
+         | InheritDoc
+         | OtherTag          (String Markup)
+
+Scaladoc = List Tag
+</code></pre>
+<h2><a href="#markup" name="markup" class="anchor"><span class="anchor-link"></span></a>Markup</h2>
+<p>Markup comes in two kinds: blocks, which stack on top of each other, and spans, which run inline within a block. A <code>Document</code> holds blocks, and a tag&rsquo;s text is always a <code>Document</code>:</p>
+<pre><code>Span     = PlainText   (String)
+         | Monospace   (String)
+         | Italic      (List Span)
+         | Bold        (List Span)
+         | Underline   (List Span)
+         | Superscript (List Span)
+         | Subscript   (List Span)
+         | Link        (String (List Span))        -- target, title
+         | HtmlTag     (String)                    -- an HTML tag the model has no node for
+
+Markup   = Span
+         | Paragraph     (List Span)
+         | Heading       (Level (List Span))       -- Level: One to Six
+         | CodeBlock     (String)
+         | UnorderedList (List Document)           -- each item: its text and nested lists
+         | OrderedList   (List Document Style)     -- Style: Decimal, LowerRoman, UpperRoman, LowerAlpha, UpperAlpha
+         | Table         (Row (List Alignment) (List Row))   -- a Row: one Paragraph a cell
+         | HorizontalRule
+         | Document      (List Markup)
+</code></pre>
+<p>The spans that hold other spans can nest without limit, so walking the model is naturally recursive. Here is a function that collects every link target in a piece of markup, however deep it sits:</p>
+<pre class="prettyprint"><code class="language-scala">def links(m: Markup): List[String] = m match {
+  case Link(target, title)     =&gt; target :: title.flatMap(links)
+  case Document(elements)      =&gt; elements.flatMap(links)
+  case Paragraph(spans)        =&gt; spans.flatMap(links)
+  case Heading(_, spans)       =&gt; spans.flatMap(links)
+  case x: HasSpans             =&gt; x.spans.flatMap(links)
+  case x: ListBlock            =&gt; x.items.flatMap(links)
+  case Table(header, _, rows)  =&gt; (header :: rows).flatMap(_.cells).flatMap(links)
+  case _                       =&gt; Nil
+}
+
+Scaladoc.fromString(
+  &quot;&quot;&quot;/** See [[scala.Option]].
+    |  *
+    |  *   - &#39;&#39;&#39;also [[scala.Either]]&#39;&#39;&#39;
+    |  */&quot;&quot;&quot;.stripMargin).map(_.descriptions.flatMap(links))
+// res0: Either[ScaladocException, Seq[String]] = Right(
+//   value = List(&quot;scala.Option&quot;, &quot;scala.Either&quot;)
+// )
+</code></pre>
+<p>Building markup by hand is just as direct. Every span has a shorthand for the common case of a single piece of text:</p>
+<pre class="prettyprint"><code class="language-scala">Paragraph(PlainText(&quot;Use &quot;), Bold(&quot;this&quot;), PlainText(&quot; or &quot;), Link(&quot;scala.Option&quot;))
+// res1: Paragraph = Paragraph(
+//   markup = List(
+//     PlainText(value = &quot;Use &quot;),
+//     Bold(spans = List(PlainText(value = &quot;this&quot;))),
+//     PlainText(value = &quot; or &quot;),
+//     Link(target = &quot;scala.Option&quot;, title = List())
+//   )
+// )
+</code></pre>
+<h2><a href="#text-when-markup-is-too-much" name="text-when-markup-is-too-much" class="anchor"><span class="anchor-link"></span></a>Text, when markup is too much</h2>
+<blockquote>
+  <p>Omit needless words.</p>
+  <p>— William Strunk Jr., <em>The Elements of Style</em></p>
+</blockquote>
+<p>Many tools want a string, not a tree: a schema needs a description, a log line needs a message. Two methods give one. <code>plainString</code> writes the markup back in wiki syntax, and <code>trimmed</code> tidies the whitespace first, which is usually what you want:</p>
+<pre class="prettyprint"><code class="language-scala">val m = Scaladoc.fromString(&quot;/** A   &#39;&#39;nice&#39;&#39;\n  *   description. */&quot;).map(_.descriptions.head)
+// m: Either[ScaladocException, Markup] = Right(
+//   value = Document(
+//     elements = List(
+//       Paragraph(
+//         markup = List(
+//           PlainText(value = &quot;A   &quot;),
+//           Italic(spans = List(PlainText(value = &quot;nice&quot;))),
+//           PlainText(
+//             value = &quot;&quot;&quot;
+//   description.&quot;&quot;&quot;
+//           )
+//         )
+//       )
+//     )
+//   )
+// )
+
+m.map(_.plainString)
+// res2: Either[ScaladocException, String] = Right(
+//   value = &quot;&quot;&quot;A   &#39;&#39;nice&#39;&#39;
+//   description.&quot;&quot;&quot;
+// )
+m.map(_.trimmed.plainString)
+// res3: Either[ScaladocException, String] = Right(
+//   value = &quot;A &#39;&#39;nice&#39;&#39; description.&quot;
+// )
+</code></pre>
+<p><code>Scaladoc</code> has helpers for the parts that tools ask for most. Each comes in two flavors: one that returns the markup, and a <code>text</code> one that returns it as trimmed plain text.</p>
+<table>
+  <thead>
+    <tr>
+      <th>Markup </th>
+      <th>Text </th>
+      <th>What </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>descriptions</code> </td>
+      <td><code>textDescriptions</code> </td>
+      <td>the description </td>
+    </tr>
+    <tr>
+      <td><code>params</code> </td>
+      <td><code>textParams</code> </td>
+      <td><code>@param</code>s by name </td>
+    </tr>
+    <tr>
+      <td><code>typeParams</code> </td>
+      <td><code>textTypeParams</code> </td>
+      <td><code>@tparam</code>s by name </td>
+    </tr>
+    <tr>
+      <td><code>throws</code> </td>
+      <td><code>textThrows</code> </td>
+      <td><code>@throws</code> by exception type </td>
+    </tr>
+    <tr>
+      <td><code>returns</code> </td>
+      <td><code>textReturns</code> </td>
+      <td><code>@return</code> </td>
+    </tr>
+    <tr>
+      <td><code>summary</code> </td>
+      <td><code>textSummary</code> </td>
+      <td>the first sentence, as scaladoc shows it in member lists </td>
+    </tr>
+  </tbody>
+</table>
+<p>The summary is the description&rsquo;s first paragraph up to and with its first full stop, the one followed by a space or the end. A <code>@shortDescription</code> tag replaces it:</p>
+<pre class="prettyprint"><code class="language-scala">Scaladoc.fromString(
+  &quot;&quot;&quot;/** Keeps the users of the app. All of them,
+    |  * in one place.
+    |  */&quot;&quot;&quot;.stripMargin).map(_.textSummary)
+// res4: Either[ScaladocException, Option[String]] = Right(
+//   value = Some(value = &quot;Keeps the users of the app.&quot;)
+// )
+</code></pre>
+</div>
+<div>
+<a href="https://github.com/andyglow/scaladoc/tree/master/target/out/jvm/scala-2.13.18/scaladoc-docs/mdoc/model.md" title="Edit this page" class="md-source-file md-edit">
+Edit this page
+</a>
+</div>
+<div class="print-only">
+<span class="md-source-file md-version">
+0.3.1*
+</span>
+</div>
+</article>
+</div>
+</div>
+</main>
+<footer class="md-footer">
+<div class="md-footer-nav">
+<nav class="md-footer-nav__inner md-grid">
+<a href="syntax.html" title="Comment syntax" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+<div class="md-flex__cell md-flex__cell--shrink">
+<i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+</div>
+<div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+<span class="md-flex__ellipsis">
+<span class="md-footer-nav__direction">
+Previous
+</span>
+Comment syntax
+</span>
+</div>
+</a>
+<a href="extractor.html" title="Scaladoc.of" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+<div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+<span class="md-flex__ellipsis">
+<span class="md-footer-nav__direction">
+Next
+</span>
+Scaladoc.of
+</span>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+</div>
+</a>
+</nav>
+</div>
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-footer-copyright">
+<div class="md-footer-copyright__highlight">
+Apache-2.0 · andyglow
+</div>
+Powered by
+<a href="https://github.com/lightbend/paradox">Paradox</a>
+and
+<a href="https://sbt.github.io/sbt-paradox-material-theme/">Paradox Material Theme</a>
+
+</div>
+</div>
+</div>
+</footer>
+
+</div>
+<script src="assets/javascripts/application.583bbe55.js"></script>
+<script src="assets/javascripts/paradox-material-theme.js"></script>
+<script>app.initialize({version:"0.17",url:{base:"."}})</script>
+<script type="text/javascript" src="lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+window.prettyPrint && prettyPrint();
+});
+</script>
+</body>
+</html>

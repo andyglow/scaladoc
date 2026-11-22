@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="generator" content="Paradox, paradox-material-theme=0.8.0, mkdocs-material=3.0.3">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Scaladoc">
+
+<meta name="lang:clipboard.copy" content="Copy to clipboard">
+<meta name="lang:clipboard.copied" content="Copied to clipboard">
+<meta name="lang:search.language" content="">
+<meta name="lang:search.pipeline.stopwords" content="true">
+<meta name="lang:search.pipeline.trimmer" content="true">
+<meta name="lang:search.result.none" content="No matching documents">
+<meta name="lang:search.result.one" content="1 matching document">
+<meta name="lang:search.result.other" content="# matching documents">
+<meta name="lang:search.tokenizer" content="[\s\-]+">
+
+
+<meta name="description" content="scaladoc-docs">
+<meta property="og:description" content="scaladoc-docs">
+<meta name="twitter:card" content="summary">
+<link rel="shortcut icon" href="assets/images/favicon.png">
+<title>Compiler plugin · Scaladoc</title>
+<meta property="og:title" content="Compiler plugin · Scaladoc">
+<link rel="stylesheet" href="assets/stylesheets/application.451f80e5.css">
+<link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
+<meta name="theme-color" content="#3f51b5" />
+<link rel="stylesheet" href="lib/material__tabs/dist/mdc.tabs.min.css">
+<link rel="stylesheet" href="lib/prettify/prettify.css">
+<script src="assets/javascripts/modernizr.1aa3b519.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+<style>
+body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}
+code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}
+</style>
+<link rel="stylesheet" href="assets/fonts/font-awesome.css">
+<link rel="stylesheet" href="assets/fonts/material-icons.css">
+<link rel="stylesheet" href="assets/stylesheets/paradox-material-theme.css">
+</head>
+<body
+data-md-color-primary="indigo"
+data-md-color-accent="orange"
+>
+<input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+<input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+<label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
+<header class="md-header" data-md-component="header">
+<nav class="md-header-nav md-grid">
+<div class="md-flex">
+<div class="md-flex__cell md-flex__cell--shrink">
+<a href="index.html" title="Scaladoc" class="md-header-nav__button md-logo">
+<i class="md-icon">description</i>
+</a>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
+</div>
+<div class="md-flex__cell md-flex__cell--stretch">
+<div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+<span class="md-header-nav__topic">
+Scaladoc
+</span>
+<span class="md-header-nav__topic">
+Compiler plugin
+</span>
+</div>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query" data-md-state="active">
+<label class="md-icon md-search__icon" for="__search"></label>
+<button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">&#xE5CD;</button>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix>
+<div class="md-search-result" data-md-component="result">
+<div class="md-search-result__meta">
+Type to start searching
+</div>
+<ol class="md-search-result__list"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<div class="md-header-nav__source">
+<a href="https://github.com/andyglow/scaladoc"
+title="Go to repository"
+class="md-source"
+data-md-source="github">
+<div class="md-source__icon">
+<i class="fa fa-github"></i>
+</div>
+<div class="md-source__repository">
+andyglow/scaladoc
+</div>
+</a>
+
+</div>
+</div>
+</div>
+</nav>
+</header>
+
+<div class="md-container">
+<main class="md-main">
+<div class="md-main__inner md-grid" data-md-component="container">
+<div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav class="md-nav md-nav--primary" data-md-level="0" style="visibility: hidden">
+<label class="md-nav__title md-nav__title--site" for="drawer">
+<a href="index.html" title="Scaladoc" class="md-nav__button md-logo">
+<span class="md-nav__button md-logo">
+<i class="md-icon">description</i>
+</a>
+<a href="index.html" title="Scaladoc">
+Scaladoc
+</a>
+</label>
+<div class="md-nav__source">
+<a href="https://github.com/andyglow/scaladoc"
+title="Go to repository"
+class="md-source"
+data-md-source="github">
+<div class="md-source__icon">
+<i class="fa fa-github"></i>
+</div>
+<div class="md-source__repository">
+andyglow/scaladoc
+</div>
+</a>
+
+</div>
+<ul>
+  <li><a href="getting-started.html" class="page">Getting started</a></li>
+  <li><a href="syntax.html" class="page">Comment syntax</a></li>
+  <li><a href="model.html" class="page">The model</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="compiler-plugin.html" class="active page">Compiler plugin</a></li>
+  <li><a href="migration.html" class="page">Migrating to 0.4</a></li>
+</ul>
+<nav class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">Table of contents</label>
+<ul>
+  <li><a href="compiler-plugin.html#compiler-plugin" class="header">Compiler plugin</a>
+  <ul>
+    <li><a href="compiler-plugin.html#choosing-what-to-embed" class="header">Choosing what to embed</a></li>
+  </ul></li>
+</ul>
+</nav>
+
+</nav>
+<ul style="display: none">
+<li class="md-nav__item md-version" id="project.version">
+<label class="md-nav__link" for="__version">
+<i class="md-icon" title="Version">label_outline</i> 0.3.1*
+</label>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">Table of contents</label>
+<ul>
+  <li><a href="compiler-plugin.html#compiler-plugin" class="header">Compiler plugin</a>
+  <ul>
+    <li><a href="compiler-plugin.html#choosing-what-to-embed" class="header">Choosing what to embed</a></li>
+  </ul></li>
+</ul>
+</nav>
+
+</div>
+</div>
+</div>
+<div class="md-content">
+<article class="md-content__inner md-typeset">
+<div class="md-content__searchable">
+<h1><a href="#compiler-plugin" name="compiler-plugin" class="anchor"><span class="anchor-link"></span></a>Compiler plugin</h1>
+<blockquote>
+  <p>The palest ink is better than the best memory.</p>
+  <p>— Chinese proverb</p>
+</blockquote>
+<p>The Scala 2 compiler has a short memory. It reads every doc comment while it compiles a file, then lets go of it, and nothing of the comment reaches the bytecode. A tool that looks at your classes later, from another module or out of a jar, finds the types intact and the prose gone.</p>
+<p>The compiler plugin writes the prose down before it&rsquo;s forgotten. For every documented class, it:</p>
+<ul>
+  <li>validates the comment. One the parser can&rsquo;t read, like one with a misaligned border, is reported as a warning in  the <code>scaladoc</code> category and isn&rsquo;t embedded. <code>-Xfatal-warnings</code>, or <code>-Wconf:cat=scaladoc:e</code> on 2.13, turns it into an error</li>
+  <li>packs the comment into a <code>@ScaladocCarrier</code> annotation on the class, which stays in the bytecode</li>
+</ul>
+<p><a href="extractor.html"><code>Scaladoc.of</code></a> finds the annotation, so it works for classes from any module or jar compiled with the plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn&rsquo;t need it, since it keeps comments in TASTy on its own.</p>
+<p>The <a href="getting-started.html#with-the-sbt-plugin">sbt plugin</a> adds it on Scala 2 modules. By hand:</p>
+<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.3.1-SNAPSHOT&quot;)
+</code></pre>
+<h2><a href="#choosing-what-to-embed" name="choosing-what-to-embed" class="anchor"><span class="anchor-link"></span></a>Choosing what to embed</h2>
+<p>By default the plugin embeds the scaladoc of every documented class. That&rsquo;s often more than needed, and a comment meant for the team may not be meant for every jar. Include and exclude patterns narrow it down. With <code>sbt-scaladoc</code> they&rsquo;re settings:</p>
+<pre class="prettyprint"><code class="language-sbt">scaladocIncludePaths   := Seq(&quot;**/model/**&quot;)
+scaladocIncludeClasses := Seq(&quot;com.acme.api.*&quot;)
+scaladocExcludePaths   := Seq(&quot;**/generated/**&quot;)
+scaladocExcludeClasses := Seq(&quot;com.acme.**.internal.*&quot;)
+</code></pre>
+<p>Without it, they&rsquo;re options of the compiler plugin, and each can be given several times:</p>
+<pre class="prettyprint"><code class="language-sbt">scalacOptions ++= Seq(
+  &quot;-P:scaladoc-compiler-plugin:include:path:**/model/**&quot;,
+  &quot;-P:scaladoc-compiler-plugin:include:class:com.acme.api.*&quot;,
+  &quot;-P:scaladoc-compiler-plugin:exclude:path:**/generated/**&quot;,
+  &quot;-P:scaladoc-compiler-plugin:exclude:class:com.acme.**.internal.*&quot;
+)
+</code></pre>
+<table>
+  <thead>
+    <tr>
+      <th>Option </th>
+      <th>Matches </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>include:path:&lt;glob&gt;</code> </td>
+      <td>source files whose path matches the glob </td>
+    </tr>
+    <tr>
+      <td><code>exclude:path:&lt;glob&gt;</code> </td>
+      <td>the same, to leave out </td>
+    </tr>
+    <tr>
+      <td><code>include:class:&lt;pattern&gt;</code> </td>
+      <td>classes whose fully qualified name matches the pattern </td>
+    </tr>
+    <tr>
+      <td><code>exclude:class:&lt;pattern&gt;</code> </td>
+      <td>the same, to leave out </td>
+    </tr>
+  </tbody>
+</table>
+<p>The rules, in the order they&rsquo;re applied:</p>
+<ul>
+  <li>Without any <code>include</code>, every class is included. With some, a class is included if its file matches an  <code>include:path</code> or its name matches an <code>include:class</code>.</li>
+  <li>An <code>exclude</code> always wins over an <code>include</code>.</li>
+  <li>Path globs use <a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-"><code>java.nio</code> glob syntax</a>  and are matched against the absolute path of the source file, so they usually start with <code>**/</code>.</li>
+  <li>In class patterns, <code>*</code> matches within one segment of the name, <code>**</code> across segments, and <code>**.</code> zero or more  packages: <code>com.acme.**.internal.*</code> matches both <code>com.acme.internal.Secret</code> and <code>com.acme.a.b.internal.Secret</code>.  Nested classes are written with dots, as in <code>com.acme.Outer.Inner</code>.</li>
+  <li>A malformed option fails the compilation, rather than quietly embedding everything.</li>
+</ul>
+</div>
+<div>
+<a href="https://github.com/andyglow/scaladoc/tree/master/target/out/jvm/scala-2.13.18/scaladoc-docs/mdoc/compiler-plugin.md" title="Edit this page" class="md-source-file md-edit">
+Edit this page
+</a>
+</div>
+<div class="print-only">
+<span class="md-source-file md-version">
+0.3.1*
+</span>
+</div>
+</article>
+</div>
+</div>
+</main>
+<footer class="md-footer">
+<div class="md-footer-nav">
+<nav class="md-footer-nav__inner md-grid">
+<a href="extractor.html" title="Scaladoc.of" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+<div class="md-flex__cell md-flex__cell--shrink">
+<i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+</div>
+<div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+<span class="md-flex__ellipsis">
+<span class="md-footer-nav__direction">
+Previous
+</span>
+Scaladoc.of
+</span>
+</div>
+</a>
+<a href="migration.html" title="Migrating to 0.4" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+<div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+<span class="md-flex__ellipsis">
+<span class="md-footer-nav__direction">
+Next
+</span>
+Migrating to 0.4
+</span>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+</div>
+</a>
+</nav>
+</div>
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-footer-copyright">
+<div class="md-footer-copyright__highlight">
+Apache-2.0 · andyglow
+</div>
+Powered by
+<a href="https://github.com/lightbend/paradox">Paradox</a>
+and
+<a href="https://sbt.github.io/sbt-paradox-material-theme/">Paradox Material Theme</a>
+
+</div>
+</div>
+</div>
+</footer>
+
+</div>
+<script src="assets/javascripts/application.583bbe55.js"></script>
+<script src="assets/javascripts/paradox-material-theme.js"></script>
+<script>app.initialize({version:"0.17",url:{base:"."}})</script>
+<script type="text/javascript" src="lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+window.prettyPrint && prettyPrint();
+});
+</script>
+</body>
+</html>

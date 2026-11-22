@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="generator" content="Paradox, paradox-material-theme=0.8.0, mkdocs-material=3.0.3">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Scaladoc">
+
+<meta name="lang:clipboard.copy" content="Copy to clipboard">
+<meta name="lang:clipboard.copied" content="Copied to clipboard">
+<meta name="lang:search.language" content="">
+<meta name="lang:search.pipeline.stopwords" content="true">
+<meta name="lang:search.pipeline.trimmer" content="true">
+<meta name="lang:search.result.none" content="No matching documents">
+<meta name="lang:search.result.one" content="1 matching document">
+<meta name="lang:search.result.other" content="# matching documents">
+<meta name="lang:search.tokenizer" content="[\s\-]+">
+
+
+<meta name="description" content="scaladoc-docs">
+<meta property="og:description" content="scaladoc-docs">
+<meta name="twitter:card" content="summary">
+<link rel="shortcut icon" href="assets/images/favicon.png">
+<title>Comment syntax · Scaladoc</title>
+<meta property="og:title" content="Comment syntax · Scaladoc">
+<link rel="stylesheet" href="assets/stylesheets/application.451f80e5.css">
+<link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
+<meta name="theme-color" content="#3f51b5" />
+<link rel="stylesheet" href="lib/material__tabs/dist/mdc.tabs.min.css">
+<link rel="stylesheet" href="lib/prettify/prettify.css">
+<script src="assets/javascripts/modernizr.1aa3b519.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+<style>
+body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}
+code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}
+</style>
+<link rel="stylesheet" href="assets/fonts/font-awesome.css">
+<link rel="stylesheet" href="assets/fonts/material-icons.css">
+<link rel="stylesheet" href="assets/stylesheets/paradox-material-theme.css">
+</head>
+<body
+data-md-color-primary="indigo"
+data-md-color-accent="orange"
+>
+<input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+<input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+<label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
+<header class="md-header" data-md-component="header">
+<nav class="md-header-nav md-grid">
+<div class="md-flex">
+<div class="md-flex__cell md-flex__cell--shrink">
+<a href="index.html" title="Scaladoc" class="md-header-nav__button md-logo">
+<i class="md-icon">description</i>
+</a>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
+</div>
+<div class="md-flex__cell md-flex__cell--stretch">
+<div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+<span class="md-header-nav__topic">
+Scaladoc
+</span>
+<span class="md-header-nav__topic">
+Comment syntax
+</span>
+</div>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query" data-md-state="active">
+<label class="md-icon md-search__icon" for="__search"></label>
+<button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">&#xE5CD;</button>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix>
+<div class="md-search-result" data-md-component="result">
+<div class="md-search-result__meta">
+Type to start searching
+</div>
+<ol class="md-search-result__list"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<div class="md-header-nav__source">
+<a href="https://github.com/andyglow/scaladoc"
+title="Go to repository"
+class="md-source"
+data-md-source="github">
+<div class="md-source__icon">
+<i class="fa fa-github"></i>
+</div>
+<div class="md-source__repository">
+andyglow/scaladoc
+</div>
+</a>
+
+</div>
+</div>
+</div>
+</nav>
+</header>
+
+<div class="md-container">
+<main class="md-main">
+<div class="md-main__inner md-grid" data-md-component="container">
+<div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav class="md-nav md-nav--primary" data-md-level="0" style="visibility: hidden">
+<label class="md-nav__title md-nav__title--site" for="drawer">
+<a href="index.html" title="Scaladoc" class="md-nav__button md-logo">
+<span class="md-nav__button md-logo">
+<i class="md-icon">description</i>
+</a>
+<a href="index.html" title="Scaladoc">
+Scaladoc
+</a>
+</label>
+<div class="md-nav__source">
+<a href="https://github.com/andyglow/scaladoc"
+title="Go to repository"
+class="md-source"
+data-md-source="github">
+<div class="md-source__icon">
+<i class="fa fa-github"></i>
+</div>
+<div class="md-source__repository">
+andyglow/scaladoc
+</div>
+</a>
+
+</div>
+<ul>
+  <li><a href="getting-started.html" class="page">Getting started</a></li>
+  <li><a href="syntax.html" class="active page">Comment syntax</a></li>
+  <li><a href="model.html" class="page">The model</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
+  <li><a href="migration.html" class="page">Migrating to 0.4</a></li>
+</ul>
+<nav class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">Table of contents</label>
+<ul>
+  <li><a href="syntax.html#comment-syntax" class="header">Comment syntax</a>
+  <ul>
+    <li><a href="syntax.html#the-comment" class="header">The comment</a></li>
+    <li><a href="syntax.html#tags" class="header">Tags</a></li>
+    <li><a href="syntax.html#inline-markup" class="header">Inline markup</a></li>
+    <li><a href="syntax.html#links" class="header">Links</a></li>
+    <li><a href="syntax.html#paragraphs-and-headings" class="header">Paragraphs and headings</a></li>
+    <li><a href="syntax.html#code-blocks" class="header">Code blocks</a></li>
+    <li><a href="syntax.html#lists" class="header">Lists</a></li>
+    <li><a href="syntax.html#tables" class="header">Tables</a></li>
+    <li><a href="syntax.html#horizontal-rules" class="header">Horizontal rules</a></li>
+    <li><a href="syntax.html#html" class="header">HTML</a></li>
+    <li><a href="syntax.html#javadocs-inline-tags" class="header">Javadoc&rsquo;s inline tags</a></li>
+    <li><a href="syntax.html#macros" class="header">Macros</a></li>
+    <li><a href="syntax.html#how-this-differs-from-scaladoc" class="header">How this differs from scaladoc</a></li>
+  </ul></li>
+</ul>
+</nav>
+
+</nav>
+<ul style="display: none">
+<li class="md-nav__item md-version" id="project.version">
+<label class="md-nav__link" for="__version">
+<i class="md-icon" title="Version">label_outline</i> 0.3.1*
+</label>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">Table of contents</label>
+<ul>
+  <li><a href="syntax.html#comment-syntax" class="header">Comment syntax</a>
+  <ul>
+    <li><a href="syntax.html#the-comment" class="header">The comment</a></li>
+    <li><a href="syntax.html#tags" class="header">Tags</a></li>
+    <li><a href="syntax.html#inline-markup" class="header">Inline markup</a></li>
+    <li><a href="syntax.html#links" class="header">Links</a></li>
+    <li><a href="syntax.html#paragraphs-and-headings" class="header">Paragraphs and headings</a></li>
+    <li><a href="syntax.html#code-blocks" class="header">Code blocks</a></li>
+    <li><a href="syntax.html#lists" class="header">Lists</a></li>
+    <li><a href="syntax.html#tables" class="header">Tables</a></li>
+    <li><a href="syntax.html#horizontal-rules" class="header">Horizontal rules</a></li>
+    <li><a href="syntax.html#html" class="header">HTML</a></li>
+    <li><a href="syntax.html#javadocs-inline-tags" class="header">Javadoc&rsquo;s inline tags</a></li>
+    <li><a href="syntax.html#macros" class="header">Macros</a></li>
+    <li><a href="syntax.html#how-this-differs-from-scaladoc" class="header">How this differs from scaladoc</a></li>
+  </ul></li>
+</ul>
+</nav>
+
+</div>
+</div>
+</div>
+<div class="md-content">
+<article class="md-content__inner md-typeset">
+<div class="md-content__searchable">
+<h1><a href="#comment-syntax" name="comment-syntax" class="anchor"><span class="anchor-link"></span></a>Comment syntax</h1>
+<blockquote>
+  <p>The limits of my language mean the limits of my world.</p>
+  <p>— Ludwig Wittgenstein, <em>Tractatus Logico-Philosophicus</em></p>
+</blockquote>
+<p>A doc comment looks like prose, but it&rsquo;s a small language with a grammar of its own. Scaladoc defined most of it: the <code>*</code> border, the <code>@</code> tags, a wiki markup with <code>&#39;&#39;italic&#39;&#39;</code> and <code>[[links]]</code>. Over the years, comments picked up some HTML and a few habits from javadoc along the way, and real codebases contain all of it, often in the same comment.</p>
+<p>The parser reads all of it, and this page walks through what it understands, from the outside in: first the comment as a whole, then its tags, then the markup inside them. Every example on this page is compiled and run when the site is built, so what you see after each snippet is what the parser really returns.</p>
+<h2><a href="#the-comment" name="the-comment" class="anchor"><span class="anchor-link"></span></a>The comment</h2>
+<p>A doc comment starts with <code>/**</code> and ends with <code>*/</code>. In between, each line usually starts with a <code>*</code> border: aligned under the second <code>*</code> of the opening marker in scaladoc&rsquo;s style, under the first in javadoc&rsquo;s. The border and one space after it belong to the comment&rsquo;s frame, not to its text:</p>
+<pre class="prettyprint"><code class="language-scala">parse(
+  &quot;&quot;&quot;/** A comment in scaladoc&#39;s style,
+    |  * the border under the second star.
+    |  */&quot;&quot;&quot;.stripMargin)
+// res0: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(
+//           value = &quot;&quot;&quot;A comment in scaladoc&#39;s style,
+// the border under the second star.&quot;&quot;&quot;
+//         )
+//       )
+//     )
+//   )
+// )
+
+parse(
+  &quot;&quot;&quot;/**
+    | * And one in javadoc&#39;s style.
+    | */&quot;&quot;&quot;.stripMargin)
+// res1: Markup = Document(
+//   elements = List(
+//     Paragraph(markup = List(PlainText(value = &quot;And one in javadoc&#39;s style.&quot;)))
+//   )
+// )
+</code></pre>
+<p>The border is optional, as it is for scaladoc. A line without one is text from its first character on:</p>
+<pre class="prettyprint"><code class="language-scala">parse(
+  &quot;&quot;&quot;/** No borders here,
+    |    just text.
+    | */&quot;&quot;&quot;.stripMargin)
+// res2: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(
+//           value = &quot;&quot;&quot;No borders here,
+// just text.&quot;&quot;&quot;
+//         )
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p>Trailing whitespace and blank lines at the start and the end of a comment are dropped. What remains is text, and the text is always made of blocks: here, a single paragraph.</p>
+<h2><a href="#tags" name="tags" class="anchor"><span class="anchor-link"></span></a>Tags</h2>
+<blockquote>
+  <p>Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.</p>
+  <p>— Andy Hunt and Dave Thomas, <em>The Pragmatic Programmer</em></p>
+</blockquote>
+<p>A tag starts a line with <code>@</code> and its name. Everything up to the next tag is its text, and the text before the first tag is the description. An <code>@</code> in the middle of a line, as in an e-mail address or <code>@tailrec</code>, is just a character:</p>
+<pre class="prettyprint"><code class="language-scala">Scaladoc.fromString(
+  &quot;&quot;&quot;/** Sends mail to support@example.com, see `@tailrec`.
+    |  *
+    |  * @param to   who gets it
+    |  * @param body what it says,
+    |  *             over two lines
+    |  * @throws java.io.IOException if the server is down
+    |  * @return the message id
+    |  */&quot;&quot;&quot;.stripMargin).map(_.tags.map(_.productPrefix))
+// res3: Either[ScaladocException, List[String]] = Right(
+//   value = List(&quot;Description&quot;, &quot;Param&quot;, &quot;Param&quot;, &quot;Throws&quot;, &quot;Returns&quot;)
+// )
+</code></pre>
+<p>These are the tags the model knows by name. Any other one, like <code>@contentDiagram</code>, comes back as an <code>OtherTag</code> with its name and text.</p>
+<table>
+  <thead>
+    <tr>
+      <th>Tag </th>
+      <th>Model </th>
+      <th>Text </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>the text before the first tag </td>
+      <td><code>Description</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@constructor</code> </td>
+      <td><code>Constructor</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@param name</code> </td>
+      <td><code>Param(name, ...)</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@tparam name</code> </td>
+      <td><code>TypeParam(name, ...)</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@return</code> (or <code>@returns</code>) </td>
+      <td><code>Returns</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@throws type</code> </td>
+      <td><code>Throws(type, ...)</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@see</code>, <code>@note</code>, <code>@example</code> </td>
+      <td><code>See</code>, <code>Note</code>, <code>Example</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@usecase</code> </td>
+      <td><code>UseCase</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@todo</code>, <code>@deprecated</code>, <code>@migration</code></td>
+      <td><code>Todo</code>, <code>Deprecated</code>, <code>Migration</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@author</code>, <code>@version</code>, <code>@since</code> </td>
+      <td><code>Author</code>, <code>Version</code>, <code>Since</code> </td>
+      <td>plain text </td>
+    </tr>
+    <tr>
+      <td><code>@group id</code> </td>
+      <td><code>Group(id)</code> </td>
+      <td>none </td>
+    </tr>
+    <tr>
+      <td><code>@groupname id</code> </td>
+      <td><code>GroupName(id, ...)</code> </td>
+      <td>plain text </td>
+    </tr>
+    <tr>
+      <td><code>@groupdesc id</code> </td>
+      <td><code>GroupDescription(id, ...)</code> </td>
+      <td>markup </td>
+    </tr>
+    <tr>
+      <td><code>@groupprio id n</code> </td>
+      <td><code>GroupPriority(id, n)</code> </td>
+      <td>a number </td>
+    </tr>
+    <tr>
+      <td><code>@documentable</code>, <code>@inheritdoc</code> </td>
+      <td><code>Documentable</code>, <code>InheritDoc</code> </td>
+      <td>none </td>
+    </tr>
+    <tr>
+      <td>anything else </td>
+      <td><code>OtherTag(name, ...)</code> </td>
+      <td>markup </td>
+    </tr>
+  </tbody>
+</table>
+<p>A tag without text is dropped, since it says nothing, with two exceptions that scaladoc makes as well: <code>@deprecated</code> deprecates even without a reason, and <code>@throws IOException</code> names an exception even without saying when.</p>
+<h2><a href="#inline-markup" name="inline-markup" class="anchor"><span class="anchor-link"></span></a>Inline markup</h2>
+<p>Inside a paragraph, a few markers change how text looks. They are scaladoc&rsquo;s wiki markup:</p>
+<table>
+  <thead>
+    <tr>
+      <th>Markup </th>
+      <th>Model </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>`code`</code> </td>
+      <td><code>Monospace</code> </td>
+    </tr>
+    <tr>
+      <td><code>&#39;&#39;italic&#39;&#39;</code> </td>
+      <td><code>Italic</code> </td>
+    </tr>
+    <tr>
+      <td><code>&#39;&#39;&#39;bold&#39;&#39;&#39;</code> </td>
+      <td><code>Bold</code> </td>
+    </tr>
+    <tr>
+      <td><code>__underline__</code> </td>
+      <td><code>Underline</code> </td>
+    </tr>
+    <tr>
+      <td><code>^super^</code> </td>
+      <td><code>Superscript</code> </td>
+    </tr>
+    <tr>
+      <td><code>,,sub,,</code> </td>
+      <td><code>Subscript</code> </td>
+    </tr>
+    <tr>
+      <td><code>[[link]]</code> </td>
+      <td><code>Link</code> </td>
+    </tr>
+  </tbody>
+</table>
+<p>Markup nests, so bold text can contain italic and links, and so on all the way down. The text of a monospace span is taken literally, which is what you want from code:</p>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** &#39;&#39;&#39;Bold, with &#39;&#39;italic&#39;&#39; and [[scala.Option]] inside&#39;&#39;&#39;, and `code with &#39;&#39;quotes&#39;&#39;`. */&quot;)
+// res4: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         Bold(
+//           spans = List(
+//             PlainText(value = &quot;Bold, with &quot;),
+//             Italic(spans = List(PlainText(value = &quot;italic&quot;))),
+//             PlainText(value = &quot; and &quot;),
+//             Link(target = &quot;scala.Option&quot;, title = List()),
+//             PlainText(value = &quot; inside&quot;)
+//           )
+//         ),
+//         PlainText(value = &quot;, and &quot;),
+//         Monospace(value = &quot;code with &#39;&#39;quotes&#39;&#39;&quot;),
+//         PlainText(value = &quot;.&quot;)
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<blockquote>
+  <p>Be conservative in what you do, be liberal in what you accept from others.</p>
+  <p>— Jon Postel, RFC 761</p>
+</blockquote>
+<p>Comments are written by people, and people write <code>x^2</code> and forget a backtick. A marker that isn&rsquo;t closed within its paragraph is therefore plain text, not an error that loses the whole comment:</p>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** The cost grows like n^2, and `this backtick never closes. */&quot;)
+// res5: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(
+//           value = &quot;The cost grows like n^2, and `this backtick never closes.&quot;
+//         )
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<h2><a href="#links" name="links" class="anchor"><span class="anchor-link"></span></a>Links</h2>
+<p>A link holds a target and, optionally, a title. The target runs to the first whitespace and the rest is the title, which can have markup of its own. The target is either an entity, like a class or a member, or a URL:</p>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** See [[scala.Option]] and [[https://docs.scala-lang.org the &#39;&#39;Scala&#39;&#39; docs]]. */&quot;)
+// res6: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(value = &quot;See &quot;),
+//         Link(target = &quot;scala.Option&quot;, title = List()),
+//         PlainText(value = &quot; and &quot;),
+//         Link(
+//           target = &quot;https://docs.scala-lang.org&quot;,
+//           title = List(
+//             PlainText(value = &quot;the &quot;),
+//             Italic(spans = List(PlainText(value = &quot;Scala&quot;))),
+//             PlainText(value = &quot; docs&quot;)
+//           )
+//         ),
+//         PlainText(value = &quot;.&quot;)
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p>Member signatures can contain <code>]]</code> themselves. A link opened with more brackets closes with as many, which keeps such a target in one piece:</p>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** Overloads are told apart like [[[baz(x:List[List[A]])*]]]. */&quot;)
+// res7: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(value = &quot;Overloads are told apart like &quot;),
+//         Link(target = &quot;baz(x:List[List[A]])*&quot;, title = List()),
+//         PlainText(value = &quot;.&quot;)
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p><code>Link.isUrl</code> tells the two kinds of target apart.</p>
+<h2><a href="#paragraphs-and-headings" name="paragraphs-and-headings" class="anchor"><span class="anchor-link"></span></a>Paragraphs and headings</h2>
+<p>A blank line ends a paragraph. A heading is a line of its own, wrapped in as many <code>=</code> on each side as its level, from one to six:</p>
+<pre class="prettyprint"><code class="language-scala">parse(
+  &quot;&quot;&quot;/** = The `App` trait =
+    |  *
+    |  * First paragraph,
+    |  * still the first.
+    |  *
+    |  * == Caveats ==
+    |  * Second paragraph.
+    |  */&quot;&quot;&quot;.stripMargin)
+// res8: Markup = Document(
+//   elements = List(
+//     Heading(
+//       level = One,
+//       spans = List(
+//         PlainText(value = &quot;The &quot;),
+//         Monospace(value = &quot;App&quot;),
+//         PlainText(value = &quot; trait&quot;)
+//       )
+//     ),
+//     Paragraph(
+//       markup = List(
+//         PlainText(
+//           value = &quot;&quot;&quot;First paragraph,
+// still the first.&quot;&quot;&quot;
+//         )
+//       )
+//     ),
+//     Heading(level = Two, spans = List(PlainText(value = &quot;Caveats&quot;))),
+//     Paragraph(markup = List(PlainText(value = &quot;Second paragraph.&quot;)))
+//   )
+// )
+</code></pre>
+<p>A heading doesn&rsquo;t need a blank line before or after it, and its title can have markup too.</p>
+<h2><a href="#code-blocks" name="code-blocks" class="anchor"><span class="anchor-link"></span></a>Code blocks</h2>
+<p>Code goes between <code>{{{</code> and <code>}}}</code>. A code block can span blank lines, and loses the indentation that all of its lines share, so the code reads the same however deeply the comment is nested:</p>
+<pre class="prettyprint"><code class="language-scala">parse(
+  &quot;&quot;&quot;/** For example:
+    |  * {{{
+    |  *   val x = 1
+    |  *
+    |  *   if (x &gt; 0)
+    |  *     println(x)
+    |  * }}}
+    |  */&quot;&quot;&quot;.stripMargin)
+// res9: Markup = Document(
+//   elements = List(
+//     Paragraph(markup = List(PlainText(value = &quot;For example:&quot;))),
+//     CodeBlock(
+//       value = &quot;&quot;&quot;val x = 1
+// 
+// if (x &gt; 0)
+//   println(x)&quot;&quot;&quot;
+//     )
+//   )
+// )
+</code></pre>
+<p>Nothing inside a code block is a tag, so an example can show <code>@main</code> or <code>@tailrec</code> without the parser mistaking them for the start of a <code>@main</code> tag.</p>
+<h2><a href="#lists" name="lists" class="anchor"><span class="anchor-link"></span></a>Lists</h2>
+<blockquote>
+  <p>The list is the origin of culture.</p>
+  <p>— Umberto Eco</p>
+</blockquote>
+<p>A list item is an indented line that starts with <code>-</code> for a bullet, or with <code>1.</code>, <code>i.</code>, <code>I.</code>, <code>a.</code> or <code>A.</code> for the numbering styles. The indentation matters twice. Without it, a line that starts with <code>-</code> is just text. And more of it nests a list under the item before it:</p>
+<pre class="prettyprint"><code class="language-scala">parse(
+  &quot;&quot;&quot;/** Steps:
+    |  *
+    |  *   1. Clone the repository
+    |  *   1. Build it
+    |  *     - on the JVM
+    |  *     - on Scala.js
+    |  *   1. Run the tests
+    |  */&quot;&quot;&quot;.stripMargin)
+// res10: Markup = Document(
+//   elements = List(
+//     Paragraph(markup = List(PlainText(value = &quot;Steps:&quot;))),
+//     OrderedList(
+//       items = List(
+//         Document(
+//           elements = List(
+//             Paragraph(markup = List(PlainText(value = &quot;Clone the repository&quot;)))
+//           )
+//         ),
+//         Document(
+//           elements = List(
+//             Paragraph(markup = List(PlainText(value = &quot;Build it&quot;))),
+//             UnorderedList(
+//               items = List(
+//                 Document(
+//                   elements = List(
+//                     Paragraph(markup = List(PlainText(value = &quot;on the JVM&quot;)))
+//                   )
+//                 ),
+//                 Document(
+//                   elements = List(
+//                     Paragraph(markup = List(PlainText(value = &quot;on Scala.js&quot;)))
+//                   )
+//                 )
+//               )
+//             )
+//           )
+//         ),
+//         Document(
+//           elements = List(
+//             Paragraph(markup = List(PlainText(value = &quot;Run the tests&quot;)))
+//           )
+//         )
+//       ),
+//       style = Decimal
+//     )
+//   )
+// )
+</code></pre>
+<p>Each item is a document of its own, holding the item&rsquo;s text and the lists nested under it. An item&rsquo;s text continues on the lines that follow, until the next item, a blank line or the end of the list. A blank line between items doesn&rsquo;t end the list. A different numbering style at the same indentation starts a new list.</p>
+<h2><a href="#tables" name="tables" class="anchor"><span class="anchor-link"></span></a>Tables</h2>
+<p>Tables use pipes, a header row, and a delimiter row that sets each column&rsquo;s alignment with <code>:</code>:</p>
+<pre class="prettyprint"><code class="language-scala">parse(
+  &quot;&quot;&quot;/** Sizes:
+    |  *
+    |  * | Size | Price | Notes      |
+    |  * |:-----|------:|:----------:|
+    |  * | S    | 10    | &#39;&#39;cheap&#39;&#39;  |
+    |  * | M    | 15    |
+    |  */&quot;&quot;&quot;.stripMargin)
+// res11: Markup = Document(
+//   elements = List(
+//     Paragraph(markup = List(PlainText(value = &quot;Sizes:&quot;))),
+//     Table(
+//       header = Row(
+//         cells = List(
+//           Paragraph(markup = List(PlainText(value = &quot;Size&quot;))),
+//           Paragraph(markup = List(PlainText(value = &quot;Price&quot;))),
+//           Paragraph(markup = List(PlainText(value = &quot;Notes&quot;)))
+//         )
+//       ),
+//       alignments = List(Left, Right, Center),
+//       rows = List(
+//         Row(
+//           cells = List(
+//             Paragraph(markup = List(PlainText(value = &quot;S&quot;))),
+//             Paragraph(markup = List(PlainText(value = &quot;10&quot;))),
+//             Paragraph(
+//               markup = List(Italic(spans = List(PlainText(value = &quot;cheap&quot;))))
+//             )
+//           )
+//         ),
+//         Row(
+//           cells = List(
+//             Paragraph(markup = List(PlainText(value = &quot;M&quot;))),
+//             Paragraph(markup = List(PlainText(value = &quot;15&quot;))),
+//             Paragraph(markup = List())
+//           )
+//         )
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p>Cells hold inline markup, and <code>\|</code> is a pipe inside a cell. Rows are padded or cut to the width of the header. Lines without a valid delimiter row aren&rsquo;t a table at all, and stay text.</p>
+<h2><a href="#horizontal-rules" name="horizontal-rules" class="anchor"><span class="anchor-link"></span></a>Horizontal rules</h2>
+<p>Four or more dashes on a line of their own make a rule:</p>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** Above.\n  *\n  * ----\n  *\n  * Below.\n  */&quot;)
+// res12: Markup = Document(
+//   elements = List(
+//     Paragraph(markup = List(PlainText(value = &quot;Above.&quot;))),
+//     HorizontalRule,
+//     Paragraph(markup = List(PlainText(value = &quot;Below.&quot;)))
+//   )
+// )
+</code></pre>
+<p>As in scaladoc, a rule starts a block, but doesn&rsquo;t interrupt a paragraph: <code>----</code> right under a line of text is text.</p>
+<h2><a href="#html" name="html" class="anchor"><span class="anchor-link"></span></a>HTML</h2>
+<p>Doc comments have always had HTML in them, often from the days when they were written for javadoc. The parser turns it into the same model as the wiki markup, wherever the model has an equivalent:</p>
+<ul>
+  <li><code>&lt;p&gt;</code> and <code>&lt;div&gt;</code> break paragraphs, <code>&lt;h1&gt;</code> to <code>&lt;h6&gt;</code> are headings, <code>&lt;li&gt;</code> are list items, <code>&lt;pre&gt;</code> is a code block</li>
+  <li><code>&lt;b&gt;</code> and <code>&lt;strong&gt;</code> are bold, <code>&lt;i&gt;</code> and <code>&lt;em&gt;</code> italic, <code>&lt;u&gt;</code> underlined, <code>&lt;sup&gt;</code> and <code>&lt;sub&gt;</code> raised and lowered</li>
+  <li><code>&lt;code&gt;</code> and <code>&lt;tt&gt;</code> are monospace, <code>&lt;a href=&quot;...&quot;&gt;</code> is a link, <code>&lt;br&gt;</code> is a line break</li>
+  <li>entities like <code>&amp;lt;</code>, <code>&amp;#60;</code> and <code>&amp;nbsp;</code> are the characters they stand for</li>
+</ul>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** &lt;p&gt;Returns a &lt;code&gt;List&amp;lt;A&amp;gt;&lt;/code&gt; of &lt;b&gt;all&lt;/b&gt; the &lt;a href=\&quot;https://example.com\&quot;&gt;items&lt;/a&gt;.&lt;/p&gt; */&quot;)
+// res13: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(value = &quot;Returns a &quot;),
+//         Monospace(value = &quot;List&lt;A&gt;&quot;),
+//         PlainText(value = &quot; of &quot;),
+//         Bold(spans = List(PlainText(value = &quot;all&quot;))),
+//         PlainText(value = &quot; the &quot;),
+//         Link(
+//           target = &quot;https://example.com&quot;,
+//           title = List(PlainText(value = &quot;items&quot;))
+//         ),
+//         PlainText(value = &quot;.&quot;)
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p>Other tags that scaladoc keeps, like <code>&lt;span&gt;</code> or <code>&lt;table&gt;</code>, come back as <code>HtmlTag</code> spans with the tag as written. A <code>&lt;</code> that isn&rsquo;t a tag at all, as in <code>List&lt;String&gt;</code>, is text. HTML inside <code>{{{</code> code blocks stays as it is.</p>
+<h2><a href="#javadocs-inline-tags" name="javadocs-inline-tags" class="anchor"><span class="anchor-link"></span></a>Javadoc&rsquo;s inline tags</h2>
+<p>Javadoc&rsquo;s inline tags are understood too:</p>
+<table>
+  <thead>
+    <tr>
+      <th>Tag </th>
+      <th>Model </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>{@code x}</code> </td>
+      <td><code>Monospace</code> </td>
+    </tr>
+    <tr>
+      <td><code>{@value x}</code> </td>
+      <td><code>Monospace</code> </td>
+    </tr>
+    <tr>
+      <td><code>{@link X}</code>, <code>{@link X label}</code> </td>
+      <td><code>Link</code>, with the label as its title </td>
+    </tr>
+    <tr>
+      <td><code>{@linkplain X}</code>, <code>{@linkplain X label}</code> </td>
+      <td><code>Link</code>, with the label as its title </td>
+    </tr>
+    <tr>
+      <td><code>{@literal x}</code> </td>
+      <td>text </td>
+    </tr>
+    <tr>
+      <td><code>{@docRoot}</code> </td>
+      <td>nothing </td>
+    </tr>
+  </tbody>
+</table>
+<pre class="prettyprint"><code class="language-scala">parse(&quot;/** Wraps a {@link java.util.Map} of {@code Map&lt;K, {V}&gt;}, see {@linkplain Foo#bar the bar}. */&quot;)
+// res14: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(value = &quot;Wraps a &quot;),
+//         Link(target = &quot;java.util.Map&quot;, title = List()),
+//         PlainText(value = &quot; of &quot;),
+//         Monospace(value = &quot;Map&lt;K, {V}&gt;&quot;),
+//         PlainText(value = &quot;, see &quot;),
+//         Link(target = &quot;Foo#bar&quot;, title = List(PlainText(value = &quot;the bar&quot;))),
+//         PlainText(value = &quot;.&quot;)
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p>Braces inside a tag must balance, which is what lets <code>{@code Map&lt;K, {V}&gt;}</code> hold braces of its own.</p>
+<h2><a href="#macros" name="macros" class="anchor"><span class="anchor-link"></span></a>Macros</h2>
+<blockquote>
+  <p>I have made this longer than usual because I have not had time to make it shorter.</p>
+  <p>— Blaise Pascal, <em>Lettres provinciales</em></p>
+</blockquote>
+<p>When a phrase repeats across a comment, <code>@define</code> gives it a name. <code>$name</code> or <code>${name}</code> then stands for it anywhere in the comment, and <code>\$</code> is a plain dollar sign:</p>
+<pre class="prettyprint"><code class="language-scala">Scaladoc.fromString(
+  &quot;&quot;&quot;/** Adds an element to the $coll.
+    |  *
+    |  * @define coll immutable list
+    |  * @param x the element to add to the $coll
+    |  */&quot;&quot;&quot;.stripMargin).map(doc =&gt; (doc.textDescriptions, doc.textParams))
+// res15: Either[ScaladocException, (Seq[String], Map[String, String])] = Right(
+//   value = (
+//     List(&quot;Adds an element to the immutable list.&quot;),
+//     Map(&quot;x&quot; -&gt; &quot;the element to add to the immutable list&quot;)
+//   )
+// )
+</code></pre>
+<p>A define runs up to the next tag, can use other defines, and doesn&rsquo;t show up in the parsed comment. Scaladoc also lets a comment use the defines of its enclosing and parent classes. Only the compiler knows those classes, though, so here a comment can use its own defines only, and an unknown variable stays as written.</p>
+<h2><a href="#how-this-differs-from-scaladoc" name="how-this-differs-from-scaladoc" class="anchor"><span class="anchor-link"></span></a>How this differs from scaladoc</h2>
+<p>Scaladoc renders comments to HTML, and this parser turns them into a model for other tools to use. A few choices follow from that difference, and a few from fixing what scaladoc leaves to warnings:</p>
+<ul>
+  <li><strong>Monospace is literal.</strong> Scaladoc parses markup inside backticks; here the text of code stays as written.</li>
+  <li><strong>Unclosed markers are text.</strong> Scaladoc runs an unclosed <code>&#39;&#39;</code> to the end of the paragraph.</li>
+  <li><strong>Bold inside italic works.</strong> In <code>&#39;&#39;a &#39;&#39;&#39;b&#39;&#39;&#39; c&#39;&#39;</code>, scaladoc ends the italic at the <code>&#39;&#39;&#39;</code>; here the bold nests.</li>
+  <li><strong>Broken tables aren&rsquo;t tables.</strong> Without a valid delimiter row, scaladoc repairs the table and warns; here the lines  stay text, which is what GitHub does and what scaladoc&rsquo;s own source says it should do.</li>
+  <li><strong>HTML becomes the model.</strong> Scaladoc passes <code>&lt;b&gt;</code> on as HTML; here it&rsquo;s <code>Bold</code>, and HTML in code blocks is left  alone.</li>
+  <li><strong><code>{@literal}</code> is text</strong>, as in javadoc. Scaladoc shows it as code.</li>
+  <li><strong><code>@define</code> sees only its own comment</strong>, as described above.</li>
+</ul>
+</div>
+<div>
+<a href="https://github.com/andyglow/scaladoc/tree/master/target/out/jvm/scala-2.13.18/scaladoc-docs/mdoc/syntax.md" title="Edit this page" class="md-source-file md-edit">
+Edit this page
+</a>
+</div>
+<div class="print-only">
+<span class="md-source-file md-version">
+0.3.1*
+</span>
+</div>
+</article>
+</div>
+</div>
+</main>
+<footer class="md-footer">
+<div class="md-footer-nav">
+<nav class="md-footer-nav__inner md-grid">
+<a href="getting-started.html" title="Getting started" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+<div class="md-flex__cell md-flex__cell--shrink">
+<i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+</div>
+<div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+<span class="md-flex__ellipsis">
+<span class="md-footer-nav__direction">
+Previous
+</span>
+Getting started
+</span>
+</div>
+</a>
+<a href="model.html" title="The model" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+<div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+<span class="md-flex__ellipsis">
+<span class="md-footer-nav__direction">
+Next
+</span>
+The model
+</span>
+</div>
+<div class="md-flex__cell md-flex__cell--shrink">
+<i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+</div>
+</a>
+</nav>
+</div>
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-footer-copyright">
+<div class="md-footer-copyright__highlight">
+Apache-2.0 · andyglow
+</div>
+Powered by
+<a href="https://github.com/lightbend/paradox">Paradox</a>
+and
+<a href="https://sbt.github.io/sbt-paradox-material-theme/">Paradox Material Theme</a>
+
+</div>
+</div>
+</div>
+</footer>
+
+</div>
+<script src="assets/javascripts/application.583bbe55.js"></script>
+<script src="assets/javascripts/paradox-material-theme.js"></script>
+<script>app.initialize({version:"0.17",url:{base:"."}})</script>
+<script type="text/javascript" src="lib/prettify/prettify.js"></script>
+<script type="text/javascript" src="lib/prettify/lang-scala.js"></script>
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(event) {
+window.prettyPrint && prettyPrint();
+});
+</script>
+</body>
+</html>
