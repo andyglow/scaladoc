@@ -50,7 +50,8 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
 
   def run(): Scaladoc = {
     while (!isEOF) {
-      if (isAt) {
+      // as in scaladoc, a tag starts a line: an `@` elsewhere (`foo@bar.com`, `{@link Foo}`) is text
+      if (isAt && isLineStart) {
         flush()
         next()
         val tagName = takeWhile(_.isLetterOrDigit)
