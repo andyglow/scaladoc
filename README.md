@@ -23,6 +23,9 @@ A toolset for working with scaladoc comments from Scala code:
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |
 
+`scaladoc-ast` and `scaladoc-parser` are also built for Scala.js 1.x (`_sjs1`, from 0.3.0), on all three Scala
+versions. The compiler plugin runs inside scalac, so its JVM artifact works for Scala.js projects as well.
+
 `sbt-scaladoc` (from 0.2.0) works with sbt 1.5.8+ and sbt 2.x.
 
 All artifacts target Java 8 and work on any later JDK. Scala 2.11 is supported up to version 0.0.14.
@@ -54,7 +57,8 @@ lazy val model = project
 - **Scala 3:** the compiler plugin doesn't exist there, so it adds `scaladoc-ast`, `scaladoc-parser` and `-Yread-docs`.
   That lets `Scaladoc.of` read doc comments from other modules and jars.
 
-The libraries get the plugin's own version; override it with `scaladocVersion` if needed.
+The libraries get the plugin's own version; override it with `scaladocVersion` if needed. On Scala.js modules (from
+0.3.0) it adds the `_sjs1` libraries and the JVM compiler plugin.
 
 ### By hand
 
@@ -71,6 +75,8 @@ addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "0.2.0")
 libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "0.2.0"
 libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.2.0" % Provided
 ```
+
+On Scala.js, use `%%%` for `scaladoc-ast` and `scaladoc-parser`. The compiler plugin stays `%%`.
 
 ## Scaladoc AST
 The model gives a detailed view of a description. It covers the scaladoc tags and also recognizes markdown markup

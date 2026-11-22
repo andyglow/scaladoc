@@ -59,7 +59,7 @@ ThisBuild / githubWorkflowBuild := Seq(
     cond = Some(s"matrix.scala == '$scala213'")
   ),
   WorkflowStep.Sbt(
-    List("coverage", "ast/test", "parser/test", "coverageAggregate"),
+    List("coverage", "astJVM/test", "parserJVM/test", "coverageAggregate"),
     name = Some("Measure coverage"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
@@ -86,7 +86,7 @@ def compilerOptions(v: String, jvmRelease: Int = 8): Seq[String] = {
 }
 
 lazy val commonSettings = Seq(
-  scalacOptions := compilerOptions(scalaVersion.value),
+  scalacOptions ++= compilerOptions(scalaVersion.value), // `++=`: keeps `-scalajs`, which Scala 3 needs to emit Scala.js IR
   Compile / doc / scalacOptions := scalacOptions.value.filterNot(_.startsWith("-W")).filterNot(_.startsWith("-Ywarn")),
   // `-Xlint:-options`: JDK 21 warns that release 8 is obsolete
   javacOptions ++= Seq("--release", "8", "-Xlint:-options"),
@@ -112,9 +112,13 @@ lazy val commonSettings = Seq(
   ),
   libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.20" % Test,
   // `scala-2` / `scala-3` (language) dirs are sbt built-ins; these are the collection-API ranges
-  Compile / unmanagedSourceDirectories ++= versionRangeDirs(baseDirectory.value / "src" / "main", scalaVersion.value),
-  Test / unmanagedSourceDirectories ++= versionRangeDirs(baseDirectory.value / "src" / "test", scalaVersion.value)
+  Compile / unmanagedSourceDirectories ++= versionRangeDirs(sourceBase(baseDirectory.value) / "src" / "main", scalaVersion.value),
+  Test / unmanagedSourceDirectories ++= versionRangeDirs(sourceBase(baseDirectory.value) / "src" / "test", scalaVersion.value)
 )
+
+// a cross (JVM + Scala.js) project of `CrossType.Pure` lives in `<module>/.jvm` and `<module>/.js`, with its sources in
+// `<module>/src`
+def sourceBase(base: File): File = if (base.getName.startsWith(".")) base.getParentFile else base
 
 def versionRangeDirs(base: File, v: String): Seq[File] = CrossVersion.partialVersion(v) match {
   case Some((2, y)) if y <= 12 => Seq(base / "scala-2.12-")
@@ -141,17 +145,30 @@ lazy val scala2Only = Seq(
 )
 
 // scaladoc AST
-lazy val ast = (project in file("ast"))
+lazy val ast = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("ast"))
   .settings(
     commonSettings,
     name := "scaladoc-ast"
   )
+  .jsSettings(jsSettings)
+
+lazy val astJVM = ast.jvm
+lazy val astJS  = ast.js
+
+// Scala.js: coverage is measured on the JVM only
+lazy val jsSettings = Seq(
+  coverageEnabled := false
+)
 
 // parses a string representation of a scaladoc into a scaladoc ast.
 // Shared code (src/main/scala) is plain Scala over String. Scala 2 adds the `Scaladoc.of[T]` macro, source
 // extraction and the `ScaladocCarrier` annotation (src/main/{scala-2,java-2}, needs scala-reflect); Scala 3
 // adds `Scaladoc.of[T]` on top of `Symbol.docstring` (src/main/scala-3, no extra dependencies).
-lazy val parser = (project in file("parser"))
+lazy val parser = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("parser"))
   .dependsOn(ast % "compile->compile;test->test")
   .settings(
     commonSettings,
@@ -161,16 +178,26 @@ lazy val parser = (project in file("parser"))
       else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)
     },
     Compile / unmanagedSourceDirectories ++= {
-      if (isScala3(scalaVersion.value)) Nil else Seq(baseDirectory.value / "src" / "main" / "java-2")
+      if (isScala3(scalaVersion.value)) Nil else Seq(sourceBase(baseDirectory.value) / "src" / "main" / "java-2")
     }
   )
+  .jsSettings(
+    jsSettings,
+    // JVM-only tests: FilesSuite reads its cases from files, SourceCodeUtilsSpec runs scalac's position API
+    Test / unmanagedSources / excludeFilter := {
+      (Test / unmanagedSources / excludeFilter).value || "FilesSuite.scala" || "SourceCodeUtilsSpec.scala"
+    }
+  )
+
+lazy val parserJVM = parser.jvm
+lazy val parserJS  = parser.js
 
 // attaches scaladoc to tree
 // scalac loads a compiler plugin in its own class loader with only the `-Xplugin` jars, and sbt's `compilerPlugin(...)`
 // passes only jars that contain a scalac-plugin.xml. So the plugin jar is self-contained: it bundles the ast and parser
 // classes, and they are not dependencies in its POM ("compile-internal").
 lazy val compilerPlugin = (project in file("compiler-plugin"))
-  .dependsOn(ast % "compile-internal->compile", parser % "compile-internal->compile")
+  .dependsOn(astJVM % "compile-internal->compile", parserJVM % "compile-internal->compile")
   .settings(
     commonSettings,
     scala2Only,
@@ -181,7 +208,7 @@ lazy val compilerPlugin = (project in file("compiler-plugin"))
       else Seq(scalaOrganization.value % "scala-compiler" % scalaVersion.value)
     },
     Compile / packageBin / mappings ++= {
-      val bundled = (ast / Compile / packageBin / mappings).value ++ (parser / Compile / packageBin / mappings).value
+      val bundled = (astJVM / Compile / packageBin / mappings).value ++ (parserJVM / Compile / packageBin / mappings).value
       if (isScala3(scalaVersion.value)) Nil else bundled
     }
   )
@@ -219,7 +246,7 @@ lazy val sbtScaladoc = (project in file("sbt-plugin"))
     scriptedSbt := {
       if (isScala3(scalaVersion.value)) scriptedSbt2 else scriptedSbt1
     },
-    scriptedLaunchOpts ++= Seq("-Xmx1024M", s"-Dplugin.version=${version.value}"),
+    scriptedLaunchOpts ++= Seq("-Xmx1024M", s"-Dplugin.version=${version.value}", s"-Dscalajs.version=$scalaJSVersion"),
     scriptedBufferLog  := false,
     // the version of the libraries and the compiler plugin that sbt-scaladoc adds: its own
     Compile / sourceGenerators += Def.task {
@@ -236,7 +263,11 @@ lazy val sbtScaladoc = (project in file("sbt-plugin"))
     }
   )
 
-lazy val itExternal = (project in file("integration-tests/external-models"))
+// the integration tests run on the JVM and on Scala.js: on Scala.js the models are compiled with the compiler plugin
+// next to the Scala.js one, and `Scaladoc.of` reads them from the compiled classes in the same way
+lazy val itExternal = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("integration-tests/external-models"))
   .settings(
     commonSettings,
     scala2Only,
@@ -247,7 +278,9 @@ lazy val itExternal = (project in file("integration-tests/external-models"))
   )
 
 // models compiled with include/exclude options; see FilteredClassesSpec for what is expected to be embedded
-lazy val itFiltered = (project in file("integration-tests/filtered-models"))
+lazy val itFiltered = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("integration-tests/filtered-models"))
   .settings(
     commonSettings,
     scala2Only,
@@ -263,7 +296,9 @@ lazy val itFiltered = (project in file("integration-tests/filtered-models"))
     )
   )
 
-lazy val it = (project in file("integration-tests/suites"))
+lazy val it = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("integration-tests/suites"))
   .dependsOn(ast, parser, itExternal, itFiltered)
   .settings(
     commonSettings,
@@ -274,7 +309,10 @@ lazy val it = (project in file("integration-tests/suites"))
   )
 
 lazy val root = (project in file("."))
-  .aggregate(ast, parser, compilerPlugin, sbtScaladoc, itExternal, itFiltered, it)
+  .aggregate(
+    astJVM, astJS, parserJVM, parserJS, compilerPlugin, sbtScaladoc,
+    itExternal.jvm, itExternal.js, itFiltered.jvm, itFiltered.js, it.jvm, it.js
+  )
   .settings(
     commonSettings,
     noPublish,

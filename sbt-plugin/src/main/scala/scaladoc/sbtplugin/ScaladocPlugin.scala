@@ -11,6 +11,8 @@ import sbt.Keys._
   *
   * The compiler plugin is Scala 2 only. On Scala 3 the plugin adds `scaladoc-ast`, `scaladoc-parser` and
   * `-Yread-docs`, so that `Scaladoc.of` also reads doc comments from other modules and jars.
+  *
+  * On Scala.js projects the libraries are the `_sjs1` ones; the compiler plugin is always the JVM artifact.
   */
 object ScaladocPlugin extends AutoPlugin {
 
@@ -61,10 +63,14 @@ object ScaladocPlugin extends AutoPlugin {
       val v      = scaladocVersion.value
       val scala3 = isScala3(scalaBinaryVersion.value)
       val embed  = scaladocEmbed.value
-      val ast    = organization %% "scaladoc-ast"    % v
-      val parser = organization %% "scaladoc-parser" % v
+      val cross  = PlatformCompat.libraryCrossVersion.value
+      val ast    = (organization % "scaladoc-ast"    % v).cross(cross)
+      val parser = (organization % "scaladoc-parser" % v).cross(cross)
+      // the compiler plugin runs in scalac, so it is the JVM artifact on Scala.js too, where `%%` (which follows
+      // `platform`) would pick a `_sjs1` one that doesn't exist
+      val plugin = organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v
       if (scala3 || !embed) Seq(ast, parser)
-      else Seq(compilerPlugin(organization %% compilerPluginName % v), ast, parser % Provided)
+      else Seq(compilerPlugin(plugin), ast, parser % Provided)
     },
     scalacOptions ++= {
       val scala3  = isScala3(scalaBinaryVersion.value)
