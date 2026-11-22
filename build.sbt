@@ -328,6 +328,10 @@ lazy val docs = project
     Compile / paradox / sourceDirectory := mdocOut.value,
     // without it mdoc keeps the output of pages that are gone, which Paradox rejects as pages missing from the ToC
     mdocExtraArguments := Seq("--clean-target"),
+    // mdoc runs as a `runMain`. Called from sbt 2's client (plain `sbt`, as on CI) that's a client-side run, which
+    // the task doesn't wait for, so Paradox would look for the pages before mdoc wrote them
+    Compile / run / clientSide     := false,
+    Compile / runMain / clientSide := false,
     // Paradox renders what mdoc writes, so it lists its pages once mdoc is done. Uncached: sbt's cache only knows the
     // directory, not what mdoc put in it, and an empty listing restored from the CI cache would stick
     Compile / paradoxMarkdownToHtml / mappings := Def.uncached {
