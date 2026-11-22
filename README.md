@@ -37,7 +37,7 @@ Scaladoc.of[User].map(_.textParams)
 Add the sbt plugin to `project/plugins.sbt`:
 
 ```sbt
-addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.3.0")
+addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.4.0")
 ```
 
 and enable it on the modules that need it:
@@ -49,7 +49,7 @@ lazy val model = project.enablePlugins(ScaladocPlugin)
 It sets each module up for its Scala version: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3, the `_sjs1`
 libraries on Scala.js.
 
-From 0.4.0, Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
+Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
 
 ```kotlin
 plugins {
