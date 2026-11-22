@@ -114,10 +114,24 @@ object Markup {
     def apply(x: Span, xs: Span*): Subscript = Subscript(x :: xs.toList)
   }
 
-  case class Link(value: String) extends Span with HasValue {
+  /** A link to `target`, an entity like `scala.Option` or a URL like `https://scala-lang.org`, with an optional title:
+    * `[[https://scala-lang.org Scala]]`.
+    */
+  case class Link(target: String, title: List[Span]) extends Span {
     type Self = Link
-    override def plainString: String = s"[[$value]]"
-    def trimmed: Self with Trimmed = new Link(trimML(value)) with Trimmed
+    override def isBlank: Boolean = target.forall(_.isWhitespace) && title.forall(_.isBlank)
+    override def plainString: String =
+      if (title.isEmpty) s"[[$target]]" else s"[[$target ${title.map(_.plainString).mkString}]]"
+    def trimmed: Self with Trimmed = new Link(target.trim, trimSpans(title)) with Trimmed
+
+    /** Whether the target is a URL (it has a scheme, like `https:`) rather than an entity. */
+    def isUrl: Boolean = Link.SchemeUri.pattern.matcher(target).matches()
+  }
+
+  object Link {
+    def apply(target: String): Link                    = Link(target, Nil)
+    def apply(target: String, title: String): Link     = Link(target, List(PlainText(title)))
+    private val SchemeUri                              = "[a-z][a-z0-9+.-]*:.*".r
   }
 
   case class CodeBlock(value: String) extends Markup with HasValue  {

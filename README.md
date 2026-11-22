@@ -91,7 +91,7 @@ Span     = PlainText (String)
          | Underline (List Span)
          | Superscript (List Span)
          | Subscript (List Span)
-         | Link (String)
+         | Link (String (List Span))      -- target, title
 
 Markup   = Span
          | Heading (Level (List Span))

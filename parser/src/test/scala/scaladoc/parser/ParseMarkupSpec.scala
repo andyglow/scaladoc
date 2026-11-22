@@ -190,6 +190,28 @@ class ParseMarkupSpec extends WSpec {
     "drop whitespace between blocks and empty code" in {
       ParseMarkup("{{{a}}}   {{{b}}}") mustBe Document(CodeBlock("a"), CodeBlock("b"))
       ParseMarkup("{{{ \n }}}") mustBe Document(CodeBlock(""))
+      ParseMarkup("`` ^ ^") mustBe Document(Nil)
+    }
+
+    "parse links with a title" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+
+      ParseMarkup("[[scala.Option]]") mustBe p(Link("scala.Option"))
+      ParseMarkup("[[https://scala-lang.org Scala Site]]") mustBe p(Link("https://scala-lang.org", "Scala Site"))
+      ParseMarkup("[[x  the '''x''' ]]") mustBe p(Link("x", List(PlainText("the "), Bold("x"))))
+      ParseMarkup("[[x\non the next line]]") mustBe p(Link("x", "on the next line"))
+      ParseMarkup("see [[[baz(x:List[List[A]])*]]] now") mustBe p(PlainText("see "), Link("baz(x:List[List[A]])*"), PlainText(" now"))
+      ParseMarkup("[[[f(a:List[A]]) f]]]") mustBe p(Link("f(a:List[A]])", "f"))
+      ParseMarkup("[[ x]]") mustBe p(PlainText("[[ x]]"))
+      ParseMarkup("[[x title") mustBe p(PlainText("[[x title"))
+      ParseMarkup("[[[x]]") mustBe p(PlainText("[[[x]]"))
+    }
+
+    "tell a URL from an entity" in {
+      Link("https://scala-lang.org").isUrl mustBe true
+      Link("mailto:a@b.c").isUrl mustBe true
+      Link("scala.Option").isUrl mustBe false
+      Link("scala.collection.immutable.List$.apply").isUrl mustBe false
     }
 
     "end a paragraph at a heading line" in {

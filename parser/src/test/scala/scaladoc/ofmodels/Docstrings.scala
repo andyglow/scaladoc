@@ -13,7 +13,7 @@ object Docstrings {
     "  * ===== Level 5 =====",
     "  * ====== Level `6` ======",
     "  *",
-    "  * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,.",
+    "  * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,, see [[https://scala-lang.org the ''Scala'' site]].",
     "  */"
   ).mkString("\n")
 

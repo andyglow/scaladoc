@@ -114,7 +114,7 @@ scaladoc
   [description]
     |<p>
     |  Implements functionality for printing Scala values on the terminal. For reading values
-    |   use <a>scala.io.StdIn$ StdIn</a>.
+    |   use <a href="scala.io.StdIn$">StdIn</a>.
     |   Also defines constants for marking up text on ANSI terminals.
     |</p>
     |<h2>Console Output</h2>

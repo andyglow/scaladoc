@@ -93,4 +93,14 @@ class MarkupSpec extends FSpec {
     Heading(Two, List(PlainText(" a "), Monospace("b"))).trimmed mustBe Heading(Two, List(PlainText("a "), Monospace("b")))
     Heading(One, " ").isBlank mustBe true
   }
+  test("links") {
+    import Markup._
+
+    Link("scala.Option").plainString mustBe "[[scala.Option]]"
+    Link("https://x.y", List(PlainText("the "), Italic("x"))).plainString mustBe "[[https://x.y the ''x'']]"
+    Link(" https://x.y ", List(PlainText(" the x "))).trimmed mustBe Link("https://x.y", "the x")
+    Link(" ", List(PlainText(" "))).isBlank mustBe true
+    Link("x").isBlank mustBe false
+    Paragraph(PlainText("  ")).trimmed mustBe Paragraph(Nil)
+  }
 }
