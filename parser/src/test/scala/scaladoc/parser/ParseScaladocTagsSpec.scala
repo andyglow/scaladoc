@@ -82,4 +82,22 @@ class ParseScaladocTagsSpec extends FSpec {
   test("a tag can be indented") {
     ParseScaladocTags("Desc\n  @param a A").textParams must contain only ("a" -> "A")
   }
+
+  test("no tags inside a code block") {
+    val doc = ParseScaladocTags(
+      """Desc
+        |
+        |@example {{{
+        |@main def run(): Unit = ()
+        |@param x not a tag
+        |}}}
+        |@param a A
+        |""".stripMargin)
+
+    doc.textParams must contain only ("a" -> "A")
+    val codeBlocks = doc.tags.collect { case scaladoc.Tag.Example(scaladoc.Markup.Document(els)) =>
+      els.collect { case scaladoc.Markup.CodeBlock(code) => code }
+    }
+    codeBlocks must contain only (List("\n@main def run(): Unit = ()\n@param x not a tag\n"))
+  }
 }
