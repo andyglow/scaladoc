@@ -58,6 +58,8 @@ ThisBuild / githubWorkflowBuild := Seq(
     name = Some("sbt plugin scripted tests"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
+  // the site: mdoc compiles and runs its snippets, Paradox checks its links
+  WorkflowStep.Sbt(List("docs/makeSite"), name = Some("Build the documentation site"), cond = Some(s"matrix.scala == '$scala213'")),
   WorkflowStep.Sbt(
     List("coverage", "astJVM/test", "parserJVM/test", "coverageAggregate"),
     name = Some("Measure coverage"),
@@ -306,6 +308,52 @@ lazy val it = crossProject(JVMPlatform, JSPlatform)
     noCoverage,
     noPublish,
     name := "scaladoc-integration-tests"
+  )
+
+// The documentation site, https://andyglow.github.io/scaladoc: mdoc checks the Scala snippets in docs/src against
+// the libraries, Paradox renders the pages with the Material theme (search included), and `docs/ghpagesPushSite`
+// publishes them to the gh-pages branch. Not in the root aggregate, so it's never cross built or published.
+lazy val docs = project
+  .in(file("docs"))
+  .enablePlugins(MdocPlugin, ParadoxMaterialThemePlugin, SitePreviewPlugin, GhpagesPlugin)
+  .dependsOn(astJVM, parserJVM)
+  .settings(
+    noPublish,
+    name               := "scaladoc-docs",
+    scalaVersion       := scala213,
+    crossScalaVersions := Seq(scala213),
+    mdocIn             := baseDirectory.value / "src",
+    mdocOut            := target.value / "mdoc",
+    mdocVariables      := Map("VERSION" -> version.value),
+    Compile / paradox / sourceDirectory := mdocOut.value,
+    // without it mdoc keeps the output of pages that are gone, which Paradox rejects as pages missing from the ToC
+    mdocExtraArguments := Seq("--clean-target"),
+    // mdoc runs as a `runMain`. Called from sbt 2's client (plain `sbt`, as on CI) that's a client-side run, which
+    // the task doesn't wait for, so Paradox would look for the pages before mdoc wrote them
+    Compile / run / clientSide     := false,
+    Compile / runMain / clientSide := false,
+    // Paradox renders what mdoc writes, so it lists its pages once mdoc is done. Uncached: sbt's cache only knows the
+    // directory, not what mdoc put in it, and an empty listing restored from the CI cache would stick
+    Compile / paradoxMarkdownToHtml / mappings := Def.uncached {
+      (Compile / paradoxMarkdownToHtml / mappings).dependsOn(mdoc.toTask("")).value
+    },
+    Compile / paradoxProperties ++= Map(
+      "project.name"    -> "Scaladoc",
+      "github.base_url" -> "https://github.com/andyglow/scaladoc/tree/master"
+    ),
+    Compile / paradoxMaterialTheme ~= {
+      _.withColor("indigo", "orange")
+        .withLogoIcon("description")
+        .withRepository(uri("https://github.com/andyglow/scaladoc"))
+        .withCopyright("Apache-2.0 · andyglow")
+    },
+    siteSourceDirectory := (Compile / paradox / target).value,
+    makeSite            := makeSite.dependsOn(Compile / paradox).value,
+    ghpagesNoJekyll     := true,
+    // CI pushes with its token, a developer with their SSH key
+    git.remoteRepo := sys.env.get("GITHUB_TOKEN").fold("git@github.com:andyglow/scaladoc.git") { token =>
+      s"https://x-access-token:$token@github.com/andyglow/scaladoc.git"
+    }
   )
 
 lazy val root = (project in file("."))
