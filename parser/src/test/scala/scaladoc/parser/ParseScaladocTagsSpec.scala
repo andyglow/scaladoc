@@ -127,4 +127,9 @@ class ParseScaladocTagsSpec extends FSpec {
     doc.textParams must contain only ("a" -> "A")
     doc.tags.size mustBe 2
   }
+  test("summary of a parsed comment") {
+    ScaladocParser.fromString("/** = Users =\n  *\n  * Keeps the '''users''' of the app. All of them.\n  */")
+      .map(_.textSummary) mustBe Right(Some("Keeps the '''users''' of the app."))
+    ScaladocParser.fromString("/** Long text.\n  * @shortDescription Short.\n  */").map(_.textSummary) mustBe Right(Some("Short."))
+  }
 }
