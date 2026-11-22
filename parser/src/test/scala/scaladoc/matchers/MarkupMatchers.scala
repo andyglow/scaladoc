@@ -55,7 +55,7 @@ trait MarkupMatchers {
                 case (acc, _)                     => acc
               }
             }
-          case (l, r)                           => fail(path, s"$l doesn't match $r")
+          case (l, r)                           => if (l == r) ok() else fail(path, s"$l doesn't match $r")
         }
       }
 

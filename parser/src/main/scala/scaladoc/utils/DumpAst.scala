@@ -43,6 +43,24 @@ object DumpAst {
       w.dump(text)
       w.dec()
       w.writeln("</code>")
+    case list: ListBlock =>
+      val tag = list match {
+        case _: UnorderedList        => "ul"
+        case OrderedList(_, style)   => s"ol type=${style.marker}"
+      }
+      w.writeln(s"<$tag>")
+      w.inc()
+      list.items foreach { item =>
+        w.writeln("<li>")
+        w.inc()
+        val nested = IdentWriter()
+        item.elements foreach { DumpAst(_, nested) }
+        w.dump(nested.toString)
+        w.dec()
+        w.writeln("</li>")
+      }
+      w.dec()
+      w.writeln(s"</${tag.takeWhile(_ != ' ')}>")
     case Heading(level, spans) => val hh = s"h${level.value}"; w.write(s"<$hh>${spans.map(inlineString).mkString}</$hh>")
   }
 

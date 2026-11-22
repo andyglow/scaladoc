@@ -103,4 +103,18 @@ class MarkupSpec extends FSpec {
     Link("x").isBlank mustBe false
     Paragraph(PlainText("  ")).trimmed mustBe Paragraph(Nil)
   }
+  test("lists") {
+    import Markup._
+
+    def item(text: String, nested: Markup*) = Document(Paragraph(PlainText(text)) :: nested.toList)
+    val list = UnorderedList(List(item(" a "), item("b", OrderedList(List(item("c"), item("d")), OrderedList.LowerRoman))))
+
+    list.plainString mustBe "-  a \n- b\n  i. c\n  i. d"
+    list.trimmed mustBe UnorderedList(List(item("a"), item("b", OrderedList(List(item("c"), item("d")), OrderedList.LowerRoman))))
+    OrderedList(List(item("a")), OrderedList.UpperAlpha).trimmed.plainString mustBe "A. a"
+    OrderedList(List(item("a")), OrderedList.Decimal).plainString mustBe "1. a"
+    UnorderedList(List(Document(Nil))).plainString mustBe "- "
+    UnorderedList(List(item(" "))).isBlank mustBe true
+    OrderedList.styles.map(_.marker) mustBe List("1", "i", "I", "a", "A")
+  }
 }

@@ -17,6 +17,20 @@ object Docstrings {
     "  */"
   ).mkString("\n")
 
+  val Lists: String = Seq(
+    "/** Lists:",
+    "  *",
+    "  *   - an \'\'\'item\'\'\'",
+    "  *     a. nested",
+    "  *     a. and [[scala.Option]]",
+    "  *   - last",
+    "  *",
+    "  * @param a one of",
+    "  *   I. x",
+    "  *   I. y",
+    "  */"
+  ).mkString("\n")
+
   val KitchenSink: String = Seq(
     "/** = Kitchen sink =",
     "  *",

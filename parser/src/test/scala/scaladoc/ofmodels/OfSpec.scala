@@ -50,6 +50,19 @@ case class KitchenSink[T](a: String, b: T)
   */
 class NestedMarkup
 
+/** Lists:
+  *
+  *   - an '''item'''
+  *     a. nested
+  *     a. and [[scala.Option]]
+  *   - last
+  *
+  * @param a one of
+  *   I. x
+  *   I. y
+  */
+class Lists(a: String)
+
 /** A plain class.
   *
   * Second paragraph.
@@ -128,6 +141,22 @@ class OfSpec extends scaladoc.FSpec {
           Markup.PlainText("."))
       case other => fail(s"not a document: $other")
     }
+  }
+
+  test("lists") {
+    val doc = Scaladoc.of[Lists]
+    doc mustBe Some(parsed(Docstrings.Lists))
+    import Markup._
+    doc.get.descriptions mustBe List(Document(
+      Paragraph(PlainText("Lists:")),
+      UnorderedList(List(
+        Document(
+          Paragraph(PlainText("an "), Bold("item")),
+          OrderedList(List(Document(Paragraph(PlainText("nested"))), Document(Paragraph(PlainText("and "), Link("scala.Option")))), OrderedList.LowerAlpha)),
+        Document(Paragraph(PlainText("last")))))))
+    doc.get.params("a") mustBe Document(
+      Paragraph(PlainText("one of")),
+      OrderedList(List(Document(Paragraph(PlainText("x"))), Document(Paragraph(PlainText("y")))), OrderedList.UpperRoman))
   }
 
   test("plain class") {
