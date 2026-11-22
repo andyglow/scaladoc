@@ -14,6 +14,22 @@ object Markup {
 
   private[scaladoc] def trimML(x: String): String = x.linesIterator.map(_.trim).filterNot(_.isEmpty).mkString("\n")
 
+  // trims a run of spans as one text: the whitespace around it goes, every line is trimmed, and whitespace between
+  // two spans stays as a single space, so `a `b` c` stays that and ``a`b`c`` doesn't get spaces
+  private[scaladoc] def trimSpans(spans: List[Span]): List[Span] = {
+    val last = spans.length - 1
+    spans.zipWithIndex.flatMap {
+      case (PlainText(value), i) =>
+        val text  = trimML(value)
+        val lead  = i > 0 && value.headOption.exists(_.isWhitespace)
+        val trail = i < last && value.lastOption.exists(_.isWhitespace)
+        if (text.isEmpty) { if (lead || trail) List(new PlainText(" ") with Trimmed) else Nil }
+        else List(new PlainText((if (lead) " " else "") + text + (if (trail) " " else "")) with Trimmed)
+      case (x, _) =>
+        List(x.trimmed)
+    }
+  }
+
   sealed trait Span extends Markup {
     override type Self <: Span
   }
@@ -58,15 +74,15 @@ object Markup {
 
   case class Superscript(value: String) extends Span with HasValue {
     type Self = Superscript
-    override def plainString: String = s"`^$value^"
+    override def plainString: String = s"^$value^"
     def trimmed: Self with Trimmed = new Superscript(trimML(value)) with Trimmed
 
   }
 
   case class Subscript(value: String) extends Span with HasValue {
-    type Self = Superscript
+    type Self = Subscript
     override def plainString: String = s",,$value,,"
-    def trimmed: Self with Trimmed = new Superscript(trimML(value)) with Trimmed
+    def trimmed: Self with Trimmed = new Subscript(trimML(value)) with Trimmed
   }
 
   case class Link(value: String) extends Span with HasValue {
@@ -89,14 +105,7 @@ object Markup {
       // every `Span` is a `HasValue`, so spans are simply concatenated
       markup.map(_.plainString).mkString
     }
-    def trimmed: Self with Trimmed = {
-      def trim(markup: List[Span]): List[Span] = markup match {
-        case Nil => Nil
-        case x :: Nil => List(x.trimmed)
-        case x :: xs => List(x.trimmed, PlainText(" ")) ++ trim(xs)
-      }
-      new Paragraph(trim(markup)) with Trimmed
-    }
+    def trimmed: Self with Trimmed = new Paragraph(trimSpans(markup)) with Trimmed
   }
 
   object Paragraph {
@@ -106,27 +115,30 @@ object Markup {
   case class Document(elements: List[Markup]) extends Markup {
     override type Self = Document
     override def isBlank: Boolean = elements.forall(_.isBlank)
+    // spans next to each other are one text; anything else goes on a line of its own
     override def plainString: String = {
       val sb = new StringBuilder
-      elements foreach {
-        case x: Span =>
-          sb.append(x.plainString)
-        case x =>
-          if(sb.nonEmpty) sb.append("\n")
-          sb.append(x.plainString)
+      var prev: Option[Markup] = None
+      elements foreach { x =>
+        (prev, x) match {
+          case (Some(_: Span), _: Span) =>
+          case _                        => if (sb.nonEmpty) sb.append("\n")
+        }
+        sb.append(x.plainString)
+        prev = Some(x)
       }
       sb.toString
     }
     def trimmed: Self with Trimmed = {
-      def trim(prev: Option[Markup], rest: List[Markup]): List[Markup] = (prev, rest) match {
-        case (_, Nil)                          => Nil
-        case (Some(_: Span), (x: Span) :: Nil) => List(PlainText(" "), x.trimmed)
-        case (Some(_: Span), x :: Nil)         => List(x.trimmed)
-        case (Some(_), x :: Nil)               => List(x.trimmed)
-        case (None, x :: Nil)                  => List(x.trimmed)
-        case (_, x :: xs)                      => List(x.trimmed) ++ trim(Some(x), xs)
+      val out  = List.newBuilder[Markup]
+      var run  = List.empty[Span]
+      def flushRun(): Unit = { out ++= trimSpans(run.reverse); run = Nil }
+      elements foreach {
+        case x: Span => run = x :: run
+        case x       => flushRun(); out += x.trimmed
       }
-      new Document(trim(None, elements)) with Trimmed
+      flushRun()
+      new Document(out.result()) with Trimmed
     }
   }
   object Document {

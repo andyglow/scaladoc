@@ -116,4 +116,8 @@ class ParseScaladocTagsSpec extends FSpec {
       scaladoc.Tag.Deprecated(scaladoc.Markup.Document(Nil)),
       scaladoc.Tag.Throws("java.io.IOException", scaladoc.Markup.Document(Nil)))
   }
+
+  test("text of a tag keeps the spacing around inline markup") {
+    ParseScaladocTags("@param a an `a@b` value").textParams must contain only ("a" -> "an `a@b` value")
+  }
 }
