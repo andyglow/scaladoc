@@ -45,6 +45,9 @@ object Docstrings {
     "  */"
   ).mkString("\n")
 
+  val Html: String =
+    """/** <b>Bold</b>, <code>a &lt; b</code>, <a href="https://x.y">a link</a> and <span>a span</span>. */"""
+
   val KitchenSink: String = Seq(
     "/** = Kitchen sink =",
     "  *",

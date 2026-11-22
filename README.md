@@ -92,6 +92,7 @@ Span     = PlainText (String)
          | Superscript (List Span)
          | Subscript (List Span)
          | Link (String (List Span))      -- target, title
+         | HtmlTag (String)               -- an HTML tag the model has no equivalent of
 
 Markup   = Span
          | Heading (Level (List Span))

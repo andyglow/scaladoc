@@ -57,6 +57,7 @@ object ScaladocMacro {
       case Underline(v)   => '{ Markup.Underline(${ spansExpr(v) }) }
       case Superscript(v) => '{ Markup.Superscript(${ spansExpr(v) }) }
       case Subscript(v)   => '{ Markup.Subscript(${ spansExpr(v) }) }
+      case HtmlTag(v)     => '{ Markup.HtmlTag(${ Expr(v) }) }
       case Link(t, title) => '{ Markup.Link(${ Expr(t) }, ${ spansExpr(title) }) }
     }
   }
