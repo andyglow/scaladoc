@@ -48,10 +48,15 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
     ident
   }
 
+  private def isAtString(x: String): Boolean =
+    remaining >= x.length && x.indices.forall(i => chars(pos + i) == x.charAt(i))
+
   def run(): Scaladoc = {
+    // inside `{{{ ... }}}` nothing is a tag, so code samples can have annotations like `@main`
+    var inCode = false
     while (!isEOF) {
       // as in scaladoc, a tag starts a line: an `@` elsewhere (`foo@bar.com`, `{@link Foo}`) is text
-      if (isAt && isLineStart) {
+      if (!inCode && isAt && isLineStart) {
         flush()
         next()
         val tagName = takeWhile(_.isLetterOrDigit)
@@ -136,6 +141,8 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
           case Some(tag) if !(tag.isOpen) => tags += Description(null)
           case _ => // println("Something is on stack, but.. Tags: \n" + tags.mkString("- ", "\n- ", ""))
         }
+        if (!inCode && isAtString("{{{")) inCode = true
+        else if (inCode && isAtString("}}}")) inCode = false
         buf append char
         next()
       }
