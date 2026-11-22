@@ -66,4 +66,20 @@ class ParseScaladocTagsSpec extends FSpec {
     ParseScaladocTags("@return the result").textReturns mustBe Some("the result")
     ParseScaladocTags("@returns the result").textReturns mustBe Some("the result")
   }
+
+  test("an @ inside a line is text") {
+    val doc = ParseScaladocTags(
+      """Write to foo@bar.com, mark it @tailrec
+        |or see {@link Foo}
+        |
+        |@param a mail a@b.c
+        |""".stripMargin)
+
+    doc.textDescriptions must contain only ("Write to foo@bar.com, mark it @tailrec\nor see {@link Foo}")
+    doc.textParams must contain only ("a" -> "mail a@b.c")
+  }
+
+  test("a tag can be indented") {
+    ParseScaladocTags("Desc\n  @param a A").textParams must contain only ("a" -> "A")
+  }
 }
