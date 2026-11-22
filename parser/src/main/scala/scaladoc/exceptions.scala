@@ -69,6 +69,7 @@ final case class EmptyGroupPriority(
 
 trait MarkupException extends ParseException
 
+@deprecated("no longer thrown: markup ends at a paragraph break", "0.3.1")
 final case class UnexpectedParagraphSeparator(
   line: Int,
   column: Int,

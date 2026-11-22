@@ -133,5 +133,24 @@ class ParseMarkupSpec extends WSpec {
           Link("com.acme.foo.Employee"),
           PlainText(" extends this class.")))))
     }
+
+    "keep an unclosed marker as text" in {
+      ParseMarkup("x^2 is square") mustBe Document(PlainText("x^2 is square"))
+      ParseMarkup("a `b c") mustBe Document(PlainText("a `b c"))
+      ParseMarkup("it''s fine") mustBe Document(PlainText("it''s fine"))
+      ParseMarkup("'''a'' b") mustBe Document(PlainText("'''a'' b"))
+      ParseMarkup("[[open link") mustBe Document(PlainText("[[open link"))
+      ParseMarkup("{{{ never closed") mustBe Document(PlainText("{{{ never closed"))
+      ParseMarkup("x^2 and ^sup^") mustBe Document(PlainText("x"), Superscript("2 and "), PlainText("sup^"))
+    }
+
+    "not close a marker in the next paragraph" in {
+      ParseMarkup("a `b\n\nc` d") mustBe Document(Paragraph(PlainText("a `b")), Paragraph(PlainText("c` d")))
+      ParseMarkup("a ''b\nc'' d") mustBe Document(PlainText("a "), Italic("b\nc"), PlainText(" d"))
+    }
+
+    "let a code block span paragraphs" in {
+      ParseMarkup("{{{\na\n\nb\n}}}") mustBe Document(CodeBlock("\na\n\nb\n"))
+    }
   }
 }
