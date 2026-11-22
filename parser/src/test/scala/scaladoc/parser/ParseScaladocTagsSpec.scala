@@ -61,4 +61,9 @@ class ParseScaladocTagsSpec extends FSpec {
       "b_b" -> "underscore in the param name",
       "c" -> "multi\nline\ndescription")
   }
+
+  test("@return and @returns") {
+    ParseScaladocTags("@return the result").textReturns mustBe Some("the result")
+    ParseScaladocTags("@returns the result").textReturns mustBe Some("the result")
+  }
 }
