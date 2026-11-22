@@ -5,6 +5,18 @@ object Docstrings {
   // what Scala 3's `Symbol.docstring` returns for the classes above: the comment starts at the opening marker,
   // the first line's indentation is gone, the following lines keep theirs.
 
+  val NestedMarkup: String = Seq(
+    "/** = Level 1 =",
+    "  * == Level 2 ==",
+    "  * === Level 3 ===",
+    "  * ==== Level 4 ====",
+    "  * ===== Level 5 =====",
+    "  * ====== Level `6` ======",
+    "  *",
+    "  * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,.",
+    "  */"
+  ).mkString("\n")
+
   val KitchenSink: String = Seq(
     "/** = Kitchen sink =",
     "  *",

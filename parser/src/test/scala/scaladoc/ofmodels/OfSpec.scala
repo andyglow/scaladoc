@@ -39,6 +39,17 @@ package scaladoc.ofmodels
   */
 case class KitchenSink[T](a: String, b: T)
 
+/** = Level 1 =
+  * == Level 2 ==
+  * === Level 3 ===
+  * ==== Level 4 ====
+  * ===== Level 5 =====
+  * ====== Level `6` ======
+  *
+  * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,.
+  */
+class NestedMarkup
+
 /** A plain class.
   *
   * Second paragraph.
@@ -96,6 +107,25 @@ class OfSpec extends scaladoc.FSpec {
     doc mustBe Some(parsed(Docstrings.KitchenSink))
     doc.get.tags.size mustBe 24
     doc.get.textParams mustBe Map("a" -> "the a param\ncontinued on the next line", "b" -> "the b param")
+  }
+
+  test("nested markup and all heading levels") {
+    val doc = Scaladoc.of[NestedMarkup]
+    doc mustBe Some(parsed(Docstrings.NestedMarkup))
+    doc.get.descriptions.head match {
+      case Markup.Document(elements) =>
+        elements.collect { case h: Markup.Heading => h.level.value } mustBe List(1, 2, 3, 4, 5, 6)
+        elements.last mustBe Markup.Paragraph(
+          Markup.Bold(Markup.PlainText("bold "), Markup.Italic("italic"), Markup.PlainText(" "), Markup.Link("scala.Option")),
+          Markup.PlainText(", "),
+          Markup.Underline(Markup.Italic("a")),
+          Markup.PlainText(", x"),
+          Markup.Superscript(Markup.Italic("2")),
+          Markup.PlainText(" and y"),
+          Markup.Subscript(Markup.Bold("i")),
+          Markup.PlainText("."))
+      case other => fail(s"not a document: $other")
+    }
   }
 
   test("plain class") {

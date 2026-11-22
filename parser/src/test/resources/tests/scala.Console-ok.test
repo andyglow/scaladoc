@@ -117,7 +117,7 @@ scaladoc
     |   use <a>scala.io.StdIn$ StdIn</a>.
     |   Also defines constants for marking up text on ANSI terminals.
     |</p>
-    |<h2> Console Output </h2>
+    |<h2>Console Output</h2>
     |<p>
     |  Use the print methods to output text.
     |</p>
@@ -128,7 +128,7 @@ scaladoc
     |    -135.05)
     |  Today the outside temperature is a balmy -137.0°C. -137.0°C beats the previous record of -135.1°C.
     |</code>
-    |<h2> ANSI escape codes </h2>
+    |<h2>ANSI escape codes</h2>
     |<p>
     |  Use the ANSI escape codes for colorizing console output either to STDOUT or STDERR.
     |</p>
@@ -156,7 +156,7 @@ scaladoc
     |     <tr><td style="background-color:#000;color:#fff"><span style="background-color:#ff0;color:#f00;text-decoration:underline">NO!</span></td></tr>
     |   </table>
     |</p>
-    |<h2> IO redefinition </h2>
+    |<h2>IO redefinition</h2>
     |<p>
     |  Use IO redefinition to temporarily swap in a different set of input and/or output streams. In this example the stream based
     |   method above is wrapped into a function.

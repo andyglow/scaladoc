@@ -79,23 +79,24 @@ libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.3.0" % Pro
 On Scala.js, use `%%%` for `scaladoc-ast` and `scaladoc-parser`. The compiler plugin stays `%%`.
 
 ## Scaladoc AST
-The model gives a detailed view of a description. It covers the scaladoc tags and also recognizes markdown markup
-in the tags that allow it.
+The model gives a detailed view of a description. It covers the scaladoc tags and the wiki markup of scaladoc
+(`''italic''`, `[[links]]`, `{{{code}}}`, ...) in the tags that allow it. Inline markup nests, as in `'''bold ''italic'''''`; the text of a `Monospace` is taken as
+is.
 
 ```
 Span     = PlainText (String)
          | Monospace (String)
-         | Italic (String)
-         | Bold (String)
-         | Underline (String)
-         | Superscript (String)
-         | Subscript (String)
+         | Italic (List Span)
+         | Bold (List Span)
+         | Underline (List Span)
+         | Superscript (List Span)
+         | Subscript (List Span)
          | Link (String)
-         | CodeBlock (String)
 
 Markup   = Span
-         | Heading (Level String)
+         | Heading (Level (List Span))
          | Paragraph (List Span)
+         | CodeBlock (String)
          | Document (List Markup)
 
 Tag      = Description       (Markup)

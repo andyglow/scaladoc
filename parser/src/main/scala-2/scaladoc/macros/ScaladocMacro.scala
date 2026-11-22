@@ -38,19 +38,20 @@ class ScaladocMacro(val c: blackbox.Context) extends ExtractScaladoc with Annota
 
     def unapply(x: Markup): Option[Tree] = Some {
       def trees(ls: List[Markup]): List[Tree] = ls map markupTree
+      def spans(ls: List[Span]): Tree        = q"scala.List(..${trees(ls)})"
       x match {
         case Document(els)                      => q"$prefix.Markup.Document(scala.List(..${trees(els)}))"
         case Paragraph(els)                     => q"$prefix.Markup.Paragraph(scala.List(..${trees(els)}))"
         case PlainText(text)                    => q"$prefix.Markup.PlainText($text)"
         case Monospace(text)                    => q"$prefix.Markup.Monospace($text)"
-        case Italic(text)                       => q"$prefix.Markup.Italic($text)"
-        case Bold(text)                         => q"$prefix.Markup.Bold($text)"
-        case Underline(text)                    => q"$prefix.Markup.Underline($text)"
-        case Superscript(text)                  => q"$prefix.Markup.Superscript($text)"
-        case Subscript(text)                    => q"$prefix.Markup.Subscript($text)"
+        case Italic(els)                        => q"$prefix.Markup.Italic(${spans(els)})"
+        case Bold(els)                          => q"$prefix.Markup.Bold(${spans(els)})"
+        case Underline(els)                     => q"$prefix.Markup.Underline(${spans(els)})"
+        case Superscript(els)                   => q"$prefix.Markup.Superscript(${spans(els)})"
+        case Subscript(els)                     => q"$prefix.Markup.Subscript(${spans(els)})"
         case Link(text)                         => q"$prefix.Markup.Link($text)"
         case CodeBlock(text)                    => q"$prefix.Markup.CodeBlock($text)"
-        case Heading(l, text)                    => q"$prefix.Markup.Heading(${levelTree(l)}, $text)"
+        case Heading(l, els)                    => q"$prefix.Markup.Heading(${levelTree(l)}, ${spans(els)})"
       }
     }
   }
