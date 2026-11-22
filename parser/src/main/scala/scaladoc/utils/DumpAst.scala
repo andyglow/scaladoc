@@ -43,6 +43,16 @@ object DumpAst {
       w.dump(text)
       w.dec()
       w.writeln("</code>")
+    case Table(header, alignments, rows) =>
+      def row(r: Table.Row, cell: String): Unit = w.writeln(r.cells.zip(alignments).map { case (c, a) =>
+        s"<$cell align=${a.toString.toLowerCase}>${c.markup.map(inlineString).mkString}</$cell>"
+      }.mkString("<tr>", "", "</tr>"))
+      w.writeln("<table>")
+      w.inc()
+      row(header, "th")
+      rows foreach { row(_, "td") }
+      w.dec()
+      w.writeln("</table>")
     case list: ListBlock =>
       val tag = list match {
         case _: UnorderedList        => "ul"

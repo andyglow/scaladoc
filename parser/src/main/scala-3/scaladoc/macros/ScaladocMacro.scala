@@ -77,6 +77,17 @@ object ScaladocMacro {
     }
   }
 
+  private def rowExpr(x: Markup.Table.Row)(using Quotes): Expr[Markup.Table.Row] = {
+    val cells = x.cells.map(cell => '{ Markup.Paragraph(${ spansExpr(cell.markup) }) })
+    '{ Markup.Table.Row(${ Expr.ofList(cells) }) }
+  }
+
+  private def alignmentExpr(x: Markup.Table.Alignment)(using Quotes): Expr[Markup.Table.Alignment] = x match {
+    case Markup.Table.Alignment.Left   => '{ Markup.Table.Alignment.Left }
+    case Markup.Table.Alignment.Center => '{ Markup.Table.Alignment.Center }
+    case Markup.Table.Alignment.Right  => '{ Markup.Table.Alignment.Right }
+  }
+
   private def markupExpr(x: Markup)(using Quotes): Expr[Markup] = {
     import Markup.*
     x match {
@@ -84,6 +95,8 @@ object ScaladocMacro {
       case CodeBlock(v)      => '{ Markup.CodeBlock(${ Expr(v) }) }
       case UnorderedList(items)      => '{ Markup.UnorderedList(${ Expr.ofList(items.map(documentExpr)) }) }
       case OrderedList(items, style) => '{ Markup.OrderedList(${ Expr.ofList(items.map(documentExpr)) }, ${ styleExpr(style) }) }
+      case Table(header, alignments, rows) =>
+        '{ Markup.Table(${ rowExpr(header) }, ${ Expr.ofList(alignments.map(alignmentExpr)) }, ${ Expr.ofList(rows.map(rowExpr)) }) }
       case Heading(l, v)     => '{ Markup.Heading(${ levelExpr(l) }, ${ spansExpr(v) }) }
       case Paragraph(spans)  => '{ Markup.Paragraph(${ Expr.ofList(spans.map(spanExpr)) }) }
       case Document(elems)   => '{ Markup.Document(${ Expr.ofList(elems.map(markupExpr)) }) }

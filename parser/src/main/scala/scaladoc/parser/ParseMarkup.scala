@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
 /** Parses scaladoc's wiki markup into a `Markup.Document`.
   *
   * A recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
-  * blocks, lists), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
+  * blocks, lists, tables), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
   * marker that isn't closed within its paragraph is text, so `x^2` and an unclosed backtick parse.
   *
   * @param codeBlocks whether `{{{ ... }}}` is a code block; a heading's title is parsed without
@@ -61,12 +61,52 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
     }
   }
 
-  // a paragraph ends with the text, at a paragraph separator, and at a line break before a blank line, a heading or a
-  // list item
+  // the cells of a table row, a line like `| a | b |`. In a cell, `\|` is a `|`.
+  private def rowAt(i: Int): Option[List[String]] = {
+    val start = firstNonSpace(i)
+    val line  = text.substring(start, lineEnd(start)).trim
+    if (line.length >= 2 && line.startsWith("|") && line.endsWith("|") && !line.endsWith("\\|")) {
+      val cells = ListBuffer.empty[String]
+      val cell  = new StringBuilder
+      var k     = 1
+      while (k < line.length - 1) {
+        val c = line.charAt(k)
+        if (c == '\\' && line.charAt(k + 1) == '|') { cell += '|'; k += 2 }
+        else if (c == '|') { cells += cell.toString; cell.setLength(0); k += 1 }
+        else { cell += c; k += 1 }
+      }
+      cells += cell.toString
+      Some(cells.toList)
+    } else None
+  }
+
+  private val DelimiterCell = """\s*(:?)-+(:?)\s*""".r
+
+  // a delimiter row: `---`, `:---`, `:---:` or `---:` cells
+  private def alignmentsAt(i: Int): Option[List[Table.Alignment]] = rowAt(i) flatMap { cells =>
+    val alignments = cells map {
+      case DelimiterCell(":", ":") => Some(Table.Alignment.Center)
+      case DelimiterCell("", ":")  => Some(Table.Alignment.Right)
+      case DelimiterCell(_, _)     => Some(Table.Alignment.Left)
+      case _                       => None
+    }
+    if (alignments.forall(_.isDefined)) Some(alignments.flatten) else None
+  }
+
+  // a table starts with a header row and a delimiter row of as many cells. Returns them and where they end.
+  private def tableAt(i: Int): Option[(List[String], List[Table.Alignment], Int)] = rowAt(i) flatMap { header =>
+    val next = lineEnd(i) + 1
+    if (next >= len) None
+    else alignmentsAt(next).filter(_.size == header.size).map(alignments => (header, alignments, lineEnd(next)))
+  }
+
+  // a paragraph ends with the text, at a paragraph separator, and at a line break before a blank line, a heading, a
+  // list item or a table
   private def paragraphBreakAt(i: Int): Boolean =
     i >= len || text.charAt(i).isParSep || (text.charAt(i).isNL && {
       val next = i + 1
-      next >= len || isBlankLine(next) || headingAt(next).isDefined || listItemAt(next).isDefined
+      next >= len || isBlankLine(next) || headingAt(next).isDefined || listItemAt(next).isDefined ||
+      tableAt(next).isDefined
     })
 
   // ... and also where a code block starts, even in the middle of a line
@@ -103,11 +143,31 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
         // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
         Some(Heading(Heading.levelOf(math.min(level, 6)), ParseMarkup.spans(title, log)))
       case None =>
-        listItemAt(pos) match {
-          case Some((indent, style, _)) => Some(list(indent, style))
-          case None                     => paragraph()
+        tableAt(pos) match {
+          case Some((header, alignments, end)) => Some(table(header, alignments, end))
+          case None =>
+            listItemAt(pos) match {
+              case Some((indent, style, _)) => Some(list(indent, style))
+              case None                     => paragraph()
+            }
         }
     }
+  }
+
+  // the rows after the header and the delimiter row, up to a line that isn't a row. Rows get as wide as the header.
+  private def table(header: List[String], alignments: List[Table.Alignment], end: Int): Table = {
+    def row(cells: List[String]) =
+      Table.Row(cells.padTo(header.size, "").take(header.size).map(cell => Paragraph(ParseMarkup.spans(cell, log))))
+    pos = end
+    val rows = ListBuffer.empty[Table.Row]
+    var more = true
+    while (more && pos + 1 < len && text.charAt(pos).isNL) {
+      rowAt(pos + 1) match {
+        case Some(cells) => rows += row(cells); pos = lineEnd(pos + 1)
+        case None        => more = false
+      }
+    }
+    Table(row(header), alignments, rows.toList)
   }
 
   // the items with this indentation and numbering, and the lists nested in them. Blank lines between items don't

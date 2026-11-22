@@ -54,6 +54,10 @@ class ScaladocMacro(val c: blackbox.Context) extends ExtractScaladoc with Annota
         case UnorderedList(items)               => q"$prefix.Markup.UnorderedList(scala.List(..${trees(items)}))"
         case OrderedList(items, style)          =>
           q"$prefix.Markup.OrderedList(scala.List(..${trees(items)}), $prefix.Markup.OrderedList.${TermName(style.toString)})"
+        case Table(header, alignments, rows)    =>
+          def row(r: Table.Row): Tree  = q"$prefix.Markup.Table.Row(scala.List(..${trees(r.cells)}))"
+          val aligned                  = alignments.map(a => q"$prefix.Markup.Table.Alignment.${TermName(a.toString)}")
+          q"$prefix.Markup.Table(${row(header)}, scala.List(..$aligned), scala.List(..${rows.map(row)}))"
         case Heading(l, els)                    => q"$prefix.Markup.Heading(${levelTree(l)}, ${spans(els)})"
       }
     }
