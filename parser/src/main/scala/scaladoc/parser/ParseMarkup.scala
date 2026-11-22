@@ -15,6 +15,7 @@ import scala.util.matching.Regex
   *
   * HTML: block tags become their wiki syntax first (see `htmlToWiki`). The inline tags with a model equivalent become
   * that (`<b>` is bold, `<code>` monospace, `<a href>` a link), other safe tags an `HtmlTag`, and entities are decoded.
+  * So are javadoc's inline tags: `{@code x}` is monospace, `{@link x}` a link.
   *
   * @param codeBlocks whether `{{{ ... }}}` is a code block; a heading's title is parsed without
   */
@@ -356,6 +357,39 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       else { buf += '&'; pos += 1 }
     }
 
+    // javadoc's inline tags: {@code x} and {@value x} are monospace, {@literal x} text, {@link x} and {@linkplain x}
+    // links with an optional label, and {@docRoot} goes. Braces in them must balance. Others, like {@inheritDoc}, and
+    // one that isn't closed in the paragraph are text.
+    def javadocTag(): Unit = {
+      var j = pos + 2
+      while (j < len && text.charAt(j).isLetter) j += 1
+      val name = text.substring(pos + 2, j)
+      while (j < len && text.charAt(j).isSpace) j += 1
+      val from  = j
+      var depth = 0
+      while (!paragraphBreakAt(j) && !(text.charAt(j) == '}' && depth == 0)) {
+        if (text.charAt(j) == '{') depth += 1 else if (text.charAt(j) == '}') depth -= 1
+        j += 1
+      }
+      if (!ParseMarkup.JavadocTags(name) || j >= len || text.charAt(j) != '}') {
+        buf ++= "{@"
+        pos += 2
+      } else {
+        val content = text.substring(from, j)
+        name match {
+          case "literal"           => buf ++= content
+          case "docRoot"           =>
+          case "code" | "value"    => flush(); spans += Monospace(content)
+          case _                   =>
+            val target = content.takeWhile(!_.isWhitespace)
+            val label  = content.drop(target.length).trim
+            flush()
+            spans += Link(target, if (label.isEmpty) Nil else ParseMarkup.spans(label, log))
+        }
+        pos = j + 1
+      }
+    }
+
     var closed = false
     var done   = false
     while (!done) {
@@ -379,6 +413,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       else if (at("[[", pos)) link()
       else if (at("<", pos)) html()
       else if (at("&", pos)) entity()
+      else if (at("{@", pos)) javadocTag()
       else {
         buf += text.charAt(pos)
         pos += 1
@@ -414,6 +449,8 @@ object ParseMarkup {
   private[parser] val HtmlTagPattern = java.util.regex.Pattern.compile("""<(/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s[^<>]*)?)/?>""")
 
   private[parser] val Href = """(?i)href\s*=\s*(["'])(.*?)\1""".r
+
+  private[parser] val JavadocTags: Set[String] = Set("code", "docRoot", "link", "linkplain", "literal", "value")
 
   // the tags scaladoc keeps, and <u>
   private[parser] val SafeTags: Set[String] = Set(
