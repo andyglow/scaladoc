@@ -348,6 +348,8 @@ lazy val docs = project
         .withCopyright("Apache-2.0 · andyglow")
     },
     siteSourceDirectory := (Compile / paradox / target).value,
+    // sbt-site's default takes html, css, images and js; the theme also needs its search index and its fonts
+    makeSite / includeFilter := (makeSite / includeFilter).value || "*.json" || "*.ttf" || "*.woff" || "*.woff2" || "*.svg",
     makeSite            := makeSite.dependsOn(Compile / paradox).value,
     ghpagesNoJekyll     := true,
     // CI pushes with its token, a developer with their SSH key
