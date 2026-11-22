@@ -367,6 +367,19 @@ class ParseMarkupSpec extends WSpec {
       ParseMarkup("{{{<p>&lt;</p>}}}") mustBe Document(CodeBlock("<p>&lt;</p>"))
     }
 
+    "parse javadoc's inline tags" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+
+      ParseMarkup("{@code Map<K, V>} and {@code {a}}") mustBe p(Monospace("Map<K, V>"), PlainText(" and "), Monospace("{a}"))
+      ParseMarkup("see {@link Foo} or {@linkplain Foo#bar the ''bar''}") mustBe p(
+        PlainText("see "), Link("Foo"), PlainText(" or "), Link("Foo#bar", List(PlainText("the "), Italic("bar"))))
+      ParseMarkup("a {@literal <} b, {@value MAX}{@docRoot}") mustBe p(PlainText("a < b, "), Monospace("MAX"))
+      ParseMarkup("{@inheritDoc} and {@code open") mustBe p(PlainText("{@inheritDoc} and {@code open"))
+      Scaladoc.fromString("/** Uses {@link java.util.List}.\n  * @param a {@code a}\n  */").map(_.tags) mustBe Right(List(
+        Tag.Description(Document(Paragraph(PlainText("Uses "), Link("java.util.List"), PlainText(".")))),
+        Tag.Param("a", Document(Paragraph(Monospace("a"))))))
+    }
+
     "end a paragraph at a heading line" in {
       ParseMarkup("text\n= Title =\nmore") mustBe Document(
         Paragraph(PlainText("text")), Heading(One, "Title"), Paragraph(PlainText("more")))

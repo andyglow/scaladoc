@@ -77,7 +77,8 @@ class ParseScaladocTagsSpec extends FSpec {
         |@param a mail a@b.c
         |""".stripMargin)
 
-    doc.textDescriptions must contain only ("Write to foo@bar.com, mark it @tailrec\nor see {@link Foo}")
+    // `{@link Foo}` is a link, not a tag
+    doc.textDescriptions must contain only ("Write to foo@bar.com, mark it @tailrec\nor see [[Foo]]")
     doc.textParams must contain only ("a" -> "mail a@b.c")
   }
 
