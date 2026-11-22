@@ -24,7 +24,7 @@ object ScaladocParser {
     comment.flatMap { c =>
       c.style match {
         // `Stripped` only comes from the `hasTags = false` branch above
-        case Style.Stripped | Style.Scaladoc => ParseScaladocTags.pure(c.body)
+        case Style.Stripped | Style.Scaladoc => ParseScaladocTags.pure(Defines.expand(c.body))
         case style: Style.NonScaladoc        => Left(NonScaladocStyle(style))
       }
     }
