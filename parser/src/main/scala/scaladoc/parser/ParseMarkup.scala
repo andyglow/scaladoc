@@ -70,10 +70,33 @@ class ParseMarkup private (
     }
   }
 
-  private def checkNoParSep(text: String): Unit = {
-    text.firstParSep match {
-      case Some((pos, len)) => throwUnexpectedParSep(pos, len)
-      case _                =>
+  private def isAtString(x: String): Boolean =
+    remaining >= x.length && x.indices.forall(i => chars(pos + i) == x.charAt(i))
+
+  private def advanceTo(target: Int): Unit = while (pos < target && !isEOF) next()
+
+  // where `close` starts, looking from `from` on: within the paragraph, or anywhere for code blocks, which can have
+  // blank lines
+  private def findClose(from: Int, close: String, sameParagraph: Boolean): Option[Int] = {
+    val limit =
+      if (!sameParagraph) chars.length
+      else new String(chars, from, chars.length - from).firstParSep.fold(chars.length)(from + _._1)
+    val idx = new String(chars, 0, limit).indexOf(close, from)
+    if (idx < 0) None else Some(idx)
+  }
+
+  // the markup from `open` to `close`. Without a `close` the `open` marker is text, so a comment with `x^2` or an
+  // unclosed backtick still parses
+  private def span(open: String, close: String, sameParagraph: Boolean = true)(make: String => Markup): Unit = {
+    val from = pos + open.length
+    findClose(from, close, sameParagraph) match {
+      case Some(end) =>
+        flush()
+        handle(make(new String(chars, from, end - from)))
+        advanceTo(end + close.length)
+      case None =>
+        buf append open
+        advanceTo(from)
     }
   }
 
@@ -81,70 +104,21 @@ class ParseMarkup private (
     while (!isEOF) {
       val c = chars(pos)
       if (c == '`') {
-        flush()
-        next()
-        val text = takeWhile(_ != '`')
-        if (isEOF) throwUnexpectedEOF(None)
-        checkNoParSep(text)
-        handle(Monospace(text))
-        next()
+        span("`", "`")(Monospace(_))
       } else if (c == '^') {
-        flush()
-        next()
-        val text = takeWhile(_ != '^')
-        if (isEOF) throwUnexpectedEOF(None)
-        checkNoParSep(text)
-        handle(Superscript(text))
-        next()
-      } else if (c == '\'' && remaining > 1 && chars(pos + 1) == '\'' && chars(pos + 2) == '\'') {
-        flush()
-        next()
-        next()
-        next()
-        if (isEOF) throwUnexpectedEOF(None)
-        val text = takeUntil3 { case ('\'', '\'', '\'') => 2 }
-        checkNoParSep(text)
-        handle(Bold(text))
-      } else if (c == '{' && remaining > 1 && chars(pos + 1) == '{' && chars(pos + 2) == '{') {
-        flush()
-        next()
-        next()
-        next()
-        if (isEOF) throwUnexpectedEOF(None)
-        val text = takeUntil3 { case ('}', '}', '}') => 2 }
-        handle(CodeBlock(text))
-      } else if (c == '\'' && remaining > 0 && chars(pos + 1) == '\'') {
-        flush()
-        next()
-        next()
-        if (isEOF) throwUnexpectedEOF(None)
-        val text = takeUntil2 { case ('\'', '\'') => 1 }
-        checkNoParSep(text)
-        handle(Italic(text))
-      } else if (c == '_' && remaining > 0 && chars(pos + 1) == '_') {
-        flush()
-        next()
-        next()
-        if (isEOF) throwUnexpectedEOF(None)
-        val text = takeUntil2 { case ('_', '_') => 1 }
-        checkNoParSep(text)
-        handle(Underline(text))
-      } else if (c == ',' && remaining > 0 && chars(pos + 1) == ',') {
-        flush()
-        next()
-        next()
-        if (isEOF) throwUnexpectedEOF(None)
-        val text = takeUntil2 { case (',', ',') => 1 }
-        checkNoParSep(text)
-        handle(Subscript(text))
-      } else if (c == '[' && remaining > 0 && chars(pos + 1) == '[') {
-        flush()
-        next()
-        next()
-        if (isEOF) throwUnexpectedEOF(None)
-        val text = takeUntil2 { case (']', ']') => 1 }
-        checkNoParSep(text)
-        handle(Link(text))
+        span("^", "^")(Superscript(_))
+      } else if (isAtString("'''")) {
+        span("'''", "'''")(Bold(_))
+      } else if (isAtString("{{{")) {
+        span("{{{", "}}}", sameParagraph = false)(CodeBlock(_))
+      } else if (isAtString("''")) {
+        span("''", "''")(Italic(_))
+      } else if (isAtString("__")) {
+        span("__", "__")(Underline(_))
+      } else if (isAtString(",,")) {
+        span(",,", ",,")(Subscript(_))
+      } else if (isAtString("[[")) {
+        span("[[", "]]")(Link(_))
       } else if (c == '=' && isLineStart) {
         log.info("-> [" + new String(chars) + "]")
         val level = scanWhile(_ == '=') + 1

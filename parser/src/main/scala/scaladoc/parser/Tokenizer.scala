@@ -166,36 +166,12 @@ private[parser] trait Tokenizer {
     if (!isEOF) next()
     res
   }
-  def takeUntil3(pred: PartialFunction[(Char, Char, Char), Int]): String = {
-    val start = pos
-    var prevPrev: Char = 0
-    var prev: Char = 0
-    var skipCharsAtRight = 0
-    while ({
-      pos < chars.length && {
-        val triple = (prevPrev, prev, chars(pos))
-        val stop = pred.isDefinedAt(triple)
-        if (stop) skipCharsAtRight = pred(triple)
-        !stop
-      }
-    }) {
-      prevPrev = prev
-      prev = chars(pos)
-      next()
-    }
-
-    val count = Math.max(0, pos - start - skipCharsAtRight)
-    val res = if (count == 0) EmptyString else new String(chars, start, count)
-    if (!isEOF) next()
-    res
-  }
   def throwUnexpectedEOF(exp: Option[Expectation]): Nothing = throw UnexpectedEOF(lin, col, pos, exp)
   def throwUnexpectedChar(exp: Expectation): Nothing = throw UnexpectedChar(lin, col, pos, chars(pos), exp)
   def throwUnexpected(exp: Expectation): Nothing = if (isEOF) throwUnexpectedEOF(Some(exp)) else throwUnexpectedChar(exp)
   def throwBrokenIndentation(actual: Int, expected: Int): Nothing = throw BrokenIndentation(lin, col, pos, actual, expected)
   def throwBufferFlushError(tag: Option[MutableTag], buffer: StringBuilder): Nothing = throw BufferFlushError(lin, col, pos, tag, buffer)
   def throwEmptyGroupPriority(): Nothing = throw EmptyGroupPriority(lin, col, pos)
-  def throwUnexpectedParSep(offset: Int, len: Int): Nothing = throw UnexpectedParagraphSeparator(lin, col, pos + offset, len)
 
   def reset(): Unit = {
     pos = 0
