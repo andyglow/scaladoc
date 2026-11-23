@@ -21,6 +21,18 @@ implementation("io.github.andyglow:scaladoc-parser_2.13:@VERSION@")             
 `scaladocRead` and Gradle's `read`, added in 0.5.0, are deprecated: they still add the libraries, with a warning, and
 go away in 0.6.0. Replace them with the dependency above.
 
+**A module that embeds scaladoc depends on `scaladoc-annotation`.** In 0.5.0 it got just the compiler plugin, which
+broke its Scala 3 consumers: Scala 3 doesn't compile against classes that refer to the annotation without its jar,
+and fails with "Bad symbolic reference … refers to ScaladocCarrier". The sbt and Gradle plugins now add it on Scala 2;
+by hand, and in Maven, add it at compile scope:
+
+```sbt
+libraryDependencies += "io.github.andyglow" % "scaladoc-annotation" % "@VERSION@"
+```
+
+Until a library published with 0.5.0 is republished, a Scala 3 project that uses it adds the same dependency itself.
+Versions before 0.5.0 aren't affected: there the plugins gave publishers `scaladoc-ast`, which held the annotation then.
+
 `scaladocEmbed` and Gradle's `embed` are deprecated too, and go away in 0.6.0. With the libraries gone, a module that
 doesn't embed gets nothing from the plugin, so it doesn't enable it. Until then, turning `embed` off still leaves the
 compiler plugin out, with a deprecation warning. On Scala 3, where `embed` never did anything, a module that reads keeps
@@ -32,7 +44,7 @@ the plugin for `-Yread-docs` and drops the setting.
 libraries along with the compiler plugin, and a module that reads it asks for them.
 
 **The sbt and Gradle plugins** publish by default, as before, but now add no libraries for that: on Scala 2 just the
-compiler plugin, on Scala 3 nothing. Reading is opt-in. In 0.5.0, a module that calls `Scaladoc.of` sets (see 0.5.1 above, which replaces this with a plain
+compiler plugin (0.5.1 adds `scaladoc-annotation` back, see above), on Scala 3 nothing. Reading is opt-in. In 0.5.0, a module that calls `Scaladoc.of` sets (see 0.5.1 above, which replaces this with a plain
 dependency):
 
 ```sbt

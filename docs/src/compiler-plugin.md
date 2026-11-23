@@ -23,9 +23,14 @@ by hand:
 
 ```sbt
 addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "@VERSION@")
+libraryDependencies += "io.github.andyglow" % "scaladoc-annotation" % "@VERSION@"
 ```
 
-The plugin's jar has everything it needs, so a module whose scaladoc gets embedded needs no library besides it.
+The plugin's jar has everything it needs to run. The module still depends on `scaladoc-annotation`, which holds the
+annotation and nothing else, because its classes refer to the annotation in their Scala signatures. Scala 2 compiles
+against them without it, and the JVM runs them without it. Scala 3 doesn't: a Scala 3 module that uses them fails
+with "Bad symbolic reference … refers to ScaladocCarrier", even if it never reads any scaladoc. With the dependency at
+compile scope, the jar reaches every consumer, like `scala-library` does.
 
 ## Reading embedded scaladoc without this library
 

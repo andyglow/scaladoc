@@ -16,8 +16,9 @@ import java.lang.annotation.*;
  * </ul>
  *
  * <p>This is the only class in its jar, which has no dependencies, so a reader that processes the text its own way
- * needs nothing else. The class doesn't have to be present where the annotated classes are used: the JVM loads and
- * runs them without it, and Java reflection then leaves the annotation out.
+ * needs nothing else. A module whose classes carry it depends on the jar, so that it reaches whatever uses them: the
+ * JVM runs them without it, and Java reflection then leaves the annotation out, but Scala 3 doesn't compile against
+ * them without it, since the annotation is part of their Scala signatures.
  */
 @Documented
 @Target(ElementType.TYPE)

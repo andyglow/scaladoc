@@ -30,11 +30,18 @@
   </build>
 
   <profiles>
-    <!-- Scala 2: what getting-started.md shows for a module whose scaladoc gets embedded: the compiler plugin, whose jar
-         has everything it needs, and nothing else. On Scala 3 such a module needs nothing at all. -->
+    <!-- Scala 2: what getting-started.md shows for a module whose scaladoc gets embedded: the compiler plugin, and
+         scaladoc-annotation, which the classes it embeds into refer to. Without it, Scala 3 modules that use them don't
+         compile. On Scala 3 such a module needs nothing at all. -->
     <profile>
       <id>embed</id>
       <activation><property><name>scala</name><value>!3</value></property></activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.github.andyglow</groupId>
+          <artifactId>scaladoc-annotation</artifactId>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <plugin>

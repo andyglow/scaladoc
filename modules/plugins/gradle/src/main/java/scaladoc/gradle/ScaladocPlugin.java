@@ -22,12 +22,15 @@ import org.gradle.api.tasks.scala.ScalaCompile;
  *
  * <ul>
  *   <li><b>Scala 2:</b> the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode;
- *       the {@code scaladoc} block's include and exclude patterns become its options.</li>
+ *       the {@code scaladoc} block's include and exclude patterns become its options. The module depends on
+ *       {@code scaladoc-annotation}, the one-class jar of the annotation that holds it, and exposes it to its
+ *       consumers: its classes refer to it, and Scala 3 modules that use them don't compile without it.</li>
  *   <li><b>Scala 3:</b> {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and
  *       jars. Scala 3 keeps doc comments in TASTy on its own, so nothing else is needed.</li>
  * </ul>
  *
- * It adds no library: a module that reads scaladoc with {@code Scaladoc.of} depends on {@code scaladoc-parser} itself.
+ * It adds no library for reading: a module that reads scaladoc with {@code Scaladoc.of} depends on
+ * {@code scaladoc-parser} itself.
  * The Scala version is the one of the module's {@code scala-library} or {@code scala3-library_3} dependency.
  */
 public class ScaladocPlugin implements Plugin<Project> {
@@ -35,6 +38,12 @@ public class ScaladocPlugin implements Plugin<Project> {
     static final String GROUP = "io.github.andyglow";
 
     static final String COMPILER_PLUGIN = "scaladoc-compiler-plugin";
+
+    static final String ANNOTATION = "scaladoc-annotation";
+
+    // holds scaladoc-annotation; `implementation` and `apiElements` extend it, so the module compiles and runs with it,
+    // and it's a compile dependency of whatever uses the module, published POMs included, with or without java-library
+    static final String ANNOTATION_CONFIGURATION = "scaladocAnnotation";
 
     // the configurations a build declares its Scala library in
     private static final List<String> DECLARING =
@@ -83,9 +92,12 @@ public class ScaladocPlugin implements Plugin<Project> {
         if (scala.equals("3")) {
             addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
         } else if (embed) {
-            // the compiler plugin's jar has everything it needs, so the module needs nothing else
+            // the compiler plugin's jar has everything it needs to run
             dependencies.add("scalaCompilerPlugins", GROUP + ":" + COMPILER_PLUGIN + "_" + scala + ":" + version);
             addCompilerOptions(project, compilerPluginOptions(extension));
+            // the classes it embeds scaladoc into refer to the annotation in their Scala signatures
+            exposeAnnotation(project);
+            dependencies.add(ANNOTATION_CONFIGURATION, GROUP + ":" + ANNOTATION + ":" + version);
         }
         @SuppressWarnings("deprecation")
         boolean read = extension.getRead().get();
@@ -97,6 +109,17 @@ public class ScaladocPlugin implements Plugin<Project> {
             dependencies.add("implementation", core);
             dependencies.add("implementation", parser);
         }
+    }
+
+    private static void exposeAnnotation(Project project) {
+        Configuration annotation = project.getConfigurations().create(ANNOTATION_CONFIGURATION, c -> {
+            c.setDescription("scaladoc-annotation, which the classes the scaladoc compiler plugin embeds into refer to");
+            c.setCanBeConsumed(false);
+            c.setCanBeResolved(false);
+            c.setVisible(false);
+        });
+        project.getConfigurations().getByName("implementation").extendsFrom(annotation);
+        project.getConfigurations().getByName("apiElements").extendsFrom(annotation);
     }
 
     /** The compiler plugin's {@code -P:} options for the extension's include and exclude patterns. */
