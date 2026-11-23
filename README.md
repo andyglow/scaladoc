@@ -46,9 +46,13 @@ and enable it on the modules that need it:
 lazy val model = project.enablePlugins(ScaladocPlugin)
 ```
 
-A module that has the plugin publishes its scaladoc, with the compiler plugin on Scala 2 (Scala 3 keeps it in TASTy on
-its own). A module that reads scaladoc with `Scaladoc.of` also sets `scaladocRead := true`, which adds the
-libraries, and `-Yread-docs` on Scala 3; a module that only publishes gets no library at all.
+The plugin sets the module's compiler up: on Scala 2 it adds the compiler plugin, which keeps the module's scaladoc in
+its bytecode, and on Scala 3, which keeps it in TASTy on its own, `-Yread-docs`. It adds no library. A module that
+reads scaladoc with `Scaladoc.of` depends on the parser, like on any library it calls:
+
+```sbt
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.5.0"
+```
 
 Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
 
@@ -64,7 +68,7 @@ hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-s
 
 | Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.3+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|
-| `scaladoc-core`             |     ✓      |     ✓      |       ✓        |      ✓       |
+| `scaladoc-core`            |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |   JVM one    |
 | `scaladoc-annotation`      |     ✓      |     ✓      |       ✓        |      ✓       |

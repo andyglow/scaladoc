@@ -4,13 +4,31 @@
 >
 > — attributed to Heraclitus
 
+## To 0.5.1
+
+The sbt and Gradle plugins set up the compiler and nothing else: the compiler plugin on Scala 2, and `-Yread-docs` on
+Scala 3, now on every Scala 3 module they're enabled on. They no longer add libraries. A module that reads scaladoc
+depends on `scaladoc-parser` itself, like on any library it calls; `scaladoc-core` comes with it:
+
+```sbt
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value   // sbt
+```
+
+```kotlin
+implementation("io.github.andyglow:scaladoc-parser_2.13:@VERSION@")                        // Gradle
+```
+
+`scaladocRead` and Gradle's `read`, added in 0.5.0, are deprecated: they still add the libraries, with a warning, and
+go away in 0.6.0. Replace them with the dependency above.
+
 ## To 0.5
 
 0.5 gives a module only what its part needs. A module that publishes its scaladoc no longer gets the scaladoc
 libraries along with the compiler plugin, and a module that reads it asks for them.
 
 **The sbt and Gradle plugins** publish by default, as before, but now add no libraries for that: on Scala 2 just the
-compiler plugin, on Scala 3 nothing. Reading is opt-in. A module that calls `Scaladoc.of` sets:
+compiler plugin, on Scala 3 nothing. Reading is opt-in. In 0.5.0, a module that calls `Scaladoc.of` sets (see 0.5.1 above, which replaces this with a plain
+dependency):
 
 ```sbt
 scaladocRead := true          // sbt

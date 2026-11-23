@@ -2,8 +2,8 @@ ThisBuild / scalaVersion       := "2.13.18"
 ThisBuild / crossScalaVersions := Seq("2.13.18", "2.12.21", "3.3.9")
 
 // Scala.js: on Scala 2 `model` publishes its scaladoc with the (JVM) compiler plugin, which embeds it into its
-// classes; on Scala 3 its TASTy keeps it. `app` reads it with `Scaladoc.of`, for which it gets the `_sjs1` libraries
-// (and `-Yread-docs` on Scala 3).
+// classes; on Scala 3 its TASTy keeps it. `app` reads it with `Scaladoc.of`: it depends on the `_sjs1` parser itself,
+// and the plugin adds `-Yread-docs` on Scala 3.
 lazy val model = project
   .enablePlugins(ScalaJSPlugin, ScaladocPlugin)
 
@@ -12,7 +12,8 @@ lazy val app = project
   .enablePlugins(ScalaJSPlugin, ScaladocPlugin)
   .settings(
     scaladocEmbed                   := false,
-    scaladocRead                    := true,
+    // the `_sjs1` parser, spelled out so the build loads on sbt 1 (which has `%%%`) and sbt 2 (whose `%%` picks it)
+    libraryDependencies += "io.github.andyglow" % s"scaladoc-parser_sjs1_${scalaBinaryVersion.value}" % scaladocVersion.value,
     scalaJSUseMainModuleInitializer := true
   )
 

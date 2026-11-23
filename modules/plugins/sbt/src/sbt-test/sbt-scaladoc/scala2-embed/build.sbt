@@ -12,7 +12,8 @@ lazy val app = project
   .enablePlugins(ScaladocPlugin)
   .settings(
     scaladocEmbed := false,
-    scaladocRead  := true
+    // reads scaladoc: depends on the parser like on any library it calls, in the plugin's version
+    libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value
   )
 
 // a module that only publishes depends on none of the scaladoc libraries, not even at compile time

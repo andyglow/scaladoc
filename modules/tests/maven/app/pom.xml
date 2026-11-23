@@ -23,11 +23,7 @@
       <artifactId>model</artifactId>
       <version>0</version>
     </dependency>
-    <!-- what getting-started.md shows for a module that reads scaladoc -->
-    <dependency>
-      <groupId>io.github.andyglow</groupId>
-      <artifactId>scaladoc-core_${scala.binary}</artifactId>
-    </dependency>
+    <!-- what getting-started.md shows for a module that reads scaladoc: the parser, which brings scaladoc-core -->
     <dependency>
       <groupId>io.github.andyglow</groupId>
       <artifactId>scaladoc-parser_${scala.binary}</artifactId>
