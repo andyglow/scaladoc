@@ -53,7 +53,9 @@ class MarkdownPathologicalSuite extends AnyFunSuite {
     "entities without their `;`"            -> r("&amp"),
     "reference definitions"                 -> (r("[a]: b\n", N / 6) + "[a]"),
     "many lines in a paragraph"             -> r("a\n"),
-    "a long table"                          -> ("| a | b |\n|---|---|\n" + r("| x | y |\n", N / 10))
+    "a long table"                          -> ("| a | b |\n|---|---|\n" + r("| x | y |\n", N / 10)),
+    "footnote references without closers"   -> r("[^a"),
+    "many footnotes and references"         -> (r("[^a]: b\n", N / 8) + r("x[^a] ", N / 6))
   )
 
   // through the tag layer too, which looks for each fence's closer

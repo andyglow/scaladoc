@@ -16,8 +16,13 @@ import scala.collection.mutable.ListBuffer
   *
   * @param depth how deep in quotes and list items the text is: what would nest deeper than `MaxNesting` is text
   * @param refs  the link reference definitions found so far, which paragraphs start with
+  * @param notes the labels of the footnotes found so far, normalized
   */
-private[parser] final class MarkdownBlocks private (text: String, depth: Int, refs: mutable.Map[String, MarkdownInlines.Ref]) {
+private[parser] final class MarkdownBlocks private (
+  text: String,
+  depth: Int,
+  refs: mutable.Map[String, MarkdownInlines.Ref],
+  notes: mutable.Set[String]) {
   import MarkdownBlocks._
 
   // the lines, with the tabs in their indentation expanded to the next multiple of 4
@@ -54,6 +59,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
               htmlBlockAt(n) match {
                 case Some(kind)                                => Some(htmlBlock(kind))
                 case None if quoteAt(n) && depth < MaxNesting => Some(quote())
+                case None if footnoteAt(n).isDefined && depth < MaxNesting => Some(footnote(footnoteAt(n).get))
                 case None =>
                   listItemAt(n) match {
                     case Some(item) if depth + 2 <= MaxNesting => Some(list(item))
@@ -168,6 +174,19 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
     }
   }
 
+  // `[^label]:`, as flexmark has footnotes: the label, and where its text starts on the line
+  private def footnoteAt(n: Int): Option[(String, Int)] = {
+    val s     = lines(n)
+    val start = indentOf(s)
+    if (start > 3 || !s.startsWith("[^", start)) None
+    else {
+      var end = start + 2
+      while (end < s.length && s.charAt(end) != ']' && s.charAt(end) != '[' && !s.charAt(end).isWhitespace) end += 1
+      if (end == start + 2 || !s.startsWith("]:", end)) None
+      else Some((s.substring(start + 2, end), runEnd(s, end + 2, ' ')))
+    }
+  }
+
   // a header row and, on the next line, a delimiter row of as many cells: the header's cells and the alignments
   private def tableAt(n: Int): Option[(List[String], List[Table.Alignment])] =
     if (n + 1 >= lines.length || indentOf(lines(n + 1)) > 3 || lines(n + 1).indexOf('|') < 0) None
@@ -181,7 +200,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
   // can if it starts at 1 and has text; an HTML block of the 7th kind can't.
   private def interruptsAt(n: Int): Boolean =
     isBlank(lines(n)) || fenceAt(n).isDefined || wikiCodeAt(n) || atxHeadingAt(n).isDefined || ruleAt(n) ||
-      htmlBlockAt(n).exists(_ < 7) || quoteAt(n) || tableAt(n).isDefined ||
+      htmlBlockAt(n).exists(_ < 7) || quoteAt(n) || tableAt(n).isDefined || footnoteAt(n).isDefined ||
       listItemAt(n).exists(item => !item.empty && (item.marker match {
         case Ordered(_, start) => start == 1
         case _                 => true
@@ -190,7 +209,8 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
   // whether the first line is a paragraph's text, rather than the start of another block
   private def startsWithText: Boolean =
     lines.nonEmpty && !isBlank(lines(0)) && indentOf(lines(0)) < 4 && fenceAt(0).isEmpty && !wikiCodeAt(0) &&
-      atxHeadingAt(0).isEmpty && !ruleAt(0) && htmlBlockAt(0).isEmpty && !quoteAt(0) && listItemAt(0).isEmpty
+      atxHeadingAt(0).isEmpty && !ruleAt(0) && htmlBlockAt(0).isEmpty && !quoteAt(0) && listItemAt(0).isEmpty &&
+      footnoteAt(0).isEmpty
 
   // whether the line after `last` can go on lazily, without the quote's `>` or the item's indentation: `last`, without
   // the quotes' and items' markers it's in, is a paragraph's
@@ -209,7 +229,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
         else more = false
       }
     }
-    new MarkdownBlocks(s, MaxNesting, mutable.Map.empty).startsWithText
+    new MarkdownBlocks(s, MaxNesting, mutable.Map.empty, mutable.Set.empty).startsWithText
   }
 
   // a lazy line goes on its paragraph as is, whatever it would be on its own: indented, it can't start a block
@@ -309,7 +329,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
         lazily = true
       } else more = false
     }
-    QuoteBlock(new MarkdownBlocks(content.mkString("\n"), depth + 1, refs).blocks())
+    QuoteBlock(new MarkdownBlocks(content.mkString("\n"), depth + 1, refs, notes).blocks())
   }
 
   // a list's items: of the same kind of marker, with blank lines between them or not
@@ -326,13 +346,24 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
     Items(first.marker, items.toList)
   }
 
-  // an item's lines: its first, those indented as far as its content, the blank lines between them, and the lines
-  // that continue its last paragraph lazily
-  private def item(start: ItemStart): List[Block] = {
-    val content = ListBuffer(start.firstLine)
+  // an item's content: its first line's, and its other lines'
+  private def item(start: ItemStart): List[Block] = content(start.firstLine, start.contentOffset, start.empty, depth + 2)
+
+  // a footnote's text: on its line after the `]:`, and on the lines after indented by 4
+  private def footnote(at: (String, Int)): Block = {
+    val (label, textStart) = at
+    notes += normalizeNote(label)
+    val first = lines(line).substring(textStart)
+    FootnoteBlock(label, content(first, 4, isBlank(first), depth + 1))
+  }
+
+  // the content of a list item or a footnote: its first line's, those indented as far as `contentOffset`, the blank
+  // lines between them, and the lines that continue its last paragraph lazily
+  private def content(firstLine: String, contentOffset: Int, empty: Boolean, depth: Int): List[Block] = {
+    val content = ListBuffer(firstLine)
     line += 1
-    // an item can start with one blank line at most
-    var more   = !(start.empty && (eof || isBlank(lines(line))))
+    // it can start with one blank line at most
+    var more   = !(empty && (eof || isBlank(lines(line))))
     var lazily = false // whether the last line went on lazily: then the paragraph goes on
     while (!eof && more) {
       val s = lines(line)
@@ -341,11 +372,11 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
         // blank lines are in the item if it goes on after them
         var k = line
         while (k < lines.length && isBlank(lines(k))) k += 1
-        if (k < lines.length && indentOf(lines(k)) >= start.contentOffset) {
+        if (k < lines.length && indentOf(lines(k)) >= contentOffset) {
           while (line < k) { content += ""; line += 1 }
         } else more = false
-      } else if (indentOf(s) >= start.contentOffset) {
-        content += s.substring(start.contentOffset)
+      } else if (indentOf(s) >= contentOffset) {
+        content += s.substring(contentOffset)
         line += 1
         lazily = false
       } else if (listItemAt(line).isEmpty && (lazily || continuesLazily(content.last)) && !interruptsAt(line)) {
@@ -354,7 +385,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
         lazily = true
       } else more = false
     }
-    new MarkdownBlocks(content.mkString("\n"), depth + 2, refs).blocks()
+    new MarkdownBlocks(content.mkString("\n"), depth, refs, notes).blocks()
   }
 
   // its rows: the lines after the delimiter row, up to a blank one or another block
@@ -373,8 +404,9 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int, re
 private[parser] object MarkdownBlocks {
 
   def apply(text: String): Document = {
-    val refs = mutable.LinkedHashMap.empty[String, MarkdownInlines.Ref]
-    toDocument(new MarkdownBlocks(text, 0, refs).blocks(), refs)
+    val refs  = mutable.LinkedHashMap.empty[String, MarkdownInlines.Ref]
+    val notes = mutable.Set.empty[String]
+    toDocument(new MarkdownBlocks(text, 0, refs, notes).blocks(), refs, notes)
   }
 
   /** How deep quotes and lists nest at most, as markdown-it's `maxNesting`: what would nest deeper is text. The model
@@ -390,6 +422,7 @@ private[parser] object MarkdownBlocks {
   final case class HtmlBlock(html: String)                           extends Block
   case object RuleBlock                                               extends Block
   final case class QuoteBlock(content: List[Block])                  extends Block
+  final case class FootnoteBlock(label: String, content: List[Block]) extends Block
   final case class Items(marker: ListMarker, items: List[List[Block]]) extends Block
   final case class TableBlock(header: List[String], alignments: List[Table.Alignment], rows: List[List[String]])
       extends Block
@@ -408,8 +441,14 @@ private[parser] object MarkdownBlocks {
   /** A list item's first line: its marker, where its content starts, the content on it, and whether there's none. */
   final case class ItemStart(marker: ListMarker, contentOffset: Int, firstLine: String, empty: Boolean)
 
-  private def toDocument(blocks: List[Block], refs: collection.Map[String, MarkdownInlines.Ref]): Document = {
-    def inlines(text: String): List[Span] = MarkdownInlines(text.trim, refs)
+  /** A footnote's label as references to it are matched: case folded, as a link's. */
+  def normalizeNote(label: String): String = MarkdownInlines.normalizeLabel(s"[$label]")
+
+  private def toDocument(
+    blocks: List[Block],
+    refs: collection.Map[String, MarkdownInlines.Ref],
+    notes: collection.Set[String]): Document = {
+    def inlines(text: String): List[Span] = MarkdownInlines(text.trim, refs, notes)
 
     def toMarkup(b: Block): List[Markup] = b match {
       case ParagraphBlock(text) =>
@@ -419,7 +458,8 @@ private[parser] object MarkdownBlocks {
       case Code(code, language)      => List(CodeBlock(code, language))
       case HtmlBlock(html)           => List(HtmlTag(html))
       case RuleBlock                 => List(HorizontalRule)
-      case QuoteBlock(content)       => List(BlockQuote(toDocument(content, refs)))
+      case QuoteBlock(content)       => List(BlockQuote(toDocument(content, refs, notes)))
+      case FootnoteBlock(label, content) => List(Footnote(label, toDocument(content, refs, notes)))
       case TableBlock(header, alignments, rows) =>
         def row(cells: List[String]) =
           Table.Row(cells.padTo(header.length, "").take(header.length).map(cell => Paragraph(inlines(cell))))
@@ -443,10 +483,10 @@ private[parser] object MarkdownBlocks {
               case Nil                  => Nil
               case more                 => PlainText(" ") :: more
             }
-            Document(Paragraph(Checkbox(checked) :: spans) :: toDocument(rest, refs).elements)
-          case None => toDocument(item, refs)
+            Document(Paragraph(Checkbox(checked) :: spans) :: toDocument(rest, refs, notes).elements)
+          case None => toDocument(item, refs, notes)
         }
-      case _ => toDocument(item, refs)
+      case _ => toDocument(item, refs, notes)
     }
 
     // `[ ]` or `[x]`, spaces, and text: whether it's checked, and where the text starts

@@ -14,9 +14,13 @@ import scala.collection.mutable.ListBuffer
   * can open and close. A closer is only looked for where one can be, which keeps parsing linear. Javadoc's inline
   * tags are the ones every syntax has, `ParseMarkup.javadocTagAt`.
   *
-  * @param refs the document's link reference definitions, by normalized label
+  * @param refs  the document's link reference definitions, by normalized label
+  * @param notes the labels of the document's footnotes, normalized
   */
-private[parser] final class MarkdownInlines private (text: String, refs: collection.Map[String, MarkdownInlines.Ref]) {
+private[parser] final class MarkdownInlines private (
+  text: String,
+  refs: collection.Map[String, MarkdownInlines.Ref],
+  notes: collection.Set[String]) {
   import MarkdownInlines._
 
   private var pos = 0
@@ -145,6 +149,17 @@ private[parser] final class MarkdownInlines private (text: String, refs: collect
         val (target, label) = splitWikiLink(body)
         Some((Link(target, if (label.isEmpty) Nil else List(PlainText(label))), end + 2))
       }
+    }
+
+  // `[^label]`, a reference to a footnote, if the document has one with that label: where it ends
+  private def footnoteReferenceAt(i: Int): Option[(Span, Int)] =
+    if (!at("[^", i)) None
+    else {
+      var end = i + 2
+      while (end < len && text.charAt(end) != ']' && text.charAt(end) != '[' && !text.charAt(end).isWhitespace) end += 1
+      val label = text.substring(i + 2, end)
+      if (end >= len || text.charAt(end) != ']' || label.isEmpty || !notes(normalizeLabel(s"[$label]"))) None
+      else Some((FootnoteReference(label), end + 1))
     }
 
   // `<scheme:...>` or `<a@b.c>`: the link, and where it ends
@@ -299,6 +314,11 @@ private[parser] final class MarkdownInlines private (text: String, refs: collect
               case None              => val end = runEnd(text, pos, '`'); buf ++= text.substring(pos, end); pos = end
             }
           case '*' | '_' | '~' => emphasis()
+          case '[' if footnoteReferenceAt(pos).isDefined =>
+            val (reference, end) = footnoteReferenceAt(pos).get
+            flush()
+            spans += reference
+            pos = end
           case '[' =>
             wikiLinkAt(pos) match {
               case Some((link, end)) => flush(); spans += link; pos = end
@@ -316,7 +336,7 @@ private[parser] final class MarkdownInlines private (text: String, refs: collect
             }
           // javadoc's inline tags, as in every syntax
           case '{' if at("{@", pos) =>
-            ParseMarkup.javadocTagAt(text, pos, _ >= len, MarkdownInlines(_, refs)) match {
+            ParseMarkup.javadocTagAt(text, pos, _ >= len, MarkdownInlines(_, refs, notes)) match {
               case Some((Left(content), end)) => buf ++= content; pos = end
               case Some((Right(span), end))   => flush(); spans += span; pos = end
               case None                       => buf ++= "{@"; pos += 2
@@ -338,7 +358,7 @@ private[parser] final class MarkdownInlines private (text: String, refs: collect
         }
     }
     flush()
-    (spans.toList, closed)
+    (mergeTexts(spans.toList), closed)
   }
 }
 
@@ -354,7 +374,8 @@ private[parser] object MarkdownInlines {
   /** How deep inline markup nests at most: what would nest deeper is text. */
   final val MaxNesting = 100
 
-  def apply(text: String, refs: collection.Map[String, Ref]): List[Span] = new MarkdownInlines(text, refs).run()
+  def apply(text: String, refs: collection.Map[String, Ref], notes: collection.Set[String] = Set.empty): List[Span] =
+    new MarkdownInlines(text, refs, notes).run()
 
   /** The link reference definitions `s` starts with, `[label]: destination "title"`, each on lines of its own: they
     * go to `refs` (the first one for a label wins), and what follows them is returned.
@@ -684,6 +705,20 @@ private[parser] object MarkdownInlines {
     var j = i
     while (j < s.length && s.charAt(j) == c) j += 1
     j
+  }
+
+  // text next to text is one text: `[a]` that isn't a link is `PlainText("[a]")`, not three
+  private def mergeTexts(spans: List[Span]): List[Span] = {
+    val out = ListBuffer.empty[Span]
+    val buf = new StringBuilder
+    spans.foreach {
+      case PlainText(t) => buf ++= t
+      case span =>
+        if (buf.nonEmpty) { out += PlainText(buf.toString); buf.setLength(0) }
+        out += span
+    }
+    if (buf.nonEmpty) out += PlainText(buf.toString)
+    out.toList
   }
 
   private def looseMarkers(s: Span): Boolean = s match {
