@@ -83,6 +83,13 @@ class MarkdownInlinesSpec extends FSpec {
     spans("""\*not em\* &copy; &#169; &#xA9; &bogus;""") mustBe List(PlainText("*not em* © © © &bogus;"))
   }
 
+  test("javadoc's inline tags, as in wiki") {
+    spans("{@code Map<K, V>}, {@link scala.Option the *option*} and {@literal <x>}") mustBe List(
+      Monospace("Map<K, V>"), PlainText(", "), Link("scala.Option", List(PlainText("the "), Italic("option"))),
+      PlainText(" and <x>"))
+    spans("{@inheritDoc} and {@code open") mustBe List(PlainText("{@inheritDoc} and {@code open"))
+  }
+
   test("inline HTML stays as it is") {
     spans("a <span class=\"x\">b</span>") mustBe List(PlainText("a "), HtmlTag("<span class=\"x\">"), PlainText("b"), HtmlTag("</span>"))
   }

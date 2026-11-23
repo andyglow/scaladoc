@@ -5,13 +5,14 @@ import scaladoc.Markup._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-/** Parses Markdown's inline markup, as CommonMark has it, with GFM's strikethrough (`~~`, as flexmark, which Scala 3
+/** Markdown's inline markup, for [[ParseMarkup]], the parser of every syntax: CommonMark's, with GFM's strikethrough (`~~`, as flexmark, which Scala 3
   * uses, has it) and extended autolinks, and scaladoc's `[[target text]]` links.
   *
   * A recursive descent parser like [[ParseMarkup]]: `spansUntil` reads markup up to a closing marker, and markup that
   * can have markup inside, like emphasis or a link's text, is tried with `tryNested`: if its closing marker is in the
   * text, it's that markup, otherwise its opening marker is text. CommonMark's flanking rules say which `*`s and `_`s
-  * can open and close. A marker that found no closer isn't looked for again, which keeps parsing linear.
+  * can open and close. A closer is only looked for where one can be, which keeps parsing linear. Javadoc's inline
+  * tags are the ones every syntax has, `ParseMarkup.javadocTagAt`.
   *
   * @param refs the document's link reference definitions, by normalized label
   */
@@ -312,6 +313,13 @@ private[parser] final class MarkdownInlines private (text: String, refs: collect
                   case Some(end) => flush(); spans += HtmlTag(text.substring(pos, end)); pos = end
                   case None      => buf += '<'; pos += 1
                 }
+            }
+          // javadoc's inline tags, as in every syntax
+          case '{' if at("{@", pos) =>
+            ParseMarkup.javadocTagAt(text, pos, _ >= len, MarkdownInlines(_, refs)) match {
+              case Some((Left(content), end)) => buf ++= content; pos = end
+              case Some((Right(span), end))   => flush(); spans += span; pos = end
+              case None                       => buf ++= "{@"; pos += 2
             }
           case '&' =>
             entityAt(text, pos) match {
