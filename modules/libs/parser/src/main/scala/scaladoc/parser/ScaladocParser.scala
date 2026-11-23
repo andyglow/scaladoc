@@ -15,8 +15,13 @@ object ScaladocParser {
     * @param hasTags if `false`, `x` is taken as an already stripped comment body (no comment markers and no left `*` border)
     * @param strict if `true`, the left `*` border of every line must be aligned with the opening marker. Only use
     *   it when `x` keeps the original indentation of the first line (Scala 3's `Symbol.docstring` does not)
+    * @param syntax the markup syntax the comment is written in
     */
-  def fromString(x: String, hasTags: Boolean = true, strict: Boolean = false): Either[ScaladocException, Scaladoc] = {
+  def fromString(
+    x: String,
+    hasTags: Boolean = true,
+    strict: Boolean = false,
+    syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] = {
     val comment =
       if (hasTags) StripCommentTags.pure(x, strict)
       else Right(StripCommentTags.Comment(Style.Stripped, x))
@@ -24,7 +29,7 @@ object ScaladocParser {
     comment.flatMap { c =>
       c.style match {
         // `Stripped` only comes from the `hasTags = false` branch above
-        case Style.Stripped | Style.Scaladoc => ParseScaladocTags.pure(Defines.expand(c.body))
+        case Style.Stripped | Style.Scaladoc => ParseScaladocTags.pure(Defines.expand(c.body), MarkupSyntax(syntax))
         case style: Style.NonScaladoc        => Left(NonScaladocStyle(style))
       }
     }
@@ -39,9 +44,13 @@ object ScaladocParser {
     *
     * @param docstring the raw doc comment, comment markers included
     * @param strict if `true`, the left `*` border of all lines must be aligned
+    * @param syntax the markup syntax the comment is written in
     */
-  def fromDocstring(docstring: String, strict: Boolean = false): Either[ScaladocException, Scaladoc] =
-    fromString(if (strict) restoreIndentation(docstring) else docstring, strict = strict)
+  def fromDocstring(
+    docstring: String,
+    strict: Boolean = false,
+    syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] =
+    fromString(if (strict) restoreIndentation(docstring) else docstring, strict = strict, syntax = syntax)
 
   // `/** a\n    * b\n    */` -> `  /** a\n    * b\n    */`. A scaladoc-style border sits 2 columns to the right of
   // the opening marker, a javadoc-style one 1 column; assuming 2 (but never a negative indentation) satisfies both.
