@@ -52,6 +52,7 @@ final class ParseScaladocTags(val chars: Array[Char], syntax: MarkupSyntax = Mar
   def run(): Scaladoc = {
     // inside code (wiki: `{{{ ... }}}` and `<pre>...</pre>`) nothing is a tag, so code samples can have annotations
     // like `@main`
+    val code                          = syntax.code(chars)
     var codeEnd: MarkupSyntax.CodeEnd = null
     def inCode = codeEnd != null
     while (!isEOF) {
@@ -144,8 +145,8 @@ final class ParseScaladocTags(val chars: Array[Char], syntax: MarkupSyntax = Mar
           case Some(tag) if !(tag.isOpen) => tags += Description(null)
           case _ => // println("Something is on stack, but.. Tags: \n" + tags.mkString("- ", "\n- ", ""))
         }
-        if (!inCode) codeEnd = syntax.codeStartsAt(chars, pos).orNull
-        else if (codeEnd.endsAt(chars, pos)) codeEnd = null
+        if (!inCode) codeEnd = code.startsAt(pos).orNull
+        else if (codeEnd.endsAt(pos)) codeEnd = null
         buf append char
         next()
       }

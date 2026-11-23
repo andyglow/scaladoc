@@ -359,37 +359,11 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       else { buf += '&'; pos += 1 }
     }
 
-    // javadoc's inline tags: {@code x} and {@value x} are monospace, {@literal x} text, {@link x} and {@linkplain x}
-    // links with an optional label, and {@docRoot} goes. Braces in them must balance. Others, like {@inheritDoc}, and
-    // one that isn't closed in the paragraph are text.
-    def javadocTag(): Unit = {
-      var j = pos + 2
-      while (j < len && text.charAt(j).isLetter) j += 1
-      val name = text.substring(pos + 2, j)
-      while (j < len && text.charAt(j).isSpace) j += 1
-      val from  = j
-      var depth = 0
-      while (!paragraphBreakAt(j) && !(text.charAt(j) == '}' && depth == 0)) {
-        if (text.charAt(j) == '{') depth += 1 else if (text.charAt(j) == '}') depth -= 1
-        j += 1
-      }
-      if (!ParseMarkup.JavadocTags(name) || j >= len || text.charAt(j) != '}') {
-        buf ++= "{@"
-        pos += 2
-      } else {
-        val content = text.substring(from, j)
-        name match {
-          case "literal"           => buf ++= content
-          case "docRoot"           =>
-          case "code" | "value"    => flush(); spans += Monospace(content)
-          case _                   =>
-            val target = content.takeWhile(!_.isWhitespace)
-            val label  = content.drop(target.length).trim
-            flush()
-            spans += Link(target, if (label.isEmpty) Nil else ParseMarkup.spans(label, log))
-        }
-        pos = j + 1
-      }
+    // javadoc's inline tags, which every syntax has; one that isn't closed in the paragraph is text
+    def javadocTag(): Unit = ParseMarkup.javadocTagAt(text, pos, paragraphBreakAt, ParseMarkup.spans(_, log)) match {
+      case Some((Left(content), end)) => buf ++= content; pos = end
+      case Some((Right(span), end))   => flush(); spans += span; pos = end
+      case None                       => buf ++= "{@"; pos += 2
     }
 
     var closed = false
@@ -441,6 +415,43 @@ object ParseMarkup {
   // the inline markup of a line, like a heading's title
   private[parser] def spans(line: String, log: Log): List[Span] =
     new ParseMarkup(line, log, codeBlocks = false).spansUntil(None)._1.trim
+
+  /** Javadoc's inline tag at `i` of `text`, which every syntax has: `{@code x}` and `{@value x}` are monospace,
+    * `{@literal x}` is text, `{@link x}` and `{@linkplain x}` are links with an optional label, which `label` parses,
+    * and `{@docRoot}` goes. Braces in them must balance. Others, like `{@inheritDoc}`, and one that isn't closed before
+    * `ends` are none. Text (`Left`) or a span, and where the tag ends.
+    */
+  private[parser] def javadocTagAt(
+    text: String,
+    i: Int,
+    ends: Int => Boolean,
+    label: String => List[Span]): Option[(Either[String, Span], Int)] = {
+    val len = text.length
+    var j   = i + 2
+    while (j < len && text.charAt(j).isLetter) j += 1
+    val name = text.substring(i + 2, j)
+    while (j < len && text.charAt(j).isSpace) j += 1
+    val from  = j
+    var depth = 0
+    while (!ends(j) && !(text.charAt(j) == '}' && depth == 0)) {
+      if (text.charAt(j) == '{') depth += 1 else if (text.charAt(j) == '}') depth -= 1
+      j += 1
+    }
+    if (!text.startsWith("{@", i) || !JavadocTags(name) || j >= len || text.charAt(j) != '}') None
+    else {
+      val content = text.substring(from, j)
+      val tag: Either[String, Span] = name match {
+        case "literal"        => Left(content)
+        case "docRoot"        => Left("")
+        case "code" | "value" => Right(Monospace(content))
+        case _ =>
+          val target = content.takeWhile(!_.isWhitespace)
+          val text   = content.drop(target.length).trim
+          Right(Link(target, if (text.isEmpty) Nil else label(text)))
+      }
+      Some((tag, j + 1))
+    }
+  }
 
   /** `text`, written in `syntax`, as a document. */
   def apply(text: String, syntax: scaladoc.CommentSyntax): Document = syntax match {

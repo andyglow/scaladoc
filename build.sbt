@@ -217,7 +217,7 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
     jsSettings,
     // JVM-only tests: FilesSuite reads its cases from files, SourceCodeUtilsSpec runs scalac's position API
     Test / unmanagedSources / excludeFilter := {
-      (Test / unmanagedSources / excludeFilter).value || "FilesSuite.scala" || "SourceCodeUtilsSpec.scala" || "CommonMarkSpecSuite.scala"
+      (Test / unmanagedSources / excludeFilter).value || "FilesSuite.scala" || "SourceCodeUtilsSpec.scala" || "CommonMarkSpecSuite.scala" || "MarkdownPathologicalSuite.scala"
     }
   )
 
