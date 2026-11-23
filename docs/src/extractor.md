@@ -58,6 +58,37 @@ scalacOptions += "-Yread-docs"
 The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it to every Scala 3
 module they're enabled on; @ref:[Maven](getting-started.md#maven) builds pass it in `scala-maven-plugin`'s `args`.
 
+## Which syntax
+
+`Scaladoc.of` reads a comment in the syntax of where it finds it:
+
+| Found in | Written for | Read as |
+|---|---|---|
+| the source code, the annotation (Scala 2) | Scala 2 | wiki, Scala 2's only syntax |
+| `Symbol.docstring` (Scala 3) | Scala 3 | Markdown, Scala 3's default |
+| the annotation, on a Scala 2 class (Scala 3) | Scala 2 | wiki |
+
+On Scala 3, a codebase that writes its comments in wiki syntax, as with scaladoc's `-comment-syntax wiki`, says so
+with a given in scope where it calls `Scaladoc.of`, or each comment says it for itself, as in Scala 3's scaladoc:
+
+```scala
+import scaladoc.syntax.wiki.given   // Scaladoc.of reads wiki from here on
+
+/** Some '''bold''' text.
+  *
+  * @syntax wiki
+  */
+```
+
+`Scaladoc.of` reads the given's type, so it's `scaladoc.syntax.wiki` or `scaladoc.syntax.markdown`, which also works in
+a library that calls `Scaladoc.of` from its own macros: the given in scope where those expand counts.
+
+## Scala 2 libraries on Scala 3
+
+A Scala 3 project can use Scala 2.13 libraries, and their classes have no TASTy to keep doc comments in. When a library
+was compiled with the @ref:[compiler plugin](compiler-plugin.md), its classes carry their scaladoc in the
+`@ScaladocCarrier` annotation, and `Scaladoc.of` reads it from there, as wiki, the syntax it was written in.
+
 ## A misaligned comment is a compile error
 
 A comment whose `*` border wanders from line to line is usually a sign of a botched edit. `Scaladoc.of` checks the
@@ -66,7 +97,8 @@ site, with the comment and the reason. A comment without borders is fine; only a
 
 ## From a string
 
-When you have the comment as text, there's no need for a macro. `Scaladoc.fromString` parses it:
+When you have the comment as text, there's no need for a macro. `Scaladoc.fromString` parses it, in wiki syntax unless
+told otherwise, with `syntax = CommentSyntax.Markdown`, or unless the comment says otherwise:
 
 ```scala mdoc
 Scaladoc.fromString("/** Hello. */").map(_.textDescriptions)

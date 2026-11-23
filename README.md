@@ -13,8 +13,8 @@ what a parameter is for. This library puts that prose to work, for tools like JS
 generators that can use it for titles and descriptions:
 
 - **a model** of scaladoc's tags and markup: paragraphs, headings, lists, tables, code, links and the rest
-- **a parser** that turns comment text into the model. It reads scaladoc's wiki markup, HTML and javadoc's inline
-  tags, on the JVM and on Scala.js
+- **a parser** that turns comment text into the model. It reads scaladoc's wiki markup and Markdown, as Scala 3's
+  scaladoc does, with HTML and javadoc's inline tags, on the JVM and on Scala.js
 - **`Scaladoc.of[T]`**, the scaladoc of a type at compile time, for macros and type class derivation
 - **a compiler plugin** (Scala 2) that embeds scaladoc into bytecode, so it can be read from jars
 
