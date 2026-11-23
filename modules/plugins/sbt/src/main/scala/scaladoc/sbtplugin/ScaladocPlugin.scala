@@ -8,12 +8,14 @@ import sbt.Keys._
 /** Sets the Scala compiler up for scaladoc. Enable it on the modules that need it with `enablePlugins(ScaladocPlugin)`.
   *
   *   - '''Scala 2:''' the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode; the
-  *     `scaladocInclude*` / `scaladocExclude*` settings become its options.
+  *     `scaladocInclude*` / `scaladocExclude*` settings become its options. The module depends on `scaladoc-annotation`,
+  *     the one-class jar of the annotation that holds it: its classes refer to it, and Scala 3 modules that use them
+  *     don't compile without it.
   *   - '''Scala 3:''' `-Yread-docs`, so that `Scaladoc.of` also reads doc comments from other modules and jars. Scala 3
   *     keeps doc comments in TASTy on its own, so nothing else is needed.
   *
-  * It adds no library: a module that reads scaladoc with `Scaladoc.of` depends on `scaladoc-parser` itself, like on any
-  * library it calls. On Scala.js the compiler plugin is the JVM artifact too, as it runs inside scalac.
+  * It adds no library for reading: a module that reads scaladoc with `Scaladoc.of` depends on `scaladoc-parser` itself,
+  * like on any library it calls. On Scala.js the compiler plugin is the JVM artifact too, as it runs inside scalac.
   */
 object ScaladocPlugin extends AutoPlugin {
 
@@ -47,6 +49,8 @@ object ScaladocPlugin extends AutoPlugin {
 
   private val compilerPluginName = "scaladoc-compiler-plugin"
 
+  private val annotationName = "scaladoc-annotation"
+
   /** The `-P:` scalac options for the given include/exclude patterns. */
   def compilerPluginOptions(
     includePaths: Seq[String],
@@ -73,11 +77,16 @@ object ScaladocPlugin extends AutoPlugin {
       val v      = scaladocVersion.value
       val scala3 = isScala3(scalaBinaryVersion.value)
       // the compiler plugin runs in scalac, so it is the JVM artifact on Scala.js too, where `%%` (which follows
-      // `platform`) would pick a `_sjs1` one that doesn't exist. Its jar has everything it needs.
+      // `platform`) would pick a `_sjs1` one that doesn't exist. Its jar has everything it needs to run. The classes it
+      // embeds scaladoc into refer to the annotation in their Scala signatures, so the annotation's jar is a dependency
+      // of the module, and of everything that uses it: Scala 3 doesn't compile against those classes without it.
       val plugin =
         // deprecated: until 0.6.0, `scaladocEmbed := false` still leaves the compiler plugin out
         if (!scala3 && scaladocEmbed.value)
-          Seq(compilerPlugin(organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v))
+          Seq(
+            compilerPlugin(organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v),
+            organization % annotationName % v
+          )
         else Nil
       // deprecated: until 0.6.0, `scaladocRead := true` still adds the libraries
       val libraries =

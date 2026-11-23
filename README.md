@@ -47,7 +47,8 @@ lazy val model = project.enablePlugins(ScaladocPlugin)
 ```
 
 The plugin sets the module's compiler up: on Scala 2 it adds the compiler plugin, which keeps the module's scaladoc in
-its bytecode, and on Scala 3, which keeps it in TASTy on its own, `-Yread-docs`. It adds no library. A module that
+its bytecode, with `scaladoc-annotation`, the one-class jar its classes then refer to; on Scala 3, which keeps scaladoc
+in TASTy on its own, `-Yread-docs`. It adds no library for reading. A module that
 reads scaladoc with `Scaladoc.of` depends on the parser, like on any library it calls:
 
 ```sbt

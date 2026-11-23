@@ -1,6 +1,7 @@
 > checkModel
 > checkLegacy
 > app/run
+> consumer3/run
 > ++2.12.21
 > checkModel
 > checkLegacy

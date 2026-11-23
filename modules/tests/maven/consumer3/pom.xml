@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Scala 3, on the Scala 2.13 build only: uses model's classes, as a Scala 3 project uses a 2.13 library, and knows
+     nothing about scaladoc. It compiles because model depends on scaladoc-annotation: the classes the compiler plugin
+     embeds into refer to it, and Scala 3 fails on them without it ("Bad symbolic reference"). -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>demo</groupId>
+    <artifactId>scaladoc-maven-tests</artifactId>
+    <version>0</version>
+  </parent>
+
+  <artifactId>consumer3</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala3-library_3</artifactId>
+      <version>3.3.9</version>
+    </dependency>
+    <dependency>
+      <groupId>demo</groupId>
+      <artifactId>model</artifactId>
+      <version>0</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <configuration>
+          <scalaVersion>3.3.9</scalaVersion>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.7.0</version>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>demo.consumer.Main</mainClass>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

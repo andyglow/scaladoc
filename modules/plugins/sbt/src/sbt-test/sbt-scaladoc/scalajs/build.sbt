@@ -22,9 +22,9 @@ TaskKey[Unit]("checkDependencies") := {
   val reader = resolved((app / Compile / update).value)
   assert(reader.exists(_.startsWith("scaladoc-parser_sjs1_")), s"app resolved: $reader")
   assert(reader.exists(_.startsWith("scaladoc-core_sjs1_")), s"app resolved: $reader")
-  // the publisher gets the (JVM) compiler plugin on Scala 2, and no libraries
+  // the publisher gets the (JVM) compiler plugin on Scala 2, and scaladoc-annotation, which its classes refer to
   val publisher      = resolved((model / Compile / update).value)
   val compilerPlugin = s"scaladoc-compiler-plugin_${scalaBinaryVersion.value}"
-  val expected       = if (scalaBinaryVersion.value.startsWith("2")) Seq(compilerPlugin) else Nil
-  assert(publisher == expected, s"model resolved: $publisher")
+  val expected       = if (scalaBinaryVersion.value.startsWith("2")) Seq(compilerPlugin, "scaladoc-annotation") else Nil
+  assert(publisher.sorted == expected.sorted, s"model resolved: $publisher")
 }

@@ -11,19 +11,22 @@ typical project, a module of models publishes, and the module that derives schem
 Each part needs something different, and what that is depends on the Scala version, because Scala 2 and Scala 3 keep
 doc comments in very different places:
 
-|                  | Scala 2                                                      | Scala 3                          |
-|------------------|--------------------------------------------------------------|----------------------------------|
-| **Publishing**   | the @ref:[compiler plugin](compiler-plugin.md), nothing else | nothing                          |
-| **Reading**      | `scaladoc-parser`                                            | `scaladoc-parser`, `-Yread-docs` |
+|                | Scala 2                                                               | Scala 3                          |
+|----------------|-----------------------------------------------------------------------|----------------------------------|
+| **Publishing** | the @ref:[compiler plugin](compiler-plugin.md), `scaladoc-annotation` | nothing                          |
+| **Reading**    | `scaladoc-parser`                                                     | `scaladoc-parser`, `-Yread-docs` |
 
 Scala 2 forgets doc comments once it's done compiling, so a publishing module needs the compiler plugin, which writes
-them into the bytecode before they're lost. The plugin's jar has everything it needs, so the module needs no library
-for it. Scala 3 keeps doc comments in its TASTy files on its own; a reading module needs `-Yread-docs`, the option that
-tells the compiler to load them.
+them into the bytecode before they're lost, in an annotation. The annotation lives in `scaladoc-annotation`, a jar with
+one class and no dependencies, and the publishing module depends on it: its classes refer to the annotation, and
+whatever uses them gets the jar along, the way it gets `scala-library`. Scala 2 would do without it, but Scala 3
+doesn't compile against such classes when it's missing, so a Scala 3 project couldn't use a 2.13 library published
+this way. Scala 3 keeps doc comments in its TASTy files on its own; a reading module needs `-Yread-docs`, the option
+that tells the compiler to load them.
 
 A reading module calls `Scaladoc.of`, so it depends on `scaladoc-parser` like on any library it calls; `scaladoc-core`,
 the model, comes with it. The rest is compiler setup, which is where the sbt and Gradle plugins help: they add the
-compiler plugin on Scala 2 and `-Yread-docs` on Scala 3. Maven gets a few lines of POM.
+compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Yread-docs` on Scala 3. Maven gets a few lines of POM.
 
 ## sbt
 
@@ -74,10 +77,11 @@ The patterns are explained in @ref:[Choosing what to embed](compiler-plugin.md#c
 
 ### By hand
 
-A Scala 2 module that publishes its scaladoc needs only the compiler plugin:
+A Scala 2 module that publishes its scaladoc needs the compiler plugin, and the annotation it embeds scaladoc in:
 
 ```sbt
 addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "@VERSION@")
+libraryDependencies += "io.github.andyglow" % "scaladoc-annotation" % "@VERSION@"   // one `%`: a Java jar
 ```
 
 A module that reads scaladoc needs the parser, which brings `scaladoc-core` along:
@@ -93,7 +97,7 @@ scalacOptions += "-Yread-docs"
 ```
 
 On Scala.js, the parser is the `_sjs1` artifact: `%%` picks it by itself on sbt 2, and sbt 1 needs `%%%`. The compiler
-plugin is the JVM artifact, `%%` on both.
+plugin is the JVM artifact, `%%` on both, and `scaladoc-annotation` the same Java jar everywhere.
 
 ## Gradle
 
@@ -107,7 +111,8 @@ plugins {
 ```
 
 It reads the module's Scala version from its `scala-library` or `scala3-library_3` dependency and sets the compiler
-up for it: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3. As with sbt, it belongs on the modules that
+up for it: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3. On Scala 2 it also adds `scaladoc-annotation`,
+and exposes it to the module's consumers, as `api` would, published POMs included. As with sbt, it belongs on the modules that
 publish on Scala 2 and those that read on Scala 3. A `scaladoc` block holds the settings, which mean what the sbt
 plugin's do:
 
@@ -133,9 +138,18 @@ The plugin runs on Gradle 8.5 and later.
 Maven builds Scala with `scala-maven-plugin`, and what a module needs fits into its configuration. The examples below
 are for Scala 2.13; for 2.12, change the `_2.13` suffixes.
 
-**A Scala 2 module that publishes its scaladoc** needs only the compiler plugin:
+**A Scala 2 module that publishes its scaladoc** needs the compiler plugin, and the annotation it embeds scaladoc in,
+at the default `compile` scope, so that it reaches the module's consumers:
 
 ```xml
+<dependencies>
+  <dependency>
+    <groupId>io.github.andyglow</groupId>
+    <artifactId>scaladoc-annotation</artifactId>
+    <version>@VERSION@</version>
+  </dependency>
+</dependencies>
+
 <build>
   <plugins>
     <plugin>

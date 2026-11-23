@@ -62,14 +62,64 @@ class ScaladocPluginTest {
     @Test
     void addsWhatEachModuleNeeds() {
         fixture(scala2("2.13.18"), false);
-        // the model publishes: the compiler plugin, and none of the libraries, not even to compile
+        // the model publishes: the compiler plugin, and scaladoc-annotation, which its classes refer to; none of the
+        // libraries
         String model = runner(":model:dependencies", "--configuration", "scalaCompilerPlugins").build().getOutput();
         assertTrue(model.contains("io.github.andyglow:scaladoc-compiler-plugin_2.13:" + VERSION), model);
         String modelCompile = runner(":model:dependencies", "--configuration", "compileClasspath").build().getOutput();
-        assertTrue(!modelCompile.contains("io.github.andyglow"), modelCompile);
+        assertTrue(modelCompile.contains("io.github.andyglow:scaladoc-annotation:" + VERSION), modelCompile);
+        assertTrue(!modelCompile.contains("scaladoc-core") && !modelCompile.contains("scaladoc-parser"), modelCompile);
         // the app reads scaladoc: the parser, which it depends on itself, at runtime
         String app = runner(":app:dependencies", "--configuration", "runtimeClasspath").build().getOutput();
         assertTrue(app.contains("io.github.andyglow:scaladoc-parser_2.13:" + VERSION), app);
+    }
+
+    @Test
+    void scala3UsesAScala2PublishersClasses() {
+        // a Scala 2.13 module that embeds scaladoc, without java-library, published with maven-publish; and a Scala 3
+        // module that uses its classes and knows nothing about scaladoc. Scala 3 fails on the annotation in their
+        // signatures unless the publisher brings scaladoc-annotation along ("Bad symbolic reference")
+        write("settings.gradle", "rootProject.name = 'fixture'\ninclude 'model', 'consumer'\n");
+        write("model/build.gradle", String.join("\n",
+            "plugins {",
+            "  id 'scala'",
+            "  id 'maven-publish'",
+            "  id 'io.github.andyglow.scaladoc'",
+            "}",
+            "repositories { mavenLocal(); mavenCentral() }",
+            "dependencies { " + scala2("2.13.18") + " }",
+            "publishing { publications { maven(MavenPublication) { from components.java } } }",
+            ""));
+        write("consumer/build.gradle", String.join("\n",
+            "plugins {",
+            "  id 'scala'",
+            "  id 'application'",
+            "}",
+            "repositories { mavenLocal(); mavenCentral() }",
+            "dependencies {",
+            "  implementation 'org.scala-lang:scala3-library_3:3.3.9'",
+            "  implementation project(':model')",
+            "}",
+            "application { mainClass.set('demo.consumer.Main') }",
+            ""));
+        write("model/src/main/scala/demo/model/User.scala",
+            "package demo.model\n\n/** A user\n  *\n  * @param name the name\n  */\ncase class User(name: String)\n");
+        write("consumer/src/main/scala/demo/consumer/Main.scala", String.join("\n",
+            "package demo.consumer",
+            "",
+            "object Main {",
+            "  def main(args: Array[String]): Unit = println(\"consumer: \" + demo.model.User(\"someone\").name)",
+            "}",
+            ""));
+
+        BuildResult result = runner(":consumer:run", ":model:generatePomFileForMavenPublication").build();
+        assertTrue(result.getOutput().contains("consumer: someone"), result.getOutput());
+
+        // and the published POM has it at compile scope, for consumers outside the build
+        String pom = read("model/build/publications/maven/pom-default.xml").replaceAll("\\s+", "");
+        assertTrue(pom.contains("<artifactId>scaladoc-annotation</artifactId><version>" + VERSION
+            + "</version><scope>compile</scope>"), pom);
+        assertTrue(!pom.contains("scaladoc-compiler-plugin"), pom);
     }
 
     @Test
@@ -175,6 +225,14 @@ class ScaladocPluginTest {
             Path file = dir.resolve(path);
             Files.createDirectories(file.getParent());
             Files.write(file, content.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private String read(String path) {
+        try {
+            return new String(Files.readAllBytes(dir.resolve(path)), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

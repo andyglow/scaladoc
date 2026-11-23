@@ -1,7 +1,8 @@
 ThisBuild / scalaVersion       := "2.13.18"
 ThisBuild / crossScalaVersions := Seq("2.13.18", "2.12.21")
 
-// publishes: embeds the scaladoc of its classes, except `demo.model.internal.*`, and gets nothing but the compiler plugin
+// publishes: embeds the scaladoc of its classes, except `demo.model.internal.*`. It gets the compiler plugin, and
+// scaladoc-annotation, which its classes refer to
 lazy val model = project
   .enablePlugins(ScaladocPlugin)
   .settings(scaladocExcludeClasses := Seq("demo.model.internal.*"))
@@ -12,12 +13,21 @@ lazy val app = project
   .dependsOn(model)
   .settings(libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % sys.props("plugin.version"))
 
-// a module that only publishes depends on none of the scaladoc libraries, not even at compile time
+// uses `model`'s classes from Scala 3, as a Scala 3 project uses a 2.13 library. It knows nothing about scaladoc,
+// and compiles because `model` brings scaladoc-annotation along: Scala 3 fails on the annotation in their signatures
+// without it ("Bad symbolic reference")
+lazy val consumer3 = project
+  .dependsOn(model)
+  .settings(scalaVersion := "3.3.9", crossScalaVersions := Seq("3.3.9"))
+
+// a module that only publishes depends on scaladoc-annotation, and none of the scaladoc libraries
 TaskKey[Unit]("checkModel") := {
   val deps = (model / libraryDependencies).value.filter(_.organization == "io.github.andyglow")
-  assert(deps.map(_.name) == Seq("scaladoc-compiler-plugin_" + scalaBinaryVersion.value), s"libraryDependencies: $deps")
-  val classpath = (model / Compile / dependencyClasspath).value.map(_.data.toString)
-  assert(!classpath.exists(_.contains("scaladoc-")), s"classpath: $classpath")
+  assert(
+    deps.map(_.name) == Seq("scaladoc-compiler-plugin_" + (model / scalaBinaryVersion).value, "scaladoc-annotation"),
+    s"libraryDependencies: $deps")
+  val classpath = (model / Compile / dependencyClasspath).value.map(_.data.toString).filter(_.contains("scaladoc-"))
+  assert(classpath.size == 1 && classpath.head.contains("scaladoc-annotation"), s"classpath: $classpath")
 }
 
 // deprecated, until 0.6.0: `scaladocEmbed := false` still leaves the compiler plugin out

@@ -2,7 +2,8 @@
 <!--
   The Maven setup that docs/src/getting-started.md shows, as a real build, so the docs can't drift from what works.
   `model` documents classes: on Scala 2 the compiler plugin embeds their scaladoc, except demo.model.internal.*.
-  `app` reads it with Scaladoc.of, and fails the build if it isn't what was written.
+  `app` reads it with Scaladoc.of, and fails the build if it isn't what was written. On Scala 2.13, `consumer3` is a
+  Scala 3 module that uses model's classes, as a Scala 3 project uses a 2.13 library, and knows nothing about scaladoc.
 
   The libraries come from the local Maven repository in the version under test, so the sbt build runs it after
   `+publishM2` (its `mavenCheck` task), once per Scala version:
@@ -38,6 +39,9 @@
         <scala.library>scala-library</scala.library>
         <excluded>excluded</excluded>
       </properties>
+      <modules>
+        <module>consumer3</module>
+      </modules>
     </profile>
     <profile>
       <id>scala-2.12</id>
@@ -68,6 +72,11 @@
         <groupId>org.scala-lang</groupId>
         <artifactId>${scala.library}</artifactId>
         <version>${scala.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.andyglow</groupId>
+        <artifactId>scaladoc-annotation</artifactId>
+        <version>${scaladoc.version}</version>
       </dependency>
       <dependency>
         <groupId>io.github.andyglow</groupId>
