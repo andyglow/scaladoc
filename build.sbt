@@ -321,6 +321,13 @@ lazy val it = crossProject(JVMPlatform, JSPlatform)
 // The documentation site, https://andyglow.github.io/scaladoc: mdoc checks the Scala snippets in docs/src against
 // the libraries, Paradox renders the pages with the Material theme (search included), and `docs/ghpagesPushSite`
 // publishes them to the gh-pages branch. Not in the root aggregate, so it's never cross built or published.
+// `version` itself when it's a release, the newest `v*` tag when it's a snapshot (or `version` without a tag)
+def releasedVersion(version: String, dir: File): String =
+  if (!version.endsWith("-SNAPSHOT")) version
+  else
+    scala.util.Try(scala.sys.process.Process(Seq("git", "describe", "--tags", "--abbrev=0", "--match", "v*"), dir).!!.trim)
+      .toOption.filter(_.nonEmpty).map(_.stripPrefix("v")).getOrElse(version)
+
 lazy val docs = project
   .in(file("docs"))
   .enablePlugins(MdocPlugin, ParadoxMaterialThemePlugin, SitePreviewPlugin, GhpagesPlugin)
@@ -332,7 +339,8 @@ lazy val docs = project
     crossScalaVersions := Seq(scala213),
     mdocIn             := baseDirectory.value / "src",
     mdocOut            := target.value / "mdoc",
-    mdocVariables      := Map("VERSION" -> version.value),
+    // install snippets show the latest release: this version when building one, the newest v* tag otherwise
+    mdocVariables      := Map("VERSION" -> releasedVersion(version.value, baseDirectory.value)),
     Compile / paradox / sourceDirectory := mdocOut.value,
     // without it mdoc keeps the output of pages that are gone, which Paradox rejects as pages missing from the ToC
     mdocExtraArguments := Seq("--clean-target"),
@@ -358,7 +366,14 @@ lazy val docs = project
     siteSourceDirectory := (Compile / paradox / target).value,
     // sbt-site's default takes html, css, images and js; the theme also needs its search index and its fonts
     makeSite / includeFilter := (makeSite / includeFilter).value || "*.json" || "*.ttf" || "*.woff" || "*.woff2" || "*.svg",
-    makeSite            := makeSite.dependsOn(Compile / paradox).value,
+    // the site is what Paradox wrote, so it's listed once Paradox is done. Uncached, like Paradox's own page list:
+    // sbt's cache knows the directory, not what's in it. `ghpagesPushSite` takes this list without running makeSite,
+    // so without the dependency a fresh build (CI's) pushed an empty site; the check keeps that from happening again.
+    makeSite / mappings := Def.uncached {
+      val site = (makeSite / mappings).dependsOn(Compile / paradox).value
+      if (!site.exists(_._2 == "index.html")) sys.error(s"docs: the site has no index.html (${site.size} files)")
+      site
+    },
     ghpagesNoJekyll     := true,
     // CI pushes with its token, a developer with their SSH key
     git.remoteRepo := sys.env.get("GITHUB_TOKEN").fold("git@github.com:andyglow/scaladoc.git") { token =>
