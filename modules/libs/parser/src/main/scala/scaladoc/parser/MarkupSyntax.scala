@@ -31,7 +31,7 @@ private[scaladoc] object MarkupSyntax {
   /** scaladoc's wiki syntax: code is `{{{ ... }}}` or `<pre>...</pre>`. */
   object Wiki extends MarkupSyntax {
 
-    def document(text: String): Markup.Document = ParseMarkup(text)
+    def document(text: String): Markup.Document = ParseMarkup(text, CommentSyntax.Wiki)
 
     def codeStartsAt(chars: Array[Char], i: Int): Option[CodeEnd] =
       if (at(chars, i, "{{{", ignoreCase = false)) Some(Marker("}}}", ignoreCase = false))
@@ -44,7 +44,7 @@ private[scaladoc] object MarkupSyntax {
     */
   object Markdown extends MarkupSyntax {
 
-    def document(text: String): Markup.Document = ParseMarkdown(text)
+    def document(text: String): Markup.Document = ParseMarkup(text, CommentSyntax.Markdown)
 
     def codeStartsAt(chars: Array[Char], i: Int): Option[CodeEnd] =
       fenceAt(chars, i).flatMap { case (fenceChar, length) =>

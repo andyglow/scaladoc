@@ -5,7 +5,7 @@ import scaladoc.Markup._
 
 import scala.collection.mutable.ListBuffer
 
-/** Parses Markdown into a `Markup.Document`: CommonMark's blocks, with GitHub Flavored Markdown's tables and task list
+/** Markdown's blocks, for [[ParseMarkup]], the parser of every syntax: CommonMark's blocks, with GitHub Flavored Markdown's tables and task list
   * items, and scaladoc's `{{{ ... }}}`, as Scala 3's scaladoc reads them.
   *
   * A recursive descent parser like [[ParseMarkup]]: a document is a sequence of blocks, each recognized at the start of
@@ -15,8 +15,8 @@ import scala.collection.mutable.ListBuffer
   *
   * @param depth how deep in quotes and list items the text is: what would nest deeper than `MaxNesting` is text
   */
-private[parser] final class ParseMarkdown private (text: String, depth: Int) {
-  import ParseMarkdown._
+private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
+  import MarkdownBlocks._
 
   // the lines, with the tabs in their indentation expanded to the next multiple of 4
   private val lines = splitLines(text).map(expandIndentation)
@@ -207,7 +207,7 @@ private[parser] final class ParseMarkdown private (text: String, depth: Int) {
         else more = false
       }
     }
-    new ParseMarkdown(s, MaxNesting).startsWithText
+    new MarkdownBlocks(s, MaxNesting).startsWithText
   }
 
   // a lazy line goes on its paragraph as is, whatever it would be on its own: indented, it can't start a block
@@ -301,7 +301,7 @@ private[parser] final class ParseMarkdown private (text: String, depth: Int) {
         lazily = true
       } else more = false
     }
-    QuoteBlock(new ParseMarkdown(content.mkString("\n"), depth + 1).blocks())
+    QuoteBlock(new MarkdownBlocks(content.mkString("\n"), depth + 1).blocks())
   }
 
   // a list's items: of the same kind of marker, with blank lines between them or not
@@ -346,7 +346,7 @@ private[parser] final class ParseMarkdown private (text: String, depth: Int) {
         lazily = true
       } else more = false
     }
-    new ParseMarkdown(content.mkString("\n"), depth + 2).blocks()
+    new MarkdownBlocks(content.mkString("\n"), depth + 2).blocks()
   }
 
   // its rows: the lines after the delimiter row, up to a blank one or another block
@@ -362,9 +362,9 @@ private[parser] final class ParseMarkdown private (text: String, depth: Int) {
   }
 }
 
-private[parser] object ParseMarkdown {
+private[parser] object MarkdownBlocks {
 
-  def apply(text: String): Document = toDocument(new ParseMarkdown(text, 0).blocks())
+  def apply(text: String): Document = toDocument(new MarkdownBlocks(text, 0).blocks())
 
   /** How deep quotes and lists nest at most, as markdown-it's `maxNesting`: what would nest deeper is text. The model
     * is a tree, and what walks it recurses.

@@ -7,9 +7,11 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 import scala.util.matching.Regex
 
-/** Parses scaladoc's wiki markup into a `Markup.Document`.
+/** Parses markup into a `Markup.Document`: the parser of every comment syntax. `ParseMarkup(text, syntax)` takes it to
+  * the one the text is written in. scaladoc's wiki syntax is parsed here; Markdown by [[MarkdownBlocks]] and
+  * [[MarkdownInlines]], which use what both syntaxes share from here.
   *
-  * A recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
+  * Wiki is parsed by a recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
   * blocks, lists, tables, rules), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
   * marker that isn't closed within its paragraph is text, so `x^2` and an unclosed backtick parse.
   *
@@ -439,6 +441,12 @@ object ParseMarkup {
   // the inline markup of a line, like a heading's title
   private[parser] def spans(line: String, log: Log): List[Span] =
     new ParseMarkup(line, log, codeBlocks = false).spansUntil(None)._1.trim
+
+  /** `text`, written in `syntax`, as a document. */
+  def apply(text: String, syntax: scaladoc.CommentSyntax): Document = syntax match {
+    case scaladoc.CommentSyntax.Wiki     => ParseMarkup(text)
+    case scaladoc.CommentSyntax.Markdown => MarkdownBlocks(text)
+  }
 
   def apply(chars: Array[Char], log: Log): Document = ParseMarkup(new String(chars), log)
 
