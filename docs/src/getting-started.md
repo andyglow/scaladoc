@@ -35,7 +35,8 @@ Add `sbt-scaladoc` to `project/plugins.sbt`:
 addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "@VERSION@")
 ```
 
-and enable it on the modules whose compiler it should set up. A module that reads scaladoc adds the parser itself:
+and enable it on the modules whose compiler it should set up: those that publish on Scala 2, and those that read on
+Scala 3. A module that reads scaladoc adds the parser itself:
 
 ```sbt
 lazy val model = project
@@ -43,13 +44,16 @@ lazy val model = project
 
 lazy val schemas = project
   .dependsOn(model)
-  .enablePlugins(ScaladocPlugin)
+  .enablePlugins(ScaladocPlugin)            // on Scala 3, for -Yread-docs; a Scala 2 reader doesn't need it
   .settings(
-    scaladocEmbed := false,                 // has no scaladoc of its own to keep
     // reads it with Scaladoc.of; scaladocVersion keeps the parser in step with the plugin
     libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value
   )
 ```
+
+On Scala 2, a module the plugin is enabled on embeds its scaladoc, even one that only reads, as when it's cross-built
+for Scala 3 and keeps the plugin for that. It does no harm: a few annotations in its bytecode. A module that shouldn't
+embed any doesn't enable the plugin.
 
 On Scala.js, the parser is the `_sjs1` artifact: on sbt 2, `%%` picks it by itself in a Scala.js module; on sbt 1, use
 `%%%`. The compiler plugin runs inside scalac, which is a JVM program however its output is used, so the plugin adds
@@ -60,7 +64,6 @@ the compiler plugin embeds:
 
 | Setting                  | Default  | What it does                                                             |
 |--------------------------|----------|--------------------------------------------------------------------------|
-| `scaladocEmbed`          | `true`   | Scala 2: embed scaladoc into bytecode with the compiler plugin           |
 | `scaladocVersion`        | plugin's | the version of the compiler plugin                                       |
 | `scaladocIncludePaths`   | none     | Scala 2: embed only classes from source files matching these globs       |
 | `scaladocExcludePaths`   | none     | Scala 2: don't embed classes from source files matching these globs      |
@@ -104,12 +107,12 @@ plugins {
 ```
 
 It reads the module's Scala version from its `scala-library` or `scala3-library_3` dependency and sets the compiler
-up for it: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3. A `scaladoc` block holds the settings, which mean
-what the sbt plugin's do:
+up for it: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3. As with sbt, it belongs on the modules that
+publish on Scala 2 and those that read on Scala 3. A `scaladoc` block holds the settings, which mean what the sbt
+plugin's do:
 
 ```kotlin
 scaladoc {
-    embed.set(false)                               // Scala 2: embed scaladoc (true by default)
     excludeClasses.add("com.acme.**.internal.*")   // also includePaths, excludePaths and includeClasses
     version.set("@VERSION@")                       // of the compiler plugin; the plugin's own by default
 }

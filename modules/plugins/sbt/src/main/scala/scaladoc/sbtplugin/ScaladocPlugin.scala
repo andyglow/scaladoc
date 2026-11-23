@@ -7,8 +7,8 @@ import sbt.Keys._
 
 /** Sets the Scala compiler up for scaladoc. Enable it on the modules that need it with `enablePlugins(ScaladocPlugin)`.
   *
-  *   - '''Scala 2:''' the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode
-  *     (`scaladocEmbed`, on by default); the `scaladocInclude*` / `scaladocExclude*` settings become its options.
+  *   - '''Scala 2:''' the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode; the
+  *     `scaladocInclude*` / `scaladocExclude*` settings become its options.
   *   - '''Scala 3:''' `-Yread-docs`, so that `Scaladoc.of` also reads doc comments from other modules and jars. Scala 3
   *     keeps doc comments in TASTy on its own, so nothing else is needed.
   *
@@ -23,7 +23,9 @@ object ScaladocPlugin extends AutoPlugin {
 
   object autoImport {
     val scaladocVersion = settingKey[String]("Version of the scaladoc compiler plugin")
-    val scaladocEmbed   = settingKey[Boolean]("Scala 2: embed scaladoc into bytecode with the compiler plugin")
+    @deprecated("a module that shouldn't embed scaladoc doesn't enable the plugin", "0.5.1")
+    val scaladocEmbed =
+      settingKey[Boolean]("Deprecated: Scala 2: embed scaladoc into bytecode; don't enable the plugin instead")
     @deprecated(
       "add scaladoc-parser as a dependency instead: libraryDependencies += \"io.github.andyglow\" %% \"scaladoc-parser\" % <version>",
       "0.5.1")
@@ -73,6 +75,7 @@ object ScaladocPlugin extends AutoPlugin {
       // the compiler plugin runs in scalac, so it is the JVM artifact on Scala.js too, where `%%` (which follows
       // `platform`) would pick a `_sjs1` one that doesn't exist. Its jar has everything it needs.
       val plugin =
+        // deprecated: until 0.6.0, `scaladocEmbed := false` still leaves the compiler plugin out
         if (!scala3 && scaladocEmbed.value)
           Seq(compilerPlugin(organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v))
         else Nil

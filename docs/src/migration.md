@@ -21,6 +21,11 @@ implementation("io.github.andyglow:scaladoc-parser_2.13:@VERSION@")             
 `scaladocRead` and Gradle's `read`, added in 0.5.0, are deprecated: they still add the libraries, with a warning, and
 go away in 0.6.0. Replace them with the dependency above.
 
+`scaladocEmbed` and Gradle's `embed` are deprecated too, and go away in 0.6.0. With the libraries gone, a module that
+doesn't embed gets nothing from the plugin, so it doesn't enable it. Until then, turning `embed` off still leaves the
+compiler plugin out, with a deprecation warning. On Scala 3, where `embed` never did anything, a module that reads keeps
+the plugin for `-Yread-docs` and drops the setting.
+
 ## To 0.5
 
 0.5 gives a module only what its part needs. A module that publishes its scaladoc no longer gets the scaladoc
@@ -39,7 +44,8 @@ scaladoc { read.set(true) }   // Gradle
 ```
 
 Without it, a module that reads gets "not found: value Scaladoc" when compiling, and setting it fixes that. A module
-that only reads can also turn publishing off, with `scaladocEmbed := false` or `embed.set(false)`.
+that only reads could also turn publishing off, with `scaladocEmbed := false` or `embed.set(false)` (deprecated in
+0.5.1).
 
 **By hand**, a Scala 2 module that publishes can drop `scaladoc-ast` (now `scaladoc-core`) and `scaladoc-parser`, and
 keep just the compiler plugin. A Scala 3 module that publishes needs nothing, and `-Yread-docs` belongs only to modules that read.
