@@ -2,7 +2,7 @@ import ReleaseTransformations._
 
 val scala212 = "2.12.21"
 val scala213 = "2.13.18"
-val scala3   = "3.3.9"
+val scala3   = "3.9.0"
 
 // sbt-scaladoc is built for sbt 2 (Scala 3) and sbt 1 (Scala 2.12), against the oldest sbt of each line it supports.
 // Scala 3 reads TASTy only from the same or older compilers, so the sbt 2 build uses sbt 2.0.0's Scala.
