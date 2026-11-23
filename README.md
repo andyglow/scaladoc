@@ -37,7 +37,7 @@ Scaladoc.of[User].map(_.textParams)
 Add the sbt plugin to `project/plugins.sbt`:
 
 ```sbt
-addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.4.0")
+addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.5.0")
 ```
 
 and enable it on the modules that need it:
@@ -47,7 +47,7 @@ lazy val model = project.enablePlugins(ScaladocPlugin)
 ```
 
 A module that has the plugin publishes its scaladoc, with the compiler plugin on Scala 2 (Scala 3 keeps it in TASTy on
-its own). From 0.5.0, a module that reads scaladoc with `Scaladoc.of` also sets `scaladocRead := true`, which adds the
+its own). A module that reads scaladoc with `Scaladoc.of` also sets `scaladocRead := true`, which adds the
 libraries, and `-Yread-docs` on Scala 3; a module that only publishes gets no library at all.
 
 Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
@@ -55,7 +55,7 @@ Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
 ```kotlin
 plugins {
     scala
-    id("io.github.andyglow.scaladoc") version "0.4.0"
+    id("io.github.andyglow.scaladoc") version "0.5.0"
 }
 ```
 
