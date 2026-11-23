@@ -49,4 +49,25 @@ class MarkdownHtmlCleaningSpec extends FSpec {
   test("wiki's HTML is as before") {
     Scaladoc.fromString("/** One<p>Two</p> */").map(_.descriptions) mustBe Right(List(Document(text("One"), text("Two"))))
   }
+
+  test("headings of every level, and list items, as Scala 3 cleans them") {
+    // headings are `= ... =` text, and an item ` *  - `, which Markdown reads as a list in a list, as in Scala 3
+    description("/** <h1>A</h1>x <h3>B</h3>y <h5>C</h5>z <ul><li>one</li></ul> */") mustBe List(
+      text("= A =\nx\n=== B ===\ny\n==== C ====\nz"),
+      UnorderedList(List(Document(UnorderedList(List(Document(text("one"))))))))
+  }
+
+  test("pseudoCode shows Markdown's nodes") {
+    val doc = Scaladoc.fromString(
+      "/** ~~a~~ ![i](i.png) b\\\n  * c [x][^1] <span>s</span>\n  *\n  * > q\n  *\n  * - [ ] t\n  *\n  * ```scala\n  * v\n  * ```\n  *\n  * [^1]: n\n  * [x]: https://x.y\n  */",
+      syntax = CommentSyntax.Markdown).fold(err => fail(err.getMessage), identity)
+    val dump = doc.pseudoCode
+    Seq("<s>a</s>", "<img src=\"i.png\" alt=\"i\">", "<br>", "<sup>[1]</sup>", "<blockquote>", "<input type=checkbox>",
+      "<code lang=scala>", "<footnote label=1>").foreach(part => dump must include(part))
+  }
+
+  test("an unknown @syntax is no syntax: the default stays") {
+    Scaladoc.fromString("/** Some '''bold'''.\n  *\n  * @syntax latex\n  */").map(_.descriptions) mustBe
+      Scaladoc.fromString("/** Some '''bold'''. */").map(_.descriptions)
+  }
 }
