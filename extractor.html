@@ -233,7 +233,7 @@ Scaladoc.of[geometry.Point].map(_.textParams)
 <p>Scala 3 keeps doc comments in TASTy, the format it stores type information in, and <code>Scaladoc.of</code> reads them from <code>Symbol.docstring</code>. By default, though, the compiler only loads the comments of the sources it compiles in the current run. To read them from TASTy as well (other modules, jars, and files skipped by an incremental compile), compile the module that calls <code>Scaladoc.of</code> with <code>-Yread-docs</code>:</p>
 <pre class="prettyprint"><code class="language-sbt">scalacOptions += &quot;-Yread-docs&quot;
 </code></pre>
-<p>The <a href="getting-started.html#with-the-sbt-plugin">sbt plugin</a> adds it on Scala 3 modules.</p>
+<p>The <a href="getting-started.html#the-sbt-plugin">sbt</a> and <a href="getting-started.html#gradle">Gradle</a> plugins add it on Scala 3 modules; <a href="getting-started.html#maven">Maven</a> builds pass it in <code>scala-maven-plugin</code>&rsquo;s <code>args</code>.</p>
 <h2><a href="#a-misaligned-comment-is-a-compile-error" name="a-misaligned-comment-is-a-compile-error" class="anchor"><span class="anchor-link"></span></a>A misaligned comment is a compile error</h2>
 <p>A comment whose <code>*</code> border wanders from line to line is usually a sign of a botched edit. <code>Scaladoc.of</code> checks the alignment, on Scala 2 and on Scala 3 alike, and reports a comment it can&rsquo;t make sense of as a compile error at the call site, with the comment and the reason. A comment without borders is fine; only a border that&rsquo;s there gets checked.</p>
 <h2><a href="#from-a-string" name="from-a-string" class="anchor"><span class="anchor-link"></span></a>From a string</h2>
