@@ -39,10 +39,8 @@ gradlePlugin {
             id = "io.github.andyglow.scaladoc"
             implementationClass = "scaladoc.gradle.ScaladocPlugin"
             displayName = "Scaladoc"
-            description = "Lets Scala code read the doc comments of its own classes, as data, at compile time: for " +
-                "example to give a derived JSON Schema or OpenAPI spec the titles and descriptions already written " +
-                "in the scaladoc. It adds the scaladoc libraries to Scala 2 and Scala 3 modules, and on Scala 2 " +
-                "keeps the comments in the compiled classes, so they can be read from other modules and jars."
+            description = "A companion of the scaladoc library (https://github.com/andyglow/scaladoc): it makes " +
+                "compiled Scala classes carry their documentation, so the library can read it."
             tags = listOf("scala", "scaladoc", "documentation")
         }
     }
