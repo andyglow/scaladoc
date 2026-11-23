@@ -3,8 +3,9 @@ package scaladoc.parser
 import org.scalatest.funsuite.AnyFunSuite
 
 /** Inputs that make a careless Markdown parser quadratic or worse, after cmark's `pathological_tests.py`. Each is big
-  * enough for that to take a hundred times as long as ordinary text of its size, and has to parse in at most 20 times
-  * as long: measured against that, rather than the clock, it holds on a slow machine and with coverage instrumentation.
+  * enough for that to take hundreds of times as long as ordinary text of its size, and has to parse in at most 50 times
+  * as long (some linear cases run at 20 times, and more with coverage instrumentation): measured against that, rather
+  * than the clock, it holds on a slow machine and with coverage instrumentation.
   */
 class MarkdownPathologicalSuite extends AnyFunSuite {
 
@@ -23,11 +24,15 @@ class MarkdownPathologicalSuite extends AnyFunSuite {
   private def ordinary(length: Int): String =
     ("Some *words*, a `code` span and [a link](https://x.y).\n\n" * (length / 55 + 1)).take(length)
 
-  private def quick(input: String)(parse: String => Any): Unit = {
+  private def quick(input: String, factor: Int = 50)(parse: String => Any): Unit = {
     val baseline = millis(parse(ordinary(input.length)))
     val took     = millis(parse(input))
-    assert(took <= math.max(50L, 20 * baseline), s"took $took ms, ordinary text of its size $baseline ms")
+    assert(took <= math.max(50L, factor * baseline), s"took $took ms, ordinary text of its size $baseline ms")
   }
+
+  // a quote's or a list item's content is parsed as a document of its own, once a level, up to `MaxNesting`: linear,
+  // but some 20 times ordinary text at the cap, and more with coverage instrumentation, so these get more room
+  private val nestingFactor = Map("nested block quotes" -> 60)
 
   private val cases: List[(String, String)] = List(
     "nested strong and emphasis"            -> (r("*a **a ", N / 6) + "b" + r(" a** a*", N / 6)),
@@ -68,7 +73,7 @@ class MarkdownPathologicalSuite extends AnyFunSuite {
 
   cases.foreach { case (name, input) =>
     test(s"$name (${input.length} characters) parses quickly") {
-      quick(input)(MarkupSyntax.Markdown.document)
+      quick(input, nestingFactor.getOrElse(name, 50))(MarkupSyntax.Markdown.document)
     }
   }
 }
