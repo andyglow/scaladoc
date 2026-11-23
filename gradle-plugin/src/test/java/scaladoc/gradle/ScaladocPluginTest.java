@@ -62,13 +62,23 @@ class ScaladocPluginTest {
     @Test
     void addsWhatEachModuleNeeds() {
         fixture(scala2("2.13.18"), false);
+        // the model publishes: the compiler plugin, and none of the libraries, not even to compile
         String model = runner(":model:dependencies", "--configuration", "scalaCompilerPlugins").build().getOutput();
         assertTrue(model.contains("io.github.andyglow:scaladoc-compiler-plugin_2.13:" + VERSION), model);
-        // the app reads scaladoc but doesn't embed any: no compiler plugin, the parser at runtime
+        String modelCompile = runner(":model:dependencies", "--configuration", "compileClasspath").build().getOutput();
+        assertTrue(!modelCompile.contains("io.github.andyglow"), modelCompile);
+        // the app reads scaladoc but doesn't embed any: no compiler plugin, the libraries at runtime
         String app = runner(":app:dependencies", "--configuration", "runtimeClasspath").build().getOutput();
         assertTrue(app.contains("io.github.andyglow:scaladoc-parser_2.13:" + VERSION), app);
         String appPlugins = runner(":app:dependencies", "--configuration", "scalaCompilerPlugins").build().getOutput();
         assertTrue(!appPlugins.contains("scaladoc-compiler-plugin"), appPlugins);
+    }
+
+    @Test
+    void scala3PublisherGetsNothing() {
+        fixture("implementation 'org.scala-lang:scala3-library_3:3.3.9'", false);
+        String model = runner(":model:dependencies", "--configuration", "compileClasspath").build().getOutput();
+        assertTrue(!model.contains("io.github.andyglow"), model);
     }
 
     @Test
@@ -107,7 +117,10 @@ class ScaladocPluginTest {
             "  " + scalaLibrary,
             "  implementation project(':model')",
             "}",
-            "scaladoc { embed.set(false) }",
+            "scaladoc {",
+            "  embed.set(false)",
+            "  read.set(true)",
+            "}",
             "application { mainClass.set('demo.app.Main') }",
             ""));
         if (sources) copySources();

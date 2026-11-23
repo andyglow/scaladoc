@@ -59,8 +59,10 @@ each field means. A schema generator needs nothing more to give every property a
 | `scaladoc-ast`             |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |  JVM one     |
+| `scaladoc-annotation`      |     ✓      |     ✓      |       ✓        |      ✓       |
 
-`sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, and the Gradle plugin with Gradle 8.5+. All artifacts target
+`scaladoc-annotation` is a single Java jar, with no Scala suffix, for all of them. `sbt-scaladoc` works with sbt 1.5.8+
+and sbt 2.x, and the Gradle plugin with Gradle 8.5+. All artifacts target
 Java 8 and run on any later JDK.
 
 ## Where to go next
@@ -76,6 +78,6 @@ If you want to try it, start with @ref:[Getting started](getting-started.md). If
 * [The model](model.md)
 * [Scaladoc.of](extractor.md)
 * [Compiler plugin](compiler-plugin.md)
-* [Migrating to 0.4](migration.md)
+* [Migrating](migration.md)
 
 @@@

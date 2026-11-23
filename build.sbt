@@ -173,14 +173,33 @@ lazy val jsSettings = Seq(
   coverageEnabled := false
 )
 
+// The `ScaladocCarrier` annotation, which carries a class's scaladoc in its bytecode: plain Java, with no Scala suffix
+// and no dependencies, so anything can read embedded scaladoc with just this jar. One jar serves every Scala version:
+// it's built in each round of `+`, so the projects that depend on it can, and published in the 2.12 one only.
+lazy val annotation = (project in file("annotation"))
+  .settings(
+    commonSettings,
+    noCoverage,
+    name             := "scaladoc-annotation",
+    crossPaths       := false,
+    autoScalaLibrary := false,
+    publish / skip   := scalaBinaryVersion.value != "2.12",
+    // no dependencies at all, not even the shared settings' test ones
+    libraryDependencies := Nil,
+    // javadoc knows --release but not javac's -Xlint
+    Compile / doc / javacOptions := (Compile / doc / javacOptions).value.filterNot(_.startsWith("-Xlint"))
+  )
+
 // parses a string representation of a scaladoc into a scaladoc ast.
-// Shared code (src/main/scala) is plain Scala over String. Scala 2 adds the `Scaladoc.of[T]` macro, source
-// extraction and the `ScaladocCarrier` annotation (src/main/{scala-2,java-2}, needs scala-reflect); Scala 3
-// adds `Scaladoc.of[T]` on top of `Symbol.docstring` (src/main/scala-3, no extra dependencies).
+// Shared code (src/main/scala) is plain Scala over String. Scala 2 adds the `Scaladoc.of[T]` macro, which also reads
+// the `ScaladocCarrier` annotation, and source extraction (src/main/scala-2, needs scala-reflect); Scala 3 adds
+// `Scaladoc.of[T]` on top of `Symbol.docstring` (src/main/scala-3, no extra dependencies).
 lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
   .in(file("parser"))
   .dependsOn(ast % "compile->compile;test->test")
+  .jvmConfigure(_.dependsOn(annotation))
+  .jsConfigure(_.dependsOn(annotation))
   .settings(
     commonSettings,
     name := "scaladoc-parser",
@@ -188,8 +207,10 @@ lazy val parser = crossProject(JVMPlatform, JSPlatform)
       if (isScala3(scalaVersion.value)) Nil
       else Seq(scalaOrganization.value % "scala-reflect" % scalaVersion.value)
     },
-    Compile / unmanagedSourceDirectories ++= {
-      if (isScala3(scalaVersion.value)) Nil else Seq(sourceBase(baseDirectory.value) / "src" / "main" / "java-2")
+    // only the Scala 2 macro reads the annotation, so the Scala 3 build doesn't depend on it
+    projectDependencies := {
+      val deps = projectDependencies.value
+      if (isScala3(scalaVersion.value)) deps.filterNot(_.name == "scaladoc-annotation") else deps
     }
   )
   .jsSettings(
@@ -205,10 +226,15 @@ lazy val parserJS  = parser.js
 
 // attaches scaladoc to tree
 // scalac loads a compiler plugin in its own class loader with only the `-Xplugin` jars, and sbt's `compilerPlugin(...)`
-// passes only jars that contain a scalac-plugin.xml. So the plugin jar is self-contained: it bundles the ast and parser
-// classes, and they are not dependencies in its POM ("compile-internal").
+// passes only jars that contain a scalac-plugin.xml. So the plugin jar is self-contained: it bundles the annotation,
+// ast and parser classes, and they are not dependencies in its POM ("compile-internal"). That's also why a module
+// whose scaladoc gets embedded needs nothing besides the plugin.
 lazy val compilerPlugin = (project in file("compiler-plugin"))
-  .dependsOn(astJVM % "compile-internal->compile", parserJVM % "compile-internal->compile")
+  .dependsOn(
+    annotation % "compile-internal->compile",
+    astJVM     % "compile-internal->compile",
+    parserJVM  % "compile-internal->compile"
+  )
   .settings(
     commonSettings,
     scala2Only,
@@ -219,7 +245,8 @@ lazy val compilerPlugin = (project in file("compiler-plugin"))
       else Seq(scalaOrganization.value % "scala-compiler" % scalaVersion.value)
     },
     Compile / packageBin / mappings ++= {
-      val bundled = (astJVM / Compile / packageBin / mappings).value ++ (parserJVM / Compile / packageBin / mappings).value
+      val bundled = (annotation / Compile / packageBin / mappings).value ++
+        (astJVM / Compile / packageBin / mappings).value ++ (parserJVM / Compile / packageBin / mappings).value
       if (isScala3(scalaVersion.value)) Nil else bundled
     }
   )
@@ -410,7 +437,7 @@ def gradlew(base: File, version: String, log: Logger, tasks: String*): Unit = {
 
 lazy val root = (project in file("."))
   .aggregate(
-    astJVM, astJS, parserJVM, parserJS, compilerPlugin, sbtScaladoc,
+    annotation, astJVM, astJS, parserJVM, parserJS, compilerPlugin, sbtScaladoc,
     itExternal.jvm, itExternal.js, itFiltered.jvm, itFiltered.js, it.jvm, it.js
   )
   .settings(

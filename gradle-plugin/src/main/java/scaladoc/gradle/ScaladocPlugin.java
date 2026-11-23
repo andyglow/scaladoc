@@ -17,15 +17,15 @@ import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.tasks.scala.ScalaCompile;
 
 /**
- * Sets a Scala module up for scaladoc, as sbt-scaladoc does for sbt. Apply it next to Gradle's {@code scala} plugin:
+ * Sets a Scala module up for scaladoc, as sbt-scaladoc does for sbt. Apply it next to Gradle's {@code scala} plugin.
+ * A module can publish its scaladoc, read scaladoc with {@code Scaladoc.of}, or both, and gets only what that takes:
  *
  * <ul>
- *   <li><b>Scala 2:</b> the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode,
- *       {@code scaladoc-ast}, and {@code scaladoc-parser} for compiling and testing only. The {@code scaladoc}
- *       block's include and exclude patterns become the compiler plugin's options. With {@code embed = false}, just
- *       the two libraries.</li>
- *   <li><b>Scala 3:</b> the compiler plugin doesn't exist there, so {@code scaladoc-ast}, {@code scaladoc-parser} and
- *       {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and jars.</li>
+ *   <li><b>Publishing</b> ({@code embed}, on by default): on Scala 2, the compiler plugin, which embeds the scaladoc of
+ *       the module's classes into their bytecode, and nothing else; the {@code scaladoc} block's include and exclude
+ *       patterns become its options. Scala 3 keeps doc comments in TASTy on its own, so there it adds nothing.</li>
+ *   <li><b>Reading</b> ({@code read}, off by default): {@code scaladoc-ast} and {@code scaladoc-parser}, and on
+ *       Scala 3 {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and jars.</li>
  * </ul>
  *
  * The Scala version is the one of the module's {@code scala-library} or {@code scala3-library_3} dependency.
@@ -45,6 +45,7 @@ public class ScaladocPlugin implements Plugin<Project> {
         ScaladocExtension extension = project.getExtensions().create("scaladoc", ScaladocExtension.class);
         extension.getVersion().convention(ownVersion());
         extension.getEmbed().convention(true);
+        extension.getRead().convention(false);
         extension.getIncludePaths().convention(Collections.emptyList());
         extension.getExcludePaths().convention(Collections.emptyList());
         extension.getIncludeClasses().convention(Collections.emptyList());
@@ -68,20 +69,16 @@ public class ScaladocPlugin implements Plugin<Project> {
         String ast = GROUP + ":scaladoc-ast_" + scala + ":" + version;
         String parser = GROUP + ":scaladoc-parser_" + scala + ":" + version;
 
-        if (scala.equals("3")) {
-            dependencies.add("implementation", ast);
-            dependencies.add("implementation", parser);
-            addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
-        } else if (extension.getEmbed().get()) {
+        boolean scala3 = scala.equals("3");
+        // publishing: the compiler plugin's jar has everything it needs, so the module needs nothing else
+        if (!scala3 && extension.getEmbed().get()) {
             dependencies.add("scalaCompilerPlugins", GROUP + ":" + COMPILER_PLUGIN + "_" + scala + ":" + version);
-            dependencies.add("implementation", ast);
-            // only needed to compile, like sbt's Provided: the code and the tests, but not at runtime
-            dependencies.add("compileOnly", parser);
-            dependencies.add("testImplementation", parser);
             addCompilerOptions(project, compilerPluginOptions(extension));
-        } else {
+        }
+        if (extension.getRead().get()) {
             dependencies.add("implementation", ast);
             dependencies.add("implementation", parser);
+            if (scala3) addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
         }
     }
 

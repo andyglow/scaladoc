@@ -1,15 +1,44 @@
-# Migrating to 0.4
+# Migrating
 
 > No man ever steps in the same river twice, for it's not the same river and he's not the same man.
 >
 > — attributed to Heraclitus
+
+## To 0.5
+
+0.5 gives a module only what its part needs. A module that publishes its scaladoc no longer gets the scaladoc
+libraries along with the compiler plugin, and a module that reads it asks for them.
+
+**The sbt and Gradle plugins** publish by default, as before, but now add no libraries for that: on Scala 2 just the
+compiler plugin, on Scala 3 nothing. Reading is opt-in. A module that calls `Scaladoc.of` sets:
+
+```sbt
+scaladocRead := true          // sbt
+```
+
+```kotlin
+scaladoc { read.set(true) }   // Gradle
+```
+
+Without it, a module that reads gets "not found: value Scaladoc" when compiling, and setting it fixes that. A module
+that only reads can also turn publishing off, with `scaladocEmbed := false` or `embed.set(false)`.
+
+**By hand**, a Scala 2 module that publishes can drop `scaladoc-ast` and `scaladoc-parser`, and keep just the compiler
+plugin. A Scala 3 module that publishes needs nothing, and `-Yread-docs` belongs only to modules that read.
+
+**`scaladoc-annotation`** is a new jar with just the `ScaladocCarrier` annotation, for anyone who reads embedded
+scaladoc without this library; see @ref:[Reading embedded scaladoc without this library](compiler-plugin.md#reading-embedded-scaladoc-without-this-library).
+The annotation's name and package haven't changed, so classes compiled with earlier versions read as before.
+`scaladoc-parser` depends on it on Scala 2, so readers don't need to add it.
+
+## To 0.4
 
 0.4 is the release where the parser learned the rest of scaladoc's syntax: nested markup, link titles, lists, tables,
 rules, HTML, javadoc's inline tags and `@define`. A model that couldn't hold those had to grow, and code that takes it
 apart needs a few changes. Code that only builds markup, or only reads text through the `text*` helpers, mostly
 doesn't.
 
-## Spans hold spans
+### Spans hold spans
 
 `Italic`, `Bold`, `Underline`, `Superscript` and `Subscript` held a `String`. They now hold a `List[Span]`, so markup
 can nest. Building one from a string still works, through a shorthand on each companion:
@@ -29,19 +58,19 @@ case b @ Bold(spans)   => b.trimmed.plainString     // or walk the spans
 
 `Monospace` still holds a `String`: code is taken literally.
 
-## Headings hold spans
+### Headings hold spans
 
 `Heading(level, text: String)` is now `Heading(level, spans: List[Span])`, so a title can have markup.
 `Heading(One, "Title")` and `Heading(1, "Title")` still build one. A heading's title is also trimmed now: `= Title =`
 gives `"Title"`, not `" Title "`.
 
-## Links have a target and a title
+### Links have a target and a title
 
 `Link(value: String)` held whatever was between the brackets, so `[[https://x.y Site]]` gave
 `Link("https://x.y Site")`. It's now `Link(target: String, title: List[Span])`, and that link gives
 `Link("https://x.y", List(PlainText("Site")))`. `Link("scala.Option")` still builds one without a title.
 
-## New nodes
+### New nodes
 
 Code that matches on `Markup` exhaustively will hear from the compiler about these:
 
@@ -50,7 +79,7 @@ Code that matches on `Markup` exhaustively will hear from the compiler about the
 - `HorizontalRule`
 - `HtmlTag`, a span for HTML tags the model has no node for
 
-## Text that changed
+### Text that changed
 
 The parser now understands more, so some comments that came back as plain text before don't anymore:
 
@@ -59,7 +88,7 @@ The parser now understands more, so some comments that came back as plain text b
 - `{@link X}` is a link, `{@code x}` monospace
 - `$name` is replaced when the comment defines `name` with `@define`
 
-## Fixes that change results
+### Fixes that change results
 
 0.4 also fixes a number of things that 0.3 got wrong. They don't change the API, but they do change what some
 comments parse to:
