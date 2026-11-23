@@ -12,7 +12,12 @@ public abstract class ScaladocExtension {
     /** The version of the compiler plugin. The Gradle plugin's own by default. */
     public abstract Property<String> getVersion();
 
-    /** Scala 2: embed the scaladoc of this module's classes into their bytecode. {@code true} by default. */
+    /**
+     * Scala 2: embed the scaladoc of this module's classes into their bytecode. {@code true} if not set.
+     *
+     * @deprecated since 0.5.1, removed in 0.6.0: a module that shouldn't embed scaladoc doesn't apply the plugin
+     */
+    @Deprecated
     public abstract Property<Boolean> getEmbed();
 
     /**

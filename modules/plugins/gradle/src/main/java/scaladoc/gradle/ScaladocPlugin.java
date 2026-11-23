@@ -21,9 +21,8 @@ import org.gradle.api.tasks.scala.ScalaCompile;
  * Sets the Scala compiler up for scaladoc, as sbt-scaladoc does for sbt. Apply it next to Gradle's {@code scala} plugin:
  *
  * <ul>
- *   <li><b>Scala 2:</b> the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode
- *       ({@code embed}, on by default); the {@code scaladoc} block's include and exclude patterns become its
- *       options.</li>
+ *   <li><b>Scala 2:</b> the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode;
+ *       the {@code scaladoc} block's include and exclude patterns become its options.</li>
  *   <li><b>Scala 3:</b> {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and
  *       jars. Scala 3 keeps doc comments in TASTy on its own, so nothing else is needed.</li>
  * </ul>
@@ -45,7 +44,6 @@ public class ScaladocPlugin implements Plugin<Project> {
     public void apply(Project project) {
         ScaladocExtension extension = project.getExtensions().create("scaladoc", ScaladocExtension.class);
         extension.getVersion().convention(ownVersion());
-        extension.getEmbed().convention(true);
         @SuppressWarnings("deprecation")
         Property<Boolean> read = extension.getRead();
         read.convention(false);
@@ -72,9 +70,19 @@ public class ScaladocPlugin implements Plugin<Project> {
         String core = GROUP + ":scaladoc-core_" + scala + ":" + version;
         String parser = GROUP + ":scaladoc-parser_" + scala + ":" + version;
 
+        @SuppressWarnings("deprecation")
+        Boolean embedSetting = extension.getEmbed().getOrNull();
+        if (embedSetting != null) {
+            // deprecated, until 0.6.0
+            project.getLogger().warn(
+                "scaladoc: `embed` is deprecated and will be removed in 0.6.0; a module that shouldn't embed scaladoc "
+                    + "doesn't apply the plugin");
+        }
+        boolean embed = embedSetting == null || embedSetting;
+
         if (scala.equals("3")) {
             addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
-        } else if (extension.getEmbed().get()) {
+        } else if (embed) {
             // the compiler plugin's jar has everything it needs, so the module needs nothing else
             dependencies.add("scalaCompilerPlugins", GROUP + ":" + COMPILER_PLUGIN + "_" + scala + ":" + version);
             addCompilerOptions(project, compilerPluginOptions(extension));

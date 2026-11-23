@@ -67,11 +67,26 @@ class ScaladocPluginTest {
         assertTrue(model.contains("io.github.andyglow:scaladoc-compiler-plugin_2.13:" + VERSION), model);
         String modelCompile = runner(":model:dependencies", "--configuration", "compileClasspath").build().getOutput();
         assertTrue(!modelCompile.contains("io.github.andyglow"), modelCompile);
-        // the app reads scaladoc but doesn't embed any: no compiler plugin, the libraries at runtime
+        // the app reads scaladoc: the parser, which it depends on itself, at runtime
         String app = runner(":app:dependencies", "--configuration", "runtimeClasspath").build().getOutput();
         assertTrue(app.contains("io.github.andyglow:scaladoc-parser_2.13:" + VERSION), app);
-        String appPlugins = runner(":app:dependencies", "--configuration", "scalaCompilerPlugins").build().getOutput();
-        assertTrue(!appPlugins.contains("scaladoc-compiler-plugin"), appPlugins);
+    }
+
+    @Test
+    void deprecatedEmbedStillLeavesTheCompilerPluginOutAndWarns() {
+        write("settings.gradle", "rootProject.name = 'fixture'\n");
+        write("build.gradle", String.join("\n",
+            "plugins {",
+            "  id 'scala'",
+            "  id 'io.github.andyglow.scaladoc'",
+            "}",
+            "repositories { mavenLocal(); mavenCentral() }",
+            "dependencies { " + scala2("2.13.18") + " }",
+            "scaladoc { embed.set(false) }",
+            ""));
+        String output = runner("dependencies", "--configuration", "scalaCompilerPlugins").build().getOutput();
+        assertTrue(output.contains("`embed` is deprecated"), output);
+        assertTrue(!output.contains("scaladoc-compiler-plugin"), output);
     }
 
     @Test
@@ -141,9 +156,6 @@ class ScaladocPluginTest {
             "  implementation project(':model')",
             "  // reads scaladoc: depends on the parser like on any library it calls",
             "  implementation 'io.github.andyglow:scaladoc-parser_" + binary(scalaLibrary) + ":" + VERSION + "'",
-            "}",
-            "scaladoc {",
-            "  embed.set(false)",
             "}",
             "application { mainClass.set('demo.app.Main') }",
             ""));
