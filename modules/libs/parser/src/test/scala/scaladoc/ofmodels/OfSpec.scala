@@ -1,6 +1,7 @@
 package scaladoc.ofmodels
 
-// The documented models live in this file on purpose: Scala 2 reads the doc comment from the source text,
+// The documented models are in wiki syntax: the ones whose markup is wiki's say so with `@syntax wiki`, which Scala 3
+// reads as Markdown otherwise. They live in this file on purpose: Scala 2 reads the doc comment from the source text,
 // which is only available when the model's file is compiled in the same run as the `Scaladoc.of` call site
 // (Scala 3 without `-Yread-docs` has the same limitation). `Undocumented` has its own file, see there.
 
@@ -36,6 +37,7 @@ package scaladoc.ofmodels
   * @documentable
   * @inheritdoc
   * @custom a custom tag
+  * @syntax wiki
   */
 case class KitchenSink[T](a: String, b: T)
 
@@ -47,6 +49,7 @@ case class KitchenSink[T](a: String, b: T)
   * ====== Level `6` ======
   *
   * '''bold ''italic'' [[scala.Option]]''', __''a''__, x^''2''^ and y,,'''i''',,, see [[https://scala-lang.org the ''Scala'' site]].
+  * @syntax wiki
   */
 class NestedMarkup
 
@@ -60,6 +63,7 @@ class NestedMarkup
   * @param a one of
   *   I. x
   *   I. y
+  * @syntax wiki
   */
 class Lists(a: String)
 
@@ -76,7 +80,10 @@ class Lists(a: String)
   */
 class Tables
 
-/** <b>Bold</b>, <code>a &lt; b</code>, <a href="https://x.y">a link</a> and <span>a span</span>. */
+/** <b>Bold</b>, <code>a &lt; b</code>, <a href="https://x.y">a link</a> and <span>a span</span>.
+  *
+  * @syntax wiki
+  */
 class Html
 
 /** A plain class.
@@ -105,6 +112,7 @@ object Outer {
     * @param a the a
     *   continued
     * @param b the b
+    * @syntax wiki
     */
   case class Nested(a: String, b: Int)
 

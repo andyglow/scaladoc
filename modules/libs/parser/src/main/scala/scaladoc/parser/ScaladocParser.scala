@@ -15,7 +15,8 @@ object ScaladocParser {
     * @param hasTags if `false`, `x` is taken as an already stripped comment body (no comment markers and no left `*` border)
     * @param strict if `true`, the left `*` border of every line must be aligned with the opening marker. Only use
     *   it when `x` keeps the original indentation of the first line (Scala 3's `Symbol.docstring` does not)
-    * @param syntax the markup syntax the comment is written in
+    * @param syntax the markup syntax the comment is written in, unless it says otherwise with `@syntax wiki` or
+    *   `@syntax markdown`, as Scala 3's scaladoc has it
     */
   def fromString(
     x: String,
@@ -29,10 +30,37 @@ object ScaladocParser {
     comment.flatMap { c =>
       c.style match {
         // `Stripped` only comes from the `hasTags = false` branch above
-        case Style.Stripped | Style.Scaladoc => ParseScaladocTags.pure(Defines.expand(c.body), MarkupSyntax(syntax))
-        case style: Style.NonScaladoc        => Left(NonScaladocStyle(style))
+        case Style.Stripped | Style.Scaladoc =>
+          val body = Defines.expand(c.body)
+          ParseScaladocTags.pure(body, MarkupSyntax(syntaxTag(body).getOrElse(syntax))).map { doc =>
+            Scaladoc(doc.tags.filterNot {
+              case Tag.OtherTag("syntax", _) => true
+              case _                         => false
+            })
+          }
+        case style: Style.NonScaladoc => Left(NonScaladocStyle(style))
       }
     }
+  }
+
+  /** The syntax a comment says it's written in, as Scala 3's scaladoc has it: `@syntax wiki` or `@syntax markdown`,
+    * on a line of its own. An unknown one is none. The tag isn't in the parsed `Scaladoc`.
+    */
+  private[scaladoc] def syntaxTag(body: String): Option[CommentSyntax] = {
+    var found: Option[CommentSyntax] = None
+    var start                        = 0
+    while (found.isEmpty && start <= body.length) {
+      val end  = { val e = body.indexOf('\n', start); if (e < 0) body.length else e }
+      val line = body.substring(start, end).trim
+      if (line.startsWith("@syntax") && line.length > 7 && line.charAt(7).isWhitespace)
+        found = line.substring(8).trim.toLowerCase match {
+          case "wiki"     => Some(CommentSyntax.Wiki)
+          case "markdown" => Some(CommentSyntax.Markdown)
+          case _          => None
+        }
+      start = end + 1
+    }
+    found
   }
 
   /** Parses a doc comment as Scala 3's `Symbol.docstring` returns it.

@@ -32,7 +32,10 @@ package object scaladoc {
       syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] =
       ScaladocParser.fromDocstring(x, strict, syntax)
 
-    /** Extracts the scaladoc of `T` at compile time from `Symbol.docstring`.
+    /** Extracts the scaladoc of `T` at compile time from `Symbol.docstring`, in Markdown, unless a given in scope
+      * (`import scaladoc.syntax.wiki.given`) or the comment (`@syntax wiki`) says otherwise. A class without a doc
+      * comment there, like one from a Scala 2 library, may have its scaladoc embedded by the compiler plugin: that's
+      * read, in wiki syntax.
       *
       * The compiler only keeps doc comments of sources compiled in the same run, unless the calling module is
       * compiled with `-Yread-docs`, which also reads them from TASTy (other modules, jars, files not recompiled
