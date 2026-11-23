@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- reads model's scaladoc with Scaladoc.of, and fails the build if it isn't what was written -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>demo</groupId>
+    <artifactId>scaladoc-maven-tests</artifactId>
+    <version>0</version>
+  </parent>
+
+  <artifactId>app</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>${scala.library}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>demo</groupId>
+      <artifactId>model</artifactId>
+      <version>0</version>
+    </dependency>
+    <!-- what getting-started.md shows for a module that reads scaladoc -->
+    <dependency>
+      <groupId>io.github.andyglow</groupId>
+      <artifactId>scaladoc-core_${scala.binary}</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.andyglow</groupId>
+      <artifactId>scaladoc-parser_${scala.binary}</artifactId>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <!-- Scala 3: a module that reads scaladoc also needs -Yread-docs, which lets Scaladoc.of read doc comments from
+         TASTy: other modules and jars -->
+    <profile>
+      <id>read-docs</id>
+      <activation><property><name>scala</name><value>3</value></property></activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <configuration>
+              <args>
+                <arg>-Yread-docs</arg>
+              </args>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+      </plugin>
+      <!-- runs Main as part of `verify`: it checks what Scaladoc.of returns -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.7.0</version>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>demo.app.Main</mainClass>
+              <arguments>
+                <argument>${excluded}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

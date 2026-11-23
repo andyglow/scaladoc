@@ -64,12 +64,12 @@ hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-s
 
 | Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.3+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|
-| `scaladoc-ast`             |     ✓      |     ✓      |       ✓        |      ✓       |
+| `scaladoc-core`             |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |   JVM one    |
 | `scaladoc-annotation`      |     ✓      |     ✓      |       ✓        |      ✓       |
 
-`scaladoc-annotation` (from 0.5.0) is a single Java jar, with no Scala suffix, that holds just the annotation embedded
+`scaladoc-core` was `scaladoc-ast` up to 0.4. `scaladoc-annotation` (from 0.5.0) is a single Java jar, with no Scala suffix, that holds just the annotation embedded
 scaladoc is kept in, for tools that read it their own way. `sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, the
 Gradle plugin with Gradle 8.5+. All artifacts target Java 8. The groupId is `io.github.andyglow` from 0.1.0; versions
 up to 0.0.14 are under `com.github.andyglow`.

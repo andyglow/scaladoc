@@ -14,7 +14,7 @@ doc comments in very different places:
 |                  | Scala 2                                                    | Scala 3                                   |
 |------------------|------------------------------------------------------------|-------------------------------------------|
 | **Publishing**   | the @ref:[compiler plugin](compiler-plugin.md), nothing else | nothing                                 |
-| **Reading**      | `scaladoc-ast` and `scaladoc-parser`                       | the same, and `-Yread-docs`               |
+| **Reading**      | `scaladoc-core` and `scaladoc-parser`                       | the same, and `-Yread-docs`               |
 
 Scala 2 forgets doc comments once it's done compiling, so a publishing module needs the compiler plugin, which writes
 them into the bytecode before they're lost. The plugin's jar has everything it needs, so the module needs no library
@@ -77,7 +77,7 @@ addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "@VERSION
 A module that reads scaladoc needs the two libraries:
 
 ```sbt
-libraryDependencies += "io.github.andyglow" %% "scaladoc-ast"    % "@VERSION@"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-core"    % "@VERSION@"
 libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "@VERSION@"
 ```
 
@@ -87,7 +87,7 @@ and on Scala 3, `-Yread-docs` as well:
 scalacOptions += "-Yread-docs"
 ```
 
-On Scala.js, use `%%%` for `scaladoc-ast` and `scaladoc-parser`. The compiler plugin stays `%%`.
+On Scala.js, use `%%%` for `scaladoc-core` and `scaladoc-parser`. The compiler plugin stays `%%`.
 
 ## Gradle
 
@@ -156,7 +156,7 @@ nothing at all.
 <dependencies>
   <dependency>
     <groupId>io.github.andyglow</groupId>
-    <artifactId>scaladoc-ast_2.13</artifactId>
+    <artifactId>scaladoc-core_2.13</artifactId>
     <version>@VERSION@</version>
   </dependency>
   <dependency>
@@ -186,7 +186,7 @@ On Scala 3, that's with the `_3` suffix, and `-Yread-docs` as well:
 ```
 
 This setup is tested as a real Maven build, on Scala 2.13, 2.12 and 3, with `scala-maven-plugin` 4.10 and Maven 3.10:
-see [maven-tests](https://github.com/andyglow/scaladoc/tree/master/maven-tests) in the repository.
+see [modules/tests/maven](https://github.com/andyglow/scaladoc/tree/master/modules/tests/maven) in the repository.
 
 @@@ note
 

@@ -15,7 +15,7 @@ val sbt1Version       = "1.5.8"
 val scriptedSbt2      = "2.1.0"
 val scriptedSbt1      = "1.13.1"
 
-// `ast` and `parser` cross-build to Scala 3; the compiler plugin (and the integration tests that need it)
+// `core` and `parser` cross-build to Scala 3; the compiler plugin (and the integration tests that need it)
 // are Scala 2 only. They are still listed for Scala 3 so that `++3.3.9 <task>` keeps a consistent build, but
 // on Scala 3 they have no sources and publish nothing (see `scala2Only`).
 val allScalaVersions = Seq(scala213, scala212, scala3)
@@ -49,7 +49,7 @@ ThisBuild / developers := List(
 ThisBuild / githubWorkflowTargetBranches        := Seq("master")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("21"))
-// Tests on every Scala version; coverage of ast and parser measured once, on 2.13, and uploaded to Codecov
+// Tests on every Scala version; coverage of core and parser measured once, on 2.13, and uploaded to Codecov
 ThisBuild / githubWorkflowBuild := Seq(
   WorkflowStep.Sbt(List("test"), name = Some("Build project")),
   // sbt-scaladoc against real sbt 2 and sbt 1 builds; they need this build's artifacts in the local repository
@@ -68,7 +68,7 @@ ThisBuild / githubWorkflowBuild := Seq(
   // the site: mdoc compiles and runs its snippets, Paradox checks its links
   WorkflowStep.Sbt(List("docs/makeSite"), name = Some("Build the documentation site"), cond = Some(s"matrix.scala == '$scala213'")),
   WorkflowStep.Sbt(
-    List("coverage", "astJVM/test", "parserJVM/test", "coverageAggregate"),
+    List("coverage", "coreJVM/test", "parserJVM/test", "coverageAggregate"),
     name = Some("Measure coverage"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
@@ -155,18 +155,18 @@ lazy val scala2Only = Seq(
   publish / skip := { (publish / skip).value || isScala3(scalaVersion.value) }
 )
 
-// scaladoc AST
-lazy val ast = crossProject(JVMPlatform, JSPlatform)
+// the scaladoc model: `Scaladoc`, its tags and markup, and the helpers that read them
+lazy val core = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
-  .in(file("ast"))
+  .in(file("modules/libs/core"))
   .settings(
     commonSettings,
-    name := "scaladoc-ast"
+    name := "scaladoc-core"
   )
   .jsSettings(jsSettings)
 
-lazy val astJVM = ast.jvm
-lazy val astJS  = ast.js
+lazy val coreJVM = core.jvm
+lazy val coreJS  = core.js
 
 // Scala.js: coverage is measured on the JVM only
 lazy val jsSettings = Seq(
@@ -176,7 +176,7 @@ lazy val jsSettings = Seq(
 // The `ScaladocCarrier` annotation, which carries a class's scaladoc in its bytecode: plain Java, with no Scala suffix
 // and no dependencies, so anything can read embedded scaladoc with just this jar. One jar serves every Scala version:
 // it's built in each round of `+`, so the projects that depend on it can, and published in the 2.12 one only.
-lazy val annotation = (project in file("annotation"))
+lazy val annotation = (project in file("modules/libs/annotation"))
   .settings(
     commonSettings,
     noCoverage,
@@ -190,14 +190,14 @@ lazy val annotation = (project in file("annotation"))
     Compile / doc / javacOptions := (Compile / doc / javacOptions).value.filterNot(_.startsWith("-Xlint"))
   )
 
-// parses a string representation of a scaladoc into a scaladoc ast.
+// parses a string representation of a scaladoc into the scaladoc model (core).
 // Shared code (src/main/scala) is plain Scala over String. Scala 2 adds the `Scaladoc.of[T]` macro, which also reads
 // the `ScaladocCarrier` annotation, and source extraction (src/main/scala-2, needs scala-reflect); Scala 3 adds
 // `Scaladoc.of[T]` on top of `Symbol.docstring` (src/main/scala-3, no extra dependencies).
 lazy val parser = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
-  .in(file("parser"))
-  .dependsOn(ast % "compile->compile;test->test")
+  .in(file("modules/libs/parser"))
+  .dependsOn(core % "compile->compile;test->test")
   .jvmConfigure(_.dependsOn(annotation))
   .jsConfigure(_.dependsOn(annotation))
   .settings(
@@ -227,12 +227,12 @@ lazy val parserJS  = parser.js
 // attaches scaladoc to tree
 // scalac loads a compiler plugin in its own class loader with only the `-Xplugin` jars, and sbt's `compilerPlugin(...)`
 // passes only jars that contain a scalac-plugin.xml. So the plugin jar is self-contained: it bundles the annotation,
-// ast and parser classes, and they are not dependencies in its POM ("compile-internal"). That's also why a module
+// core and parser classes, and they are not dependencies in its POM ("compile-internal"). That's also why a module
 // whose scaladoc gets embedded needs nothing besides the plugin.
-lazy val compilerPlugin = (project in file("compiler-plugin"))
+lazy val compilerPlugin = (project in file("modules/plugins/scalac"))
   .dependsOn(
     annotation % "compile-internal->compile",
-    astJVM     % "compile-internal->compile",
+    coreJVM    % "compile-internal->compile",
     parserJVM  % "compile-internal->compile"
   )
   .settings(
@@ -246,7 +246,7 @@ lazy val compilerPlugin = (project in file("compiler-plugin"))
     },
     Compile / packageBin / mappings ++= {
       val bundled = (annotation / Compile / packageBin / mappings).value ++
-        (astJVM / Compile / packageBin / mappings).value ++ (parserJVM / Compile / packageBin / mappings).value
+        (coreJVM / Compile / packageBin / mappings).value ++ (parserJVM / Compile / packageBin / mappings).value
       if (isScala3(scalaVersion.value)) Nil else bundled
     }
   )
@@ -268,7 +268,7 @@ def withScaladocPlugin(pluginOptions: String*) = Compile / scalacOptions ++= {
 }
 
 // sbt plugin that adds the compiler plugin (Scala 2) or `-Yread-docs` (Scala 3) and the libraries to a project
-lazy val sbtScaladoc = (project in file("sbt-plugin"))
+lazy val sbtScaladoc = (project in file("modules/plugins/sbt"))
   .enablePlugins(SbtPlugin)
   .settings(
     commonSettings,
@@ -305,7 +305,7 @@ lazy val sbtScaladoc = (project in file("sbt-plugin"))
 // next to the Scala.js one, and `Scaladoc.of` reads them from the compiled classes in the same way
 lazy val itExternal = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
-  .in(file("integration-tests/external-models"))
+  .in(file("modules/tests/integration/external-models"))
   .settings(
     commonSettings,
     scala2Only,
@@ -318,7 +318,7 @@ lazy val itExternal = crossProject(JVMPlatform, JSPlatform)
 // models compiled with include/exclude options; see FilteredClassesSpec for what is expected to be embedded
 lazy val itFiltered = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
-  .in(file("integration-tests/filtered-models"))
+  .in(file("modules/tests/integration/filtered-models"))
   .settings(
     commonSettings,
     scala2Only,
@@ -336,8 +336,8 @@ lazy val itFiltered = crossProject(JVMPlatform, JSPlatform)
 
 lazy val it = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Pure)
-  .in(file("integration-tests/suites"))
-  .dependsOn(ast, parser, itExternal, itFiltered)
+  .in(file("modules/tests/integration/suites"))
+  .dependsOn(core, parser, itExternal, itFiltered)
   .settings(
     commonSettings,
     scala2Only,
@@ -359,7 +359,7 @@ def releasedVersion(version: String, dir: File): String =
 lazy val docs = project
   .in(file("docs"))
   .enablePlugins(MdocPlugin, ParadoxMaterialThemePlugin, SitePreviewPlugin, GhpagesPlugin)
-  .dependsOn(astJVM, parserJVM)
+  .dependsOn(coreJVM, parserJVM)
   .settings(
     noPublish,
     name               := "scaladoc-docs",
@@ -409,20 +409,20 @@ lazy val docs = project
     }
   )
 
-// The Gradle plugin, in gradle-plugin/, is a Gradle build of its own. These tasks run it with this build's version,
+// The Gradle plugin, in modules/plugins/gradle, is a Gradle build of its own. These tasks run it with this build's version,
 // so CI tests it (after `+publishM2`, as its test builds take the libraries from the local Maven repository) and the
 // release publishes it with everything else.
 lazy val gradlePluginCheck   = taskKey[Unit]("Builds and tests the Gradle plugin; needs `+publishM2` first")
 lazy val gradlePluginPublish = taskKey[Unit]("Publishes the Gradle plugin to the Gradle Plugin Portal")
 
-// maven-tests/ is the Maven setup that the docs show, as a real build; it runs once per Scala version, from clean, so
+// modules/tests/maven is the Maven setup that the docs show, as a real build; it runs once per Scala version, from clean, so
 // one version's classes are never read by another
 lazy val mavenCheck = taskKey[Unit]("Tests the documented Maven setup on each Scala version; needs `+publishM2` first")
 
 def mvnw(base: File, version: String, log: Logger, scalaBinary: String): Unit = {
   val command = Seq("./mvnw", "-B", s"-Dscala=$scalaBinary", s"-Dscaladoc.version=$version", "clean", "verify")
   log.info(s"maven-tests: ${command.mkString(" ")}")
-  val exit = scala.sys.process.Process(command, base / "maven-tests").!(
+  val exit = scala.sys.process.Process(command, base / "modules" / "tests" / "maven").!(
     scala.sys.process.ProcessLogger(line => log.info(line), line => log.warn(line)))
   if (exit != 0) sys.error(s"maven-tests: Scala $scalaBinary failed with exit code $exit")
 }
@@ -430,14 +430,14 @@ def mvnw(base: File, version: String, log: Logger, scalaBinary: String): Unit = 
 def gradlew(base: File, version: String, log: Logger, tasks: String*): Unit = {
   val command = Seq("./gradlew", s"-PscaladocVersion=$version") ++ tasks
   log.info(s"gradle-plugin: ${command.mkString(" ")}")
-  val exit = scala.sys.process.Process(command, base / "gradle-plugin").!(
+  val exit = scala.sys.process.Process(command, base / "modules" / "plugins" / "gradle").!(
     scala.sys.process.ProcessLogger(line => log.info(line), line => log.warn(line)))
   if (exit != 0) sys.error(s"gradle-plugin: ${tasks.mkString(" ")} failed with exit code $exit")
 }
 
 lazy val root = (project in file("."))
   .aggregate(
-    annotation, astJVM, astJS, parserJVM, parserJS, compilerPlugin, sbtScaladoc,
+    annotation, coreJVM, coreJS, parserJVM, parserJS, compilerPlugin, sbtScaladoc,
     itExternal.jvm, itExternal.js, itFiltered.jvm, itFiltered.js, it.jvm, it.js
   )
   .settings(
