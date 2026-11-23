@@ -27,7 +27,7 @@
 <meta property="og:title" content="Getting started · Scaladoc">
 <link rel="stylesheet" href="assets/stylesheets/application.451f80e5.css">
 <link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
-<meta name="theme-color" content="#3f51b5" />
+<meta name="theme-color" content="#03a9f4" />
 <link rel="stylesheet" href="lib/material__tabs/dist/mdc.tabs.min.css">
 <link rel="stylesheet" href="lib/prettify/prettify.css">
 <script src="assets/javascripts/modernizr.1aa3b519.js"></script>
@@ -41,8 +41,8 @@ code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}
 <link rel="stylesheet" href="assets/stylesheets/paradox-material-theme.css">
 </head>
 <body
-data-md-color-primary="indigo"
-data-md-color-accent="orange"
+data-md-color-primary="light-blue"
+data-md-color-accent="cyan"
 >
 <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
 <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
@@ -167,7 +167,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.3.1*
+<i class="md-icon" title="Version">label_outline</i> 0.4.1*
 </label>
 </li>
 </ul>
@@ -204,7 +204,7 @@ andyglow/scaladoc
 <p>There are three ways in: the sbt plugin and the Gradle plugin, which know what each kind of module needs, or adding the dependencies by hand. The plugins are the shorter road, so they come first.</p>
 <h2><a href="#with-the-sbt-plugin" name="with-the-sbt-plugin" class="anchor"><span class="anchor-link"></span></a>With the sbt plugin</h2>
 <p>Add <code>sbt-scaladoc</code> to <code>project/plugins.sbt</code>:</p>
-<pre class="prettyprint"><code class="language-sbt">addSbtPlugin(&quot;io.github.andyglow&quot; % &quot;sbt-scaladoc&quot; % &quot;0.3.1-SNAPSHOT&quot;)
+<pre class="prettyprint"><code class="language-sbt">addSbtPlugin(&quot;io.github.andyglow&quot; % &quot;sbt-scaladoc&quot; % &quot;0.4.0&quot;)
 </code></pre>
 <p>and enable it on the modules that need it:</p>
 <pre class="prettyprint"><code class="language-sbt">lazy val model = project
@@ -263,13 +263,13 @@ andyglow/scaladoc
 <p>Gradle builds get the same setup from a Gradle plugin. Apply it next to Gradle&rsquo;s <code>scala</code> plugin:</p>
 <pre class="prettyprint"><code class="language-kotlin">plugins {
     scala
-    id(&quot;io.github.andyglow.scaladoc&quot;) version &quot;0.3.1-SNAPSHOT&quot;
+    id(&quot;io.github.andyglow.scaladoc&quot;) version &quot;0.4.0&quot;
 }
 </code></pre>
 <p>It reads the module&rsquo;s Scala version from its <code>scala-library</code> or <code>scala3-library_3</code> dependency, and then does what the sbt plugin does: the compiler plugin and the two libraries on Scala 2, the libraries and <code>-Yread-docs</code> on Scala 3. On Scala 2 the parser is only needed to compile, so it goes on <code>compileOnly</code> and <code>testImplementation</code>, not on the runtime classpath.</p>
 <p>A <code>scaladoc</code> block holds the settings, with the same meaning as the sbt plugin&rsquo;s:</p>
 <pre class="prettyprint"><code class="language-kotlin">scaladoc {
-    version.set(&quot;0.3.1-SNAPSHOT&quot;)                       // the plugin&#39;s own by default
+    version.set(&quot;0.4.0&quot;)                       // the plugin&#39;s own by default
     embed.set(false)                               // Scala 2: read scaladoc, don&#39;t embed any
     excludeClasses.add(&quot;com.acme.**.internal.*&quot;)   // also includePaths, excludePaths and includeClasses
 }
@@ -277,14 +277,14 @@ andyglow/scaladoc
 <p>The plugin runs on Gradle 8.5 and later.</p>
 <h2><a href="#by-hand" name="by-hand" class="anchor"><span class="anchor-link"></span></a>By hand</h2>
 <p>The libraries are two ordinary dependencies:</p>
-<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-ast&quot;    % &quot;0.3.1-SNAPSHOT&quot;
-libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.3.1-SNAPSHOT&quot;
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-ast&quot;    % &quot;0.4.0&quot;
+libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.4.0&quot;
 </code></pre>
 <p>To embed scaladoc into bytecode (Scala 2 only), add the compiler plugin as well. The parser is then only needed while compiling, so it can stay out of the runtime classpath:</p>
-<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.3.1-SNAPSHOT&quot;)
+<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.4.0&quot;)
 
-libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-ast&quot;    % &quot;0.3.1-SNAPSHOT&quot;
-libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.3.1-SNAPSHOT&quot; % Provided
+libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-ast&quot;    % &quot;0.4.0&quot;
+libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.4.0&quot; % Provided
 </code></pre>
 <p>On Scala 3, compile the modules that call <code>Scaladoc.of</code> with <code>-Yread-docs</code>:</p>
 <pre class="prettyprint"><code class="language-sbt">scalacOptions += &quot;-Yread-docs&quot;
@@ -353,7 +353,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.3.1*
+0.4.1*
 </span>
 </div>
 </article>
