@@ -3,583 +3,387 @@ package scaladoc.parser
 import scaladoc.Markup
 import scaladoc.Markup._
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.ListBuffer
 
-/** Markdown's block structure, as CommonMark specifies it (https://spec.commonmark.org), with GitHub Flavored
-  * Markdown's tables and task list items, and scaladoc's `{{{ ... }}}` code blocks: what Scala 3's scaladoc reads.
+/** Parses Markdown into a `Markup.Document`: CommonMark's blocks, with GitHub Flavored Markdown's tables and task list
+  * items, and scaladoc's `{{{ ... }}}`, as Scala 3's scaladoc reads them.
   *
-  * It follows the spec's parsing strategy, the one commonmark.js implements. A line first continues the blocks that
-  * are open, from the outermost in: a block quote takes its `>`, a list item its indentation. What's left may open
-  * new blocks, and the text that remains goes to the innermost one, or continues a paragraph "lazily". Blocks that a
-  * line doesn't continue are closed.
+  * A recursive descent parser like [[ParseMarkup]]: a document is a sequence of blocks, each recognized at the start of
+  * a line. A block quote's or a list item's content is its lines without the `>` or the item's indentation, parsed as a
+  * document of its own. A paragraph's, a heading's and a table cell's text becomes inline markup once all blocks are
+  * parsed, by `inlines`.
   *
-  * Inline content (of paragraphs, headings and table cells) is parsed by [[ParseMarkdown.inlines]].
+  * @param depth how deep in quotes and list items the text is: what would nest deeper than `MaxNesting` is text
   */
-private[parser] final class ParseMarkdown private (input: String) {
+private[parser] final class ParseMarkdown private (text: String, depth: Int) {
   import ParseMarkdown._
 
-  // the blocks while they're being built; `toMarkup` turns them into the model
-  private sealed abstract class Block {
-    var parent: Block = _
-    val children      = ArrayBuffer.empty[Block]
-    var open          = true
+  // the lines, with the tabs in their indentation expanded to the next multiple of 4
+  private val lines = splitLines(text).map(expandIndentation)
+  private var line  = 0
 
-    /** Whether `b` can be a child: list items only go into lists, and lists only hold items. */
-    def canContain(b: Block): Boolean = false
+  private def eof: Boolean = line >= lines.length
 
-    /** Whether the text left on a line goes into this block (rather than into a new paragraph). */
-    def acceptsLines: Boolean = false
-
-    /** Whether a line continues this block: `Matched` (having consumed its prefix), `NotMatched`, or `Consumed` (the
-      * line was this block's last, like a closing code fence).
-      */
-    def continues(): Continuation
-
-    /** Called when the block is closed. */
-    def finish(): Unit = ()
-  }
-
-  private abstract class TextBlock extends Block {
-    val content = new StringBuilder
-  }
-
-  private final class DocumentBlock extends Block {
-    override def canContain(b: Block): Boolean = !b.isInstanceOf[ItemBlock]
-    def continues(): Continuation              = Matched
-  }
-
-  private final class QuoteBlock extends Block {
-    override def canContain(b: Block): Boolean = !b.isInstanceOf[ItemBlock]
-    def continues(): Continuation =
-      if (!indented && peek(nextNonspace) == '>') {
-        advanceNextNonspace()
-        advanceOffset(1, columns = false)
-        if (isSpaceOrTab(peek(offset))) advanceOffset(1, columns = true)
-        Matched
-      } else NotMatched
-  }
-
-  private final class ListBlock(val marker: ListMarker) extends Block {
-    override def canContain(b: Block): Boolean = b.isInstanceOf[ItemBlock]
-    def continues(): Continuation              = Matched
-  }
-
-  private final class ItemBlock(val markerOffset: Int, val padding: Int) extends Block {
-    override def canContain(b: Block): Boolean = !b.isInstanceOf[ItemBlock]
-    def continues(): Continuation =
-      if (blank) {
-        // an item that starts with a blank line ends at the next one
-        if (children.isEmpty) NotMatched else { advanceNextNonspace(); Matched }
-      } else if (indent >= markerOffset + padding) {
-        advanceOffset(markerOffset + padding, columns = true)
-        Matched
-      } else NotMatched
-  }
-
-  private final class ParagraphBlock extends TextBlock {
-    override def acceptsLines: Boolean = true
-    def continues(): Continuation      = if (blank) NotMatched else Matched
-  }
-
-  private final class HeadingBlock(val level: Int, val text: String) extends Block {
-    def continues(): Continuation = NotMatched
-  }
-
-  private final class RuleBlock extends Block {
-    def continues(): Continuation = NotMatched
-  }
-
-  /** ```` ``` ```` or `~~~`, `fenceOffset` the fence's indentation, which the code's lines lose. */
-  private final class FencedBlock(val fenceChar: Char, val fenceLength: Int, val fenceOffset: Int) extends TextBlock {
-    var info = ""
-    override def acceptsLines: Boolean = true
-    def continues(): Continuation = {
-      val closes = indent <= 3 && peek(nextNonspace) == fenceChar && {
-        val run = line.iterator.drop(nextNonspace).takeWhile(_ == fenceChar).size
-        run >= fenceLength && line.substring(nextNonspace + run).forall(isSpaceOrTab)
-      }
-      if (closes) { close(this); Consumed }
+  def blocks(): List[Block] = {
+    val out = ListBuffer.empty[Block]
+    while (!eof) {
+      if (isBlank(lines(line))) line += 1
       else {
-        var i = fenceOffset
-        while (i > 0 && isSpaceOrTab(peek(offset))) { advanceOffset(1, columns = true); i -= 1 }
-        Matched
+        val from = line
+        out ++= block()
+        if (line == from) line += 1 // can't happen, but never loop forever
       }
     }
-    // the first line is the info string
-    override def finish(): Unit = {
-      val text = content.toString
-      val nl   = text.indexOf('\n')
-      info = unescape(if (nl < 0) text else text.substring(0, nl)).trim
-      content.setLength(0)
-      if (nl >= 0) content.append(text.substring(nl + 1))
-    }
+    out.toList
   }
 
-  /** scaladoc's `{{{ ... }}}`, which Scala 3 reads in Markdown too. */
-  private final class WikiCodeBlock extends TextBlock {
-    override def acceptsLines: Boolean = true
-    def continues(): Continuation =
-      if (indent <= 3 && line.startsWith("}}}", nextNonspace)) { close(this); Consumed } else Matched
-  }
-
-  private final class IndentedCodeBlock extends TextBlock {
-    override def acceptsLines: Boolean = true
-    def continues(): Continuation =
-      if (indent >= 4) { advanceOffset(4, columns = true); Matched }
-      else if (blank) { advanceNextNonspace(); Matched }
-      else NotMatched
-  }
-
-  /** One of the spec's seven kinds of HTML block; 6 and 7 end at a blank line, the others at their end marker. */
-  private final class HtmlBlock(val kind: Int) extends TextBlock {
-    override def acceptsLines: Boolean = true
-    def continues(): Continuation      = if (blank && (kind == 6 || kind == 7)) NotMatched else Matched
-  }
-
-  /** A GFM table; each line that continues it is a row. */
-  private final class TableBlock(val header: List[String], val alignments: List[Table.Alignment]) extends Block {
-    val rows                           = ArrayBuffer.empty[List[String]]
-    override def acceptsLines: Boolean = true
-    def continues(): Continuation      = if (blank) NotMatched else Matched
-  }
-
-  // where the parser is, as in commonmark.js: `offset` in the line's characters, `column` with tabs expanded to the
-  // next multiple of 4, and whether a tab was only partly consumed (when a container takes some of its columns)
-  private var line                 = ""
-  private var offset               = 0
-  private var column               = 0
-  private var nextNonspace         = 0
-  private var nextNonspaceColumn   = 0
-  private var indent               = 0
-  private var indented             = false
-  private var blank                = false
-  private var partiallyConsumedTab = false
-
-  private val document              = new DocumentBlock
-  private var tip: Block            = document
-  private var oldTip: Block         = document
-  private var lastMatched: Block    = document
-  private var allClosed             = true
-
-  private def peek(i: Int): Char = if (i < line.length) line.charAt(i) else EOL
-
-  private def findNextNonspace(): Unit = {
-    var i    = offset
-    var cols = column
-    while (i < line.length && isSpaceOrTab(line.charAt(i))) {
-      cols += (if (line.charAt(i) == '\t') 4 - (cols % 4) else 1)
-      i += 1
-    }
-    blank = i >= line.length
-    nextNonspace = i
-    nextNonspaceColumn = cols
-    indent = nextNonspaceColumn - column
-    indented = indent >= 4
-  }
-
-  private def advanceNextNonspace(): Unit = {
-    offset = nextNonspace
-    column = nextNonspaceColumn
-    partiallyConsumedTab = false
-  }
-
-  private def advanceOffset(count: Int, columns: Boolean): Unit = {
-    var left = count
-    while (left > 0 && offset < line.length) {
-      if (line.charAt(offset) == '\t') {
-        val toTab = 4 - (column % 4)
-        if (columns) {
-          partiallyConsumedTab = toTab > left
-          val advance = math.min(left, toTab)
-          column += advance
-          if (!partiallyConsumedTab) offset += 1
-          left -= advance
-        } else {
-          partiallyConsumedTab = false
-          column += toTab
-          offset += 1
-          left -= 1
-        }
-      } else {
-        partiallyConsumedTab = false
-        offset += 1
-        column += 1
-        left -= 1
-      }
-    }
-  }
-
-  private def addLine(): Unit = tip match {
-    // the rest of a delimiter row, once the table has started, is empty: it's not a row
-    case table: TableBlock => if (!line.substring(offset).forall(isSpaceOrTab)) table.rows += splitRow(line.substring(offset))
-    case b: TextBlock =>
-      if (partiallyConsumedTab) {
-        // the rest of a tab a container took part of
-        offset += 1
-        b.content.append(" " * (4 - (column % 4)))
-      }
-      b.content.append(line.substring(offset)).append('\n')
-    case _ =>
-  }
-
-  private def addChild(b: Block): Block = {
-    while (!tip.canContain(b)) close(tip)
-    b.parent = tip
-    tip.children += b
-    tip = b
-    b
-  }
-
-  private def close(b: Block): Unit = {
-    b.open = false
-    b.finish()
-    tip = b.parent
-  }
-
-  private def closeUnmatchedBlocks(): Unit = if (!allClosed) {
-    while (oldTip ne lastMatched) {
-      val parent = oldTip.parent
-      close(oldTip)
-      oldTip = parent
-    }
-    allClosed = true
-  }
-
-  private def replace(old: Block, by: Block): Unit = {
-    val parent = old.parent
-    parent.children(parent.children.indexOf(old)) = by
-    by.parent = parent
-    tip = by
-  }
-
-  // block starts, tried in this order; each says whether it started a container (more starts may follow on the same
-  // line), a leaf (the rest of the line is its content), or nothing
-  private def blockQuoteStart(container: Block): Start =
-    if (!indented && peek(nextNonspace) == '>') {
-      advanceNextNonspace()
-      advanceOffset(1, columns = false)
-      if (isSpaceOrTab(peek(offset))) advanceOffset(1, columns = true)
-      closeUnmatchedBlocks()
-      addChild(new QuoteBlock)
-      ContainerStart
-    } else NoStart
-
-  private def atxHeadingStart(container: Block): Start =
-    if (indented) NoStart
+  private def block(): Option[Block] = {
+    val n = line
+    if (indentOf(lines(n)) >= 4) Some(indentedCode())
     else
-      AtxHeading.findPrefixMatchOf(line.substring(nextNonspace)) match {
-        case Some(m) =>
-          advanceNextNonspace()
-          advanceOffset(m.matched.length, columns = false)
-          closeUnmatchedBlocks()
-          val text = line.substring(offset).replaceAll("^[ \t]*#+[ \t]*$", "").replaceAll("[ \t]+#+[ \t]*$", "")
-          addChild(new HeadingBlock(m.group(1).length, text))
-          advanceOffset(line.length - offset, columns = false)
-          LeafStart
-        case None => NoStart
+      fenceAt(n) match {
+        case Some((c, length, indent, info)) => Some(fencedCode(c, length, indent, info))
+        case None if wikiCodeAt(n)           => Some(wikiCode())
+        case None =>
+          atxHeadingAt(n) match {
+            case Some((level, title)) => line += 1; Some(HeadingBlock(level, title))
+            case None if ruleAt(n)    => line += 1; Some(RuleBlock)
+            case None =>
+              htmlBlockAt(n) match {
+                case Some(kind)                                => Some(htmlBlock(kind))
+                case None if quoteAt(n) && depth < MaxNesting => Some(quote())
+                case None =>
+                  listItemAt(n) match {
+                    case Some(item) if depth + 2 <= MaxNesting => Some(list(item))
+                    case _ =>
+                      tableAt(n) match {
+                        case Some((header, alignments)) => Some(table(header, alignments))
+                        case None                       => Some(paragraph())
+                      }
+                  }
+              }
+          }
       }
+  }
 
-  private def fencedCodeStart(container: Block): Start =
-    if (indented) NoStart
-    else
-      CodeFence.findPrefixMatchOf(line.substring(nextNonspace)) match {
-        case Some(m) =>
-          val fence = m.matched
-          closeUnmatchedBlocks()
-          addChild(new FencedBlock(fence.charAt(0), fence.length, indent))
-          advanceNextNonspace()
-          advanceOffset(fence.length, columns = false)
-          LeafStart
-        case None => NoStart
-      }
+  // ---- what starts at a line
 
-  private def wikiCodeStart(container: Block): Start =
-    if (!indented && line.startsWith("{{{", nextNonspace)) {
-      closeUnmatchedBlocks()
-      addChild(new WikiCodeBlock)
-      advanceNextNonspace()
-      advanceOffset(3, columns = false)
-      LeafStart
-    } else NoStart
+  // `#`s, a space and the title, maybe with closing `#`s: the level and the title
+  private def atxHeadingAt(n: Int): Option[(Int, String)] = {
+    val s     = lines(n)
+    val start = indentOf(s)
+    val end   = runEnd(s, start, '#')
+    val level = end - start
+    if (start > 3 || level < 1 || level > 6 || (end < s.length && !isSpaceOrTab(s.charAt(end)))) None
+    else Some((level, atxTitle(s.substring(end)).trim))
+  }
 
-  private def htmlBlockStart(container: Block): Start =
-    if (indented || peek(nextNonspace) != '<') NoStart
+  // 3 or more backticks or tildes: the character, how many, the fence's indentation and the info string. A backtick
+  // fence's info string has no backticks.
+  private def fenceAt(n: Int): Option[(Char, Int, Int, String)] = {
+    val s      = lines(n)
+    val indent = indentOf(s)
+    if (indent > 3 || indent >= s.length || (s.charAt(indent) != '`' && s.charAt(indent) != '~')) None
     else {
-      val rest = line.substring(nextNonspace)
-      HtmlBlockOpen.indexWhere(_.pattern.matcher(rest).lookingAt()) match {
-        // the 7th kind can't interrupt a paragraph
-        case i if i >= 0 && !(i == 6 && container.isInstanceOf[ParagraphBlock]) =>
-          closeUnmatchedBlocks()
-          addChild(new HtmlBlock(i + 1))
-          LeafStart
-        case _ => NoStart
-      }
+      val c    = s.charAt(indent)
+      val end  = runEnd(s, indent, c)
+      val info = s.substring(end)
+      if (end - indent < 3 || (c == '`' && info.indexOf('`') >= 0)) None
+      else Some((c, end - indent, indent, unescapeInfo(info.trim)))
     }
-
-  private def tableStart(container: Block): Start = container match {
-    case para: ParagraphBlock if !indented =>
-      val delimiter = line.substring(nextNonspace)
-      val lines     = para.content.toString.split("\n").toList
-      (delimiter.indexOf('|') >= 0, alignmentsOf(delimiter)) match {
-        case (true, Some(alignments)) =>
-          val header = splitRow(lines.last)
-          if (header.length != alignments.length) NoStart
-          else {
-            closeUnmatchedBlocks()
-            val table = new TableBlock(header, alignments)
-            if (lines.length == 1) replace(para, table)
-            else {
-              // the lines before the header stay a paragraph
-              para.content.setLength(0)
-              para.content.append(lines.init.mkString("", "\n", "\n"))
-              close(para)
-              addChild(table)
-            }
-            advanceOffset(line.length - offset, columns = false)
-            LeafStart
-          }
-        case _ => NoStart
-      }
-    case _ => NoStart
   }
 
-  private def setextHeadingStart(container: Block): Start = container match {
-    case para: ParagraphBlock if !indented =>
-      SetextUnderline.findFirstMatchIn(line.substring(nextNonspace)) match {
-        case Some(m) =>
-          closeUnmatchedBlocks()
-          val level = if (m.matched.charAt(0) == '=') 1 else 2
-          replace(para, new HeadingBlock(level, para.content.toString.trim))
-          advanceOffset(line.length - offset, columns = false)
-          LeafStart
-        case None => NoStart
-      }
-    case _ => NoStart
+  private def closingFenceAt(n: Int, c: Char, length: Int): Boolean = {
+    val s      = lines(n)
+    val indent = indentOf(s)
+    val end    = runEnd(s, indent, c)
+    indent <= 3 && end - indent >= length && isBlank(s.substring(end))
   }
 
-  private def thematicBreakStart(container: Block): Start =
-    if (!indented && ThematicBreak.pattern.matcher(line.substring(nextNonspace)).matches()) {
-      closeUnmatchedBlocks()
-      addChild(new RuleBlock)
-      advanceOffset(line.length - offset, columns = false)
-      LeafStart
-    } else NoStart
-
-  private def listItemStart(container: Block): Start = listMarker(container) match {
-    case Some((marker, markerOffset, padding)) =>
-      closeUnmatchedBlocks()
-      tip match {
-        case list: ListBlock if list.marker.sameList(marker) =>
-        case _                                               => addChild(new ListBlock(marker))
-      }
-      addChild(new ItemBlock(markerOffset, padding))
-      ContainerStart
-    case None => NoStart
+  private def wikiCodeAt(n: Int): Boolean = {
+    val s = lines(n)
+    indentOf(s) <= 3 && s.startsWith("{{{", indentOf(s))
   }
 
-  private def indentedCodeStart(container: Block): Start =
-    if (indented && !tip.isInstanceOf[ParagraphBlock] && !blank) {
-      advanceOffset(4, columns = true)
-      closeUnmatchedBlocks()
-      addChild(new IndentedCodeBlock)
-      LeafStart
-    } else NoStart
+  // 3 or more of the same `*`, `-` or `_`, maybe with spaces between, and nothing else
+  private def ruleAt(n: Int): Boolean = {
+    val s     = lines(n)
+    val start = indentOf(s)
+    start <= 3 && start < s.length && "*-_".indexOf(s.charAt(start)) >= 0 && {
+      val c = s.charAt(start)
+      s.substring(start).forall(x => x == c || isSpaceOrTab(x)) && s.count(_ == c) >= 3
+    }
+  }
 
-  private val starts: List[Block => Start] = List(
-    blockQuoteStart,
-    atxHeadingStart,
-    fencedCodeStart,
-    wikiCodeStart,
-    htmlBlockStart,
-    tableStart,
-    setextHeadingStart,
-    thematicBreakStart,
-    listItemStart,
-    indentedCodeStart
-  )
+  // a line of `=`s or `-`s under a paragraph: the heading's level
+  private def setextAt(n: Int): Option[Int] = {
+    val s     = lines(n)
+    val start = indentOf(s)
+    if (start > 3 || start >= s.length || (s.charAt(start) != '=' && s.charAt(start) != '-')) None
+    else if (!isBlank(s.substring(runEnd(s, start, s.charAt(start))))) None
+    else Some(if (s.charAt(start) == '=') 1 else 2)
+  }
 
-  /** A list marker at the line's next non-space, and the item's marker offset and padding: where its content starts.
-    * Moves past the marker and the spaces after it.
-    */
-  private def listMarker(container: Block): Option[(ListMarker, Int, Int)] =
-    if (indent >= 4) None
+  private def quoteAt(n: Int): Boolean = {
+    val s = lines(n)
+    indentOf(s) <= 3 && indentOf(s) < s.length && s.charAt(indentOf(s)) == '>'
+  }
+
+  // which of the spec's seven kinds of HTML block starts here, 1 to 7
+  private def htmlBlockAt(n: Int): Option[Int] = {
+    val s = lines(n)
+    if (indentOf(s) > 3) None else MarkdownHtml.blockAt(s, indentOf(s))
+  }
+
+  // `-`, `+`, `*`, or a number and `.` or `)`, then a space or the line's end
+  private def listItemAt(n: Int): Option[ItemStart] = {
+    val s      = lines(n)
+    val indent = indentOf(s)
+    if (indent > 3 || indent >= s.length) None
     else {
-      val rest = line.substring(nextNonspace)
-      val found: Option[(ListMarker, Int)] =
-        if (rest.nonEmpty && "*+-".indexOf(rest.charAt(0)) >= 0) Some((Bullet(rest.charAt(0)), 1))
-        else
-          OrderedMarker.findPrefixMatchOf(rest).flatMap { m =>
-            // a list can interrupt a paragraph only if it starts at 1
-            if (container.isInstanceOf[ParagraphBlock] && m.group(1) != "1") None
-            else Some((Ordered(m.group(2).charAt(0), m.group(1).toInt), m.matched.length))
-          }
-      found.flatMap { case (marker, length) =>
-        val after = peek(nextNonspace + length)
-        if (after != EOL && !isSpaceOrTab(after)) None
-        // an empty item can't interrupt a paragraph
-        else if (container.isInstanceOf[ParagraphBlock] && line.substring(nextNonspace + length).forall(isSpaceOrTab)) None
+      val c = s.charAt(indent)
+      val marker: Option[(ListMarker, Int)] =
+        if ("*+-".indexOf(c) >= 0) Some((Bullet(c), indent + 1))
         else {
-          val markerOffset = indent
-          advanceNextNonspace()
-          advanceOffset(length, columns = true)
-          val spacesStartColumn = column
-          val spacesStartOffset = offset
-          advanceOffset(1, columns = true)
-          while (column - spacesStartColumn < 5 && isSpaceOrTab(peek(offset))) advanceOffset(1, columns = true)
-          val blankItem         = peek(offset) == EOL
-          val spacesAfterMarker = column - spacesStartColumn
-          val padding =
-            if (spacesAfterMarker >= 5 || spacesAfterMarker < 1 || blankItem) {
-              // the content starts one space after the marker: the rest is indentation, like indented code's
-              column = spacesStartColumn
-              offset = spacesStartOffset
-              if (isSpaceOrTab(peek(offset))) advanceOffset(1, columns = true)
-              length + 1
-            } else length + spacesAfterMarker
-          Some((marker, markerOffset, padding))
+          var digits = indent
+          while (digits < s.length && digits - indent < 9 && isAsciiDigit(s.charAt(digits))) digits += 1
+          if (digits == indent || digits >= s.length || (s.charAt(digits) != '.' && s.charAt(digits) != ')')) None
+          else Some((Ordered(s.charAt(digits), s.substring(indent, digits).toInt), digits + 1))
+        }
+      marker.flatMap { case (m, markerEnd) =>
+        if (markerEnd < s.length && !isSpaceOrTab(s.charAt(markerEnd))) None
+        else {
+          // the tabs after the marker, as the spaces they take to the next multiple of 4
+          val s = lines(n).substring(0, markerEnd) + expandFrom(lines(n).substring(markerEnd), markerEnd)
+          val spaces = runEnd(s, markerEnd, ' ') - markerEnd
+          val empty  = isBlank(s.substring(markerEnd))
+          // the content starts after the spaces; with 5 or more, one is the separator, and the rest indent the content
+          val contentOffset = if (empty || spaces >= 5) markerEnd + 1 else markerEnd + spaces
+          val firstLine     = if (empty) "" else s.substring(math.min(contentOffset, s.length))
+          Some(ItemStart(m, contentOffset, firstLine, empty))
         }
       }
     }
-
-  private def incorporate(ln: String): Unit = {
-    line = ln
-    offset = 0
-    column = 0
-    blank = false
-    partiallyConsumedTab = false
-
-    // 1. the open blocks the line continues
-    var container: Block = document
-    oldTip = tip
-    var done      = false
-    var consumed  = false
-    while (!done && container.children.nonEmpty && container.children.last.open) {
-      val last = container.children.last
-      findNextNonspace()
-      last.continues() match {
-        case Matched    => container = last
-        case NotMatched => done = true
-        case Consumed   => done = true; consumed = true
-      }
-    }
-    if (consumed) return
-
-    allClosed = container eq oldTip
-    lastMatched = container
-
-    // 2. the blocks it starts; tables, like paragraphs, can be interrupted by other blocks
-    var matchedLeaf = container.acceptsLines && !container.isInstanceOf[ParagraphBlock] &&
-      !container.isInstanceOf[TableBlock]
-    while (!matchedLeaf) {
-      findNextNonspace()
-      starts.iterator.map(_(container)).find(_ != NoStart) match {
-        case Some(ContainerStart) => container = tip
-        case Some(_)              => container = tip; matchedLeaf = true
-        case None                 => advanceNextNonspace(); matchedLeaf = true
-      }
-    }
-
-    // 3. what's left of it: a paragraph's continuation (even "lazily", without the prefixes of the blocks it's in), a
-    // line of the innermost block, or a new paragraph
-    if (!allClosed && !blank && tip.isInstanceOf[ParagraphBlock]) addLine()
-    else {
-      closeUnmatchedBlocks()
-      if (container.acceptsLines) {
-        addLine()
-        container match {
-          case html: HtmlBlock if html.kind <= 5 && HtmlBlockClose(html.kind - 1).findFirstIn(line.substring(offset)).nonEmpty =>
-            close(html)
-          case _ =>
-        }
-      } else if (offset < line.length && !blank) {
-        addChild(new ParagraphBlock)
-        advanceNextNonspace()
-        addLine()
-      }
-    }
   }
 
-  def run(): Document = {
-    // a trailing newline doesn't make a last, empty line
-    val lines = input.split("\n", -1)
-    val count = if (lines.nonEmpty && lines.last.isEmpty) lines.length - 1 else lines.length
-    var i = 0
-    while (i < count) { incorporate(lines(i).replace("\r", "")); i += 1 }
-    while (tip ne null) close(tip)
-    toDocument(document)
+  // a header row and, on the next line, a delimiter row of as many cells: the header's cells and the alignments
+  private def tableAt(n: Int): Option[(List[String], List[Table.Alignment])] =
+    if (n + 1 >= lines.length || indentOf(lines(n + 1)) > 3 || lines(n + 1).indexOf('|') < 0) None
+    else
+      alignmentsOf(lines(n + 1)).flatMap { alignments =>
+        val header = splitRow(lines(n))
+        if (header.length == alignments.length) Some((header, alignments)) else None
+      }
+
+  // whether a line ends a paragraph: a blank line, or a block that can start right after a paragraph's line. A list
+  // can if it starts at 1 and has text; an HTML block of the 7th kind can't.
+  private def interruptsAt(n: Int): Boolean =
+    isBlank(lines(n)) || fenceAt(n).isDefined || wikiCodeAt(n) || atxHeadingAt(n).isDefined || ruleAt(n) ||
+      htmlBlockAt(n).exists(_ < 7) || quoteAt(n) || tableAt(n).isDefined ||
+      listItemAt(n).exists(item => !item.empty && (item.marker match {
+        case Ordered(_, start) => start == 1
+        case _                 => true
+      }))
+
+  // whether the first line is a paragraph's text, rather than the start of another block
+  private def startsWithText: Boolean =
+    lines.nonEmpty && !isBlank(lines(0)) && indentOf(lines(0)) < 4 && fenceAt(0).isEmpty && !wikiCodeAt(0) &&
+      atxHeadingAt(0).isEmpty && !ruleAt(0) && htmlBlockAt(0).isEmpty && !quoteAt(0) && listItemAt(0).isEmpty
+
+  // whether the line after `last` can go on lazily, without the quote's `>` or the item's indentation: `last`, without
+  // the quotes' and items' markers it's in, is a paragraph's
+  private def continuesLazily(last: String): Boolean = {
+    var s    = last
+    var more = true
+    while (more && indentOf(s) < 4 && indentOf(s) < s.length) {
+      val t = s.substring(indentOf(s))
+      if (t.charAt(0) == '>') s = if (t.startsWith("> ")) t.substring(2) else t.substring(1)
+      else if (t.length > 1 && "*+-".indexOf(t.charAt(0)) >= 0 && t.charAt(1) == ' ') s = t.substring(2)
+      else {
+        // `1.` or `1)`
+        val digits = runWhile(t, 0, isAsciiDigit)
+        if (digits > 0 && digits + 1 < t.length && ".)".indexOf(t.charAt(digits)) >= 0 && t.charAt(digits + 1) == ' ')
+          s = t.substring(digits + 2)
+        else more = false
+      }
+    }
+    new ParseMarkdown(s, MaxNesting).startsWithText
   }
 
-  private def toDocument(b: Block): Document = Document(b.children.toList.flatMap(toMarkup))
+  // a lazy line goes on its paragraph as is, whatever it would be on its own: indented, it can't start a block
+  private def lazyLine(s: String): String = "    " + s.trim
 
-  private def toMarkup(b: Block): List[Markup] = b match {
-    case p: ParagraphBlock =>
-      val spans = inlines(p.content.toString)
-      if (spans.isEmpty) Nil else List(Paragraph(spans))
-    case h: HeadingBlock      => List(Heading(Heading.levelOf(h.level), inlines(h.text)))
-    case _: RuleBlock         => List(HorizontalRule)
-    case q: QuoteBlock        => List(BlockQuote(toDocument(q)))
-    case f: FencedBlock       => List(CodeBlock(dropLastNewline(f.content.toString), f.info.split("[ \t]+").headOption.filter(_.nonEmpty)))
-    case c: IndentedCodeBlock => List(CodeBlock(c.content.toString.replaceAll("(?:\n[ \t]*)+\\z", "").stripSuffix("\n")))
-    case c: WikiCodeBlock     => List(CodeBlock(ParseMarkup.normalizeCode(c.content.toString)))
-    case h: HtmlBlock         => List(HtmlTag(dropLastNewline(h.content.toString)))
-    case t: TableBlock =>
-      val width = t.header.length
-      def row(cells: List[String]) =
-        Table.Row(cells.padTo(width, "").take(width).map(cell => Paragraph(inlines(cell))))
-      List(Table(row(t.header), t.alignments, t.rows.toList.map(row)))
-    case l: ListBlock =>
-      val items = l.children.toList.collect { case item: ItemBlock => taskItem(toDocument(item), item) }
-      l.marker match {
-        case _: Bullet  => List(UnorderedList(items))
-        case _: Ordered => List(OrderedList(items, OrderedList.Decimal))
+  // ---- blocks
+
+  // its lines, up to one that ends it; a line of `=`s or `-`s under them makes them a heading
+  private def paragraph(): Block = {
+    val text = ListBuffer(lines(line).trim)
+    line += 1
+    var heading: Option[Int] = None
+    var more                 = true
+    while (!eof && heading.isEmpty && more) {
+      setextAt(line) match {
+        case Some(level) => heading = Some(level); line += 1
+        case None if interruptsAt(line) => more = false
+        case None => text += lines(line).trim; line += 1
       }
-    case _ => Nil
+    }
+    heading.fold[Block](ParagraphBlock(text.mkString("\n")))(HeadingBlock(_, text.mkString("\n")))
   }
 
-  // a GFM task list item: its first paragraph starts with `[ ]` or `[x]` and a space
-  private def taskItem(doc: Document, item: ItemBlock): Document = item.children.headOption match {
-    case Some(p: ParagraphBlock) =>
-      TaskMarker.findPrefixMatchOf(p.content.toString) match {
-        case Some(m) =>
-          val checkbox = Checkbox(checked = m.group(1) != " ")
-          val rest     = inlines(p.content.toString.substring(m.end))
-          // the space after the checkbox goes with the text: `[x] done` is `Checkbox(true)`, `PlainText(" done")`
-          val text = rest match {
-            case PlainText(t) :: more => PlainText(" " + t) :: more
-            case Nil                  => Nil
-            case more                 => PlainText(" ") :: more
-          }
-          val first = Paragraph(checkbox :: text)
-          Document(first :: doc.elements.drop(1))
-        case None => doc
+  private def indentedCode(): Block = {
+    val code = ListBuffer.empty[String]
+    while (!eof && (indentOf(lines(line)) >= 4 || isBlank(lines(line)))) {
+      code += (if (lines(line).length >= 4) lines(line).substring(4) else "")
+      line += 1
+    }
+    // the blank lines after it aren't part of it
+    while (code.nonEmpty && isBlank(code.last)) code.remove(code.length - 1)
+    Code(code.mkString("\n"), None)
+  }
+
+  // up to a closing fence, or the end; its lines lose as much indentation as the fence has
+  private def fencedCode(c: Char, length: Int, indent: Int, info: String): Block = {
+    line += 1
+    val code = ListBuffer.empty[String]
+    while (!eof && !closingFenceAt(line, c, length)) {
+      val s = lines(line)
+      code += s.substring(math.min(indentOf(s), indent))
+      line += 1
+    }
+    if (!eof) line += 1
+    Code(code.mkString("\n"), Some(info.takeWhile(!isSpaceOrTab(_))).filter(_.nonEmpty))
+  }
+
+  // `{{{`, up to a line that starts with `}}}`
+  private def wikiCode(): Block = {
+    val first = lines(line)
+    val code  = ListBuffer(first.substring(indentOf(first) + 3))
+    line += 1
+    while (!eof && !lines(line).trim.startsWith("}}}")) { code += lines(line); line += 1 }
+    if (!eof) line += 1
+    Code(normalizeCode(code.mkString("\n")), None)
+  }
+
+  // kinds 1 to 5 go up to their end marker, 6 and 7 to a blank line
+  private def htmlBlock(kind: Int): Block = {
+    val html = ListBuffer.empty[String]
+    var done = false
+    while (!eof && !done) {
+      val s = lines(line)
+      if (kind >= 6 && isBlank(s)) done = true
+      else {
+        html += s
+        line += 1
+        if (kind <= 5 && MarkdownHtml.blockEnds(kind, s)) done = true
       }
-    case _ => doc
+    }
+    HtmlBlock(html.mkString("\n"))
+  }
+
+  // its lines without their `>`, and the lines that continue its last paragraph without one ("lazily")
+  private def quote(): Block = {
+    val content = ListBuffer.empty[String]
+    var more    = true
+    var lazily  = false // whether the last line went on lazily: then the paragraph goes on
+    while (!eof && more) {
+      val s = lines(line)
+      if (quoteAt(line)) {
+        val after = indentOf(s) + 1
+        // a space after the `>` is part of it; a tab there, as many spaces as it takes, one of them
+        val rest = expandFrom(s.substring(after), after)
+        content += (if (rest.startsWith(" ")) rest.substring(1) else rest)
+        line += 1
+        lazily = false
+      } else if (content.nonEmpty && (lazily || continuesLazily(content.last)) && !interruptsAt(line)) {
+        content += lazyLine(s)
+        line += 1
+        lazily = true
+      } else more = false
+    }
+    QuoteBlock(new ParseMarkdown(content.mkString("\n"), depth + 1).blocks())
+  }
+
+  // a list's items: of the same kind of marker, with blank lines between them or not
+  private def list(first: ItemStart): Block = {
+    val items = ListBuffer.empty[List[Block]]
+    var next  = Option(first)
+    while (next.isDefined) {
+      items += item(next.get)
+      val from = line
+      while (!eof && isBlank(lines(line))) line += 1
+      next = if (eof || ruleAt(line)) None else listItemAt(line).filter(_.marker.sameList(first.marker))
+      if (next.isEmpty) line = from
+    }
+    Items(first.marker, items.toList)
+  }
+
+  // an item's lines: its first, those indented as far as its content, the blank lines between them, and the lines
+  // that continue its last paragraph lazily
+  private def item(start: ItemStart): List[Block] = {
+    val content = ListBuffer(start.firstLine)
+    line += 1
+    // an item can start with one blank line at most
+    var more   = !(start.empty && (eof || isBlank(lines(line))))
+    var lazily = false // whether the last line went on lazily: then the paragraph goes on
+    while (!eof && more) {
+      val s = lines(line)
+      if (isBlank(s)) {
+        lazily = false
+        // blank lines are in the item if it goes on after them
+        var k = line
+        while (k < lines.length && isBlank(lines(k))) k += 1
+        if (k < lines.length && indentOf(lines(k)) >= start.contentOffset) {
+          while (line < k) { content += ""; line += 1 }
+        } else more = false
+      } else if (indentOf(s) >= start.contentOffset) {
+        content += s.substring(start.contentOffset)
+        line += 1
+        lazily = false
+      } else if (listItemAt(line).isEmpty && (lazily || continuesLazily(content.last)) && !interruptsAt(line)) {
+        content += lazyLine(s)
+        line += 1
+        lazily = true
+      } else more = false
+    }
+    new ParseMarkdown(content.mkString("\n"), depth + 2).blocks()
+  }
+
+  // its rows: the lines after the delimiter row, up to a blank one or another block
+  private def table(header: List[String], alignments: List[Table.Alignment]): Block = {
+    line += 2
+    val rows = ListBuffer.empty[List[String]]
+    while (!eof && !isBlank(lines(line)) && !(quoteAt(line) || fenceAt(line).isDefined || wikiCodeAt(line) ||
+             atxHeadingAt(line).isDefined || ruleAt(line) || htmlBlockAt(line).exists(_ < 7))) {
+      rows += splitRow(lines(line))
+      line += 1
+    }
+    TableBlock(header, alignments, rows.toList)
   }
 }
 
 private[parser] object ParseMarkdown {
 
-  def apply(text: String): Document = new ParseMarkdown(text).run()
+  def apply(text: String): Document = toDocument(new ParseMarkdown(text, 0).blocks())
 
-  /** The inline markup of a paragraph's, a heading's or a table cell's text. For now just its text, without the
-    * spaces around its lines.
+  /** How deep quotes and lists nest at most, as markdown-it's `maxNesting`: what would nest deeper is text. The model
+    * is a tree, and what walks it recurses.
     */
-  def inlines(text: String): List[Span] = {
-    val lines = text.split("\n").map(_.trim).filter(_.nonEmpty)
-    if (lines.isEmpty) Nil else List(PlainText(lines.mkString("\n")))
-  }
+  final val MaxNesting = 100
 
-  private sealed trait Continuation
-  private case object Matched    extends Continuation
-  private case object NotMatched extends Continuation
-  private case object Consumed   extends Continuation
+  // the blocks while they're being parsed: their text becomes inline markup once they all are
+  sealed trait Block
+  final case class ParagraphBlock(text: String)                      extends Block
+  final case class HeadingBlock(level: Int, text: String)            extends Block
+  final case class Code(code: String, language: Option[String])      extends Block
+  final case class HtmlBlock(html: String)                           extends Block
+  case object RuleBlock                                               extends Block
+  final case class QuoteBlock(content: List[Block])                  extends Block
+  final case class Items(marker: ListMarker, items: List[List[Block]]) extends Block
+  final case class TableBlock(header: List[String], alignments: List[Table.Alignment], rows: List[List[String]])
+      extends Block
 
-  private sealed trait Start
-  private case object NoStart        extends Start
-  private case object ContainerStart extends Start
-  private case object LeafStart      extends Start
-
-  private sealed trait ListMarker {
+  sealed trait ListMarker {
     // items with different bullets, or different delimiters, are in different lists
     def sameList(other: ListMarker): Boolean = (this, other) match {
       case (Bullet(a), Bullet(b))         => a == b
@@ -587,57 +391,187 @@ private[parser] object ParseMarkdown {
       case _                              => false
     }
   }
-  private final case class Bullet(char: Char)                 extends ListMarker
-  private final case class Ordered(delimiter: Char, start: Int) extends ListMarker
+  final case class Bullet(char: Char)                   extends ListMarker
+  final case class Ordered(delimiter: Char, start: Int) extends ListMarker
 
-  private val EOL = '\u0000'
+  /** A list item's first line: its marker, where its content starts, the content on it, and whether there's none. */
+  final case class ItemStart(marker: ListMarker, contentOffset: Int, firstLine: String, empty: Boolean)
 
-  private def isSpaceOrTab(c: Char): Boolean = c == ' ' || c == '\t'
+  def toDocument(blocks: List[Block]): Document = Document(blocks.flatMap(toMarkup))
 
-  private val AtxHeading      = "(#{1,6})(?:[ \t]+|$)".r
-  private val CodeFence       = "`{3,}(?!.*`)|~{3,}".r
-  private val SetextUnderline = "^(?:=+|-+)[ \t]*$".r
-  private val ThematicBreak   = "(?:\\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,}".r
-  private val OrderedMarker   = "(\\d{1,9})([.)])".r
-  private val TaskMarker      = "^[ \t]*\\[([ xX])\\][ \t]+(?=\\S)".r
+  private def toMarkup(b: Block): List[Markup] = b match {
+    case ParagraphBlock(text) =>
+      val spans = inlines(text)
+      if (spans.isEmpty) Nil else List(Paragraph(spans))
+    case HeadingBlock(level, text) => List(Heading(Heading.levelOf(level), inlines(text)))
+    case Code(code, language)      => List(CodeBlock(code, language))
+    case HtmlBlock(html)           => List(HtmlTag(html))
+    case RuleBlock                 => List(HorizontalRule)
+    case QuoteBlock(content)       => List(BlockQuote(toDocument(content)))
+    case TableBlock(header, alignments, rows) =>
+      def row(cells: List[String]) =
+        Table.Row(cells.padTo(header.length, "").take(header.length).map(cell => Paragraph(inlines(cell))))
+      List(Table(row(header), alignments, rows.map(row)))
+    case Items(marker, items) =>
+      val documents = items.map(taskItem)
+      marker match {
+        case _: Bullet  => List(UnorderedList(documents))
+        case _: Ordered => List(OrderedList(documents, OrderedList.Decimal))
+      }
+  }
 
-  private val BlockTagNames =
-    "address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|" +
-      "fieldset|figcaption|figure|footer|form|frame|frameset|h[123456]|head|header|hr|html|iframe|legend|li|link|main|" +
-      "menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|" +
-      "title|tr|track|ul"
-  private val AttributeValue = "(?:[^\"'=<>`\\x00-\\x20]+|'[^']*'|\"[^\"]*\")"
-  private val Attribute      = s"(?:\\s+[a-zA-Z_:][a-zA-Z0-9_.:-]*(?:\\s*=\\s*$AttributeValue)?)"
-  private val OpenTag        = s"<[A-Za-z][A-Za-z0-9-]*$Attribute*\\s*/?>"
-  private val CloseTag       = "</[A-Za-z][A-Za-z0-9-]*\\s*>"
+  // a GFM task list item: its first paragraph starts with `[ ]` or `[x]` and a space
+  private def taskItem(item: List[Block]): Document = item match {
+    case ParagraphBlock(text) :: rest =>
+      taskMarkerAt(text) match {
+        case Some((checked, textStart)) =>
+          // the space after the checkbox goes with the text: `[x] done` is `Checkbox(true)`, `PlainText(" done")`
+          val spans = inlines(text.substring(textStart)) match {
+            case PlainText(t) :: more => PlainText(" " + t) :: more
+            case Nil                  => Nil
+            case more                 => PlainText(" ") :: more
+          }
+          Document(Paragraph(Checkbox(checked) :: spans) :: toDocument(rest).elements)
+        case None => toDocument(item)
+      }
+    case _ => toDocument(item)
+  }
 
-  // the spec's seven kinds of HTML block: how each starts, and how the first five end
-  private val HtmlBlockOpen = List(
-    "(?i)<(?:script|pre|style)(?:\\s|>|$)",
-    "<!--",
-    "<[?]",
-    "<![A-Z]",
-    "<!\\[CDATA\\[",
-    s"(?i)</?(?:$BlockTagNames)(?:\\s|/?>|$$)",
-    s"(?:$OpenTag|$CloseTag)\\s*$$"
-  ).map(_.r)
-  private val HtmlBlockClose = List("(?i)</(?:script|pre|style)>", "-->", "\\?>", ">", "\\]\\]>").map(_.r)
+  // `[ ]` or `[x]`, spaces, and text: whether it's checked, and where the text starts
+  private def taskMarkerAt(s: String): Option[(Boolean, Int)] =
+    if (s.length < 4 || s.charAt(0) != '[' || s.charAt(2) != ']' || " xX".indexOf(s.charAt(1)) < 0) None
+    else {
+      val text = runEnd(s, 3, ' ')
+      if (text == 3 || text >= s.length) None else Some((s.charAt(1) != ' ', text))
+    }
 
-  private val Alignment = "^[ \t]*(:?)-+(:?)[ \t]*$".r
+  /** The inline markup of a paragraph's, a heading's or a table cell's text. For now just its text, without the spaces
+    * around its lines.
+    */
+  def inlines(text: String): List[Span] = {
+    val lines = splitLines(text).map(_.trim).filter(_.nonEmpty)
+    if (lines.isEmpty) Nil else List(PlainText(lines.mkString("\n")))
+  }
+
+  // ---- characters
+
+  def isSpaceOrTab(c: Char): Boolean = c == ' ' || c == '\t'
+
+  def isAsciiDigit(c: Char): Boolean = c >= '0' && c <= '9'
+
+  def isBlank(s: String): Boolean = s.forall(isSpaceOrTab)
+
+  /** How many spaces a line starts with. */
+  def indentOf(s: String): Int = runEnd(s, 0, ' ')
+
+  /** Where the run of characters that are `p` from `i` ends. */
+  def runWhile(s: String, i: Int, p: Char => Boolean): Int = {
+    var j = i
+    while (j < s.length && p(s.charAt(j))) j += 1
+    j
+  }
+
+  /** Where the run of `c` from `i` ends. */
+  def runEnd(s: String, i: Int, c: Char): Int = {
+    var j = i
+    while (j < s.length && s.charAt(j) == c) j += 1
+    j
+  }
+
+  /** `s` without trailing spaces and tabs. */
+  def trimEnd(s: String): String = {
+    var j = s.length
+    while (j > 0 && isSpaceOrTab(s.charAt(j - 1))) j -= 1
+    s.substring(0, j)
+  }
+
+  /** The lines of `s`, split at `\n`, without `\r`s; a last empty one isn't a line. */
+  def splitLines(s: String): Array[String] = {
+    val out   = Array.newBuilder[String]
+    var start = 0
+    var i     = s.indexOf('\n')
+    while (i >= 0) {
+      out += s.substring(start, i).filter(_ != '\r')
+      start = i + 1
+      i = s.indexOf('\n', start)
+    }
+    if (start < s.length) out += s.substring(start).filter(_ != '\r')
+    out.result()
+  }
+
+  // the tabs `s` starts with, as spaces to the next multiple of 4, `s` being at `column` of its line
+  private def expandFrom(s: String, column: Int): String =
+    if (s.isEmpty || s.charAt(0) != '\t' && !(s.charAt(0) == ' ' && s.indexOf('\t') >= 0)) s
+    else {
+      val sb = new StringBuilder
+      var i  = 0
+      while (i < s.length && isSpaceOrTab(s.charAt(i))) {
+        if (s.charAt(i) == '\t') sb.append(" " * (4 - (column + sb.length) % 4)) else sb.append(' ')
+        i += 1
+      }
+      sb.append(s.substring(i)).toString
+    }
+
+  // the tabs in a line's indentation, as spaces to the next multiple of 4
+  private def expandIndentation(s: String): String =
+    if (s.isEmpty || !isSpaceOrTab(s.charAt(0)) || s.indexOf('\t') < 0) s
+    else {
+      val sb = new StringBuilder
+      var i  = 0
+      while (i < s.length && isSpaceOrTab(s.charAt(i))) {
+        if (s.charAt(i) == '\t') sb.append(" " * (4 - sb.length % 4)) else sb.append(' ')
+        i += 1
+      }
+      sb.append(s.substring(i)).toString
+    }
+
+  // an ATX heading's title without its closing `#`s: a run of them at the end, after a space, or all there is
+  private def atxTitle(s: String): String = {
+    val t = trimEnd(s)
+    var j = t.length
+    while (j > 0 && t.charAt(j - 1) == '#') j -= 1
+    if (j == t.length) t
+    else if (isBlank(t.substring(0, j))) ""
+    else if (isSpaceOrTab(t.charAt(j - 1))) trimEnd(t.substring(0, j))
+    else t
+  }
+
+  private val Escapable = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
+  // backslash escapes in a code fence's info string
+  private def unescapeInfo(s: String): String = {
+    val sb = new StringBuilder
+    var i  = 0
+    while (i < s.length) {
+      if (s.charAt(i) == '\\' && i + 1 < s.length && Escapable.indexOf(s.charAt(i + 1)) >= 0) {
+        sb.append(s.charAt(i + 1)); i += 2
+      } else { sb.append(s.charAt(i)); i += 1 }
+    }
+    sb.toString
+  }
+
+  // as scaladoc has a `{{{ }}}` block's code: no blank lines at the start, no whitespace at the end, and without the
+  // indentation all its non-blank lines share
+  private def normalizeCode(code: String): String = {
+    val lines    = splitLines(code).toList.map(trimEnd).dropWhile(_.isEmpty).reverse.dropWhile(_.isEmpty).reverse
+    val nonBlank = lines.filter(_.nonEmpty)
+    val indent   = if (nonBlank.isEmpty) 0 else nonBlank.map(indentOf).min
+    lines.map(l => if (l.isEmpty) "" else l.substring(indent)).mkString("\n")
+  }
 
   /** A GFM table's delimiter row, like `| :-- | --: |`: the alignment of each column. */
   def alignmentsOf(row: String): Option[List[Table.Alignment]] = {
-    val cells = splitRow(row)
-    val aligned = cells.map { cell =>
-      Alignment.findFirstMatchIn(cell).map { m =>
-        (m.group(1).nonEmpty, m.group(2).nonEmpty) match {
-          case (true, true)  => Table.Alignment.Center
-          case (false, true) => Table.Alignment.Right
-          case _             => Table.Alignment.Left
-        }
-      }
+    val aligned = splitRow(row).map { cell =>
+      val t      = cell.trim
+      val left   = t.startsWith(":")
+      val right  = t.length > 1 && t.endsWith(":")
+      val dashes = t.substring(if (left) 1 else 0, math.max(if (left) 1 else 0, t.length - (if (right) 1 else 0)))
+      if (dashes.isEmpty || !dashes.forall(_ == '-')) None
+      else if (left && right) Some(Table.Alignment.Center)
+      else if (right) Some(Table.Alignment.Right)
+      else Some(Table.Alignment.Left)
     }
-    if (cells.nonEmpty && aligned.forall(_.nonEmpty)) Some(aligned.flatten) else None
+    if (aligned.nonEmpty && aligned.forall(_.isDefined)) Some(aligned.flatten) else None
   }
 
   /** A table row's cells: split at the `|`s that aren't escaped, without the leading and trailing one. An escaped `|`
@@ -645,7 +579,7 @@ private[parser] object ParseMarkdown {
     */
   def splitRow(row: String): List[String] = {
     val text  = row.trim
-    val cells = ArrayBuffer.empty[String]
+    val cells = ListBuffer.empty[String]
     val cell  = new StringBuilder
     var i     = if (text.startsWith("|")) 1 else 0
     while (i < text.length) {
@@ -657,21 +591,5 @@ private[parser] object ParseMarkdown {
     }
     if (cell.toString.trim.nonEmpty || !text.endsWith("|") || text == "|") cells += cell.toString.trim
     cells.toList
-  }
-
-  private def dropLastNewline(x: String): String = x.stripSuffix("\n")
-
-  private val Escapable = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-
-  /** Backslash escapes of ASCII punctuation, and entities, as in a code fence's info string. */
-  def unescape(x: String): String = {
-    val sb = new StringBuilder
-    var i  = 0
-    while (i < x.length) {
-      val c = x.charAt(i)
-      if (c == '\\' && i + 1 < x.length && Escapable.indexOf(x.charAt(i + 1)) >= 0) { sb.append(x.charAt(i + 1)); i += 2 }
-      else { sb.append(c); i += 1 }
-    }
-    ParseMarkup.decodeEntities(sb.toString)
   }
 }
