@@ -10,13 +10,13 @@ sealed trait CommentSyntax extends Product with Serializable
 
 object CommentSyntax {
 
-  /** scaladoc's wiki syntax: `'''bold'''`, `''italic''`, `__underline__`, `=heading=`, `{{{ code }}}`, `[[link]]`.
+  /** scaladoc's wiki syntax: `'''bold'''`, `''italic''`, `__underline__`, `=heading=`, `{{{ code }}}` and links in double brackets.
     * Scala 2's only syntax, and Scala 3's with `-comment-syntax wiki`.
     */
   case object Wiki extends CommentSyntax
 
   /** Markdown: CommonMark, with GitHub Flavored Markdown's tables, task lists and strikethrough, and scaladoc's
-    * `[[links]]` and `{{{ code }}}`, as Scala 3's scaladoc reads it. Scala 3's default syntax.
+    * links in double brackets and `{{{ code }}}`, as Scala 3's scaladoc reads it. Scala 3's default syntax.
     */
   case object Markdown extends CommentSyntax
 }

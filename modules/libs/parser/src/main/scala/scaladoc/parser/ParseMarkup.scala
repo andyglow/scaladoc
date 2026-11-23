@@ -8,8 +8,8 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 /** Parses markup into a `Markup.Document`: the parser of every comment syntax. `ParseMarkup(text, syntax)` takes it to
-  * the one the text is written in. scaladoc's wiki syntax is parsed here; Markdown by [[MarkdownBlocks]] and
-  * [[MarkdownInlines]], which use what both syntaxes share from here.
+  * the one the text is written in. scaladoc's wiki syntax is parsed here; Markdown by `MarkdownBlocks` and
+  * `MarkdownInlines`, which use what both syntaxes share from here.
   *
   * Wiki is parsed by a recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
   * blocks, lists, tables, rules), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
