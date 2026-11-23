@@ -7,28 +7,76 @@ import scala.quoted.*
 
 object ScaladocMacro {
 
+  /** The scaladoc of `T`: its doc comment, from `Symbol.docstring`, in Markdown, Scala 3's default, unless a given
+    * `CommentSyntax` in scope says otherwise (`import scaladoc.syntax.wiki.given`) or the comment does (`@syntax wiki`).
+    * A class that has no doc comment there, like one from a Scala 2 library, may have its scaladoc embedded by the
+    * compiler plugin, in a `ScaladocCarrier` annotation: that's in wiki syntax, Scala 2's only one.
+    */
   def scaladoc[T: Type](using q: Quotes): Expr[Option[Scaladoc]] = {
     import q.reflect.*
 
     val sym = TypeRepr.of[T].typeSymbol
+
+    def parsed(raw: String, result: Either[ScaladocException, Scaladoc]): Expr[Option[Scaladoc]] = result match {
+      case Right(doc) => '{ Some(${ Expr(doc) }) }
+      case Left(err) =>
+        val pos = sym.pos.getOrElse(Position.ofMacroExpansion)
+        report.errorAndAbort(
+          s"""Error extracting scaladoc from comment:
+             |```
+             |$raw
+             |```
+             |Reason: ${err.getMessage}
+             |""".stripMargin,
+          pos
+        )
+    }
+
     sym.docstring match {
-      case None => '{ None }
-      case Some(raw) =>
-        ScaladocParser.fromDocstring(raw, strict = true) match {
-          case Right(doc) => '{ Some(${ Expr(doc) }) }
-          case Left(err) =>
-            val pos = sym.pos.getOrElse(Position.ofMacroExpansion)
-            report.errorAndAbort(
-              s"""Error extracting scaladoc from comment:
-                 |```
-                 |$raw
-                 |```
-                 |Reason: ${err.getMessage}
-                 |""".stripMargin,
-              pos
-            )
+      case Some(raw) => parsed(raw, ScaladocParser.fromDocstring(raw, strict = true, syntax = syntaxInScope))
+      case None =>
+        carrier(sym) match {
+          case Some((text, tags)) => parsed(text, ScaladocParser.fromString(text, tags, strict = true, CommentSyntax.Wiki))
+          case None               => '{ None }
         }
     }
+  }
+
+  // the syntax a given in scope says, `import scaladoc.syntax.wiki.given`: its type is the syntax
+  private def syntaxInScope(using q: Quotes): CommentSyntax = {
+    import q.reflect.*
+    Implicits.search(TypeRepr.of[CommentSyntax]) match {
+      case found: ImplicitSearchSuccess =>
+        val tpe = found.tree.tpe.widenTermRefByName
+        if (tpe <:< TypeRepr.of[CommentSyntax.Wiki.type]) CommentSyntax.Wiki
+        else if (tpe <:< TypeRepr.of[CommentSyntax.Markdown.type]) CommentSyntax.Markdown
+        else {
+          report.warning(
+            "Scaladoc.of reads the syntax from the given's type: use scaladoc.syntax.wiki or scaladoc.syntax.markdown; " +
+              "Markdown it is")
+          CommentSyntax.Markdown
+        }
+      case _ => CommentSyntax.Markdown
+    }
+  }
+
+  // the text of a `ScaladocCarrier` annotation, which the compiler plugin puts on Scala 2 classes, and whether it has
+  // the comment's markers; by the annotation's name, so that it needn't be on the class path
+  private def carrier(using q: Quotes)(sym: q.reflect.Symbol): Option[(String, Boolean)] = {
+    import q.reflect.*
+    sym.annotations.collectFirst {
+      case annotation @ Apply(_, args) if annotation.tpe.typeSymbol.fullName == "scaladoc.annotation.ScaladocCarrier" =>
+        val values = args.zipWithIndex.map {
+          case (NamedArg(name, Literal(c)), _) => name -> c.value
+          case (Literal(c), 0)                 => "text" -> c.value
+          case (Literal(c), 1)                 => "tags" -> c.value
+          case (other, i)                      => s"$i" -> other
+        }.toMap
+        (values.get("text"), values.get("tags")) match {
+          case (Some(text: String), Some(tags: Boolean)) => Some((text, tags))
+          case _                                         => None
+        }
+    }.flatten
   }
 
   given ToExpr[Scaladoc] with {
