@@ -9,7 +9,8 @@ the `*` border, the `@` tags, a wiki markup with `''italic''` and `[[links]]`. O
 some HTML and a few habits from javadoc along the way, and real codebases contain all of it, often in the same comment.
 
 The parser reads all of it, and this page walks through what it understands, from the outside in: first the comment
-as a whole, then its tags, then the markup inside them. Every example on this page is compiled and run when the site
+as a whole, then its tags, then the markup inside them. That markup is scaladoc's wiki syntax, Scala 2's, unless the
+comment is in Markdown, Scala 3's default, which the @ref:[last part](#markdown) is about. Every example on this page is compiled and run when the site
 is built, so what you see after each snippet is what the parser really returns.
 
 ```scala mdoc:invisible
@@ -298,6 +299,78 @@ Scaladoc.fromString(
 A define runs up to the next tag, can use other defines, and doesn't show up in the parsed comment. Scaladoc also lets
 a comment use the defines of its enclosing and parent classes. Only the compiler knows those classes, though, so here
 a comment can use its own defines only, and an unknown variable stays as written.
+
+## Markdown
+
+> Simplicity is prerequisite for reliability.
+>
+> — Edsger W. Dijkstra
+
+Scala 3's scaladoc reads doc comments as Markdown by default, and wiki syntax only when told to. The parser reads
+both, and is told which one a comment is written in, since the same characters mean different things in the two:
+`__x__` is underline in wiki and bold in Markdown, and `=x=` is a heading in one and text in the other.
+
+`Scaladoc.fromString` and `fromDocstring` take the syntax as a parameter, wiki by default. A comment can also say it
+for itself, as in Scala 3's scaladoc, with `@syntax wiki` or `@syntax markdown` on a line of its own; the tag isn't
+kept in the parsed comment. @ref:[Scaladoc.of](extractor.md#which-syntax) picks the syntax by where it finds the
+comment.
+
+```scala mdoc:invisible
+def parseMarkdown(comment: String): Markup =
+  Scaladoc.fromString(comment, syntax = CommentSyntax.Markdown)
+    .fold(e => throw e, _.descriptions.headOption.getOrElse(Document(Nil)))
+```
+
+```scala mdoc
+parseMarkdown(
+  """/** Some **bold**, `code` and a [link](https://scala-lang.org).
+    |  *
+    |  * - [x] a task, done
+    |  * - [ ] and one to do
+    |  */""".stripMargin)
+
+Scaladoc.fromString(
+  """/** Some '''bold''' text.
+    |  *
+    |  * @syntax wiki
+    |  */""".stripMargin, syntax = CommentSyntax.Markdown).map(_.descriptions)
+```
+
+Both syntaxes give the same model, named for what the markup means, so tools that walk it work the same on either:
+`'''bold'''` and `**bold**` are both `Bold`. Tags work the same in both, and only their text's markup differs. A few
+nodes only come from Markdown, because wiki syntax can't write them: `BlockQuote`, `Strikethrough`, `Image`,
+`LineBreak`, `Checkbox` and footnotes; see @ref:[The model](model.md#markup).
+
+### What it reads
+
+The Markdown is Scala 3's: [CommonMark](https://commonmark.org), with the extensions Scala 3's scaladoc turns on.
+
+- **Blocks:** paragraphs, `#` and underlined headings, fenced (```` ``` ````, `~~~`, with a language) and indented code,
+  block quotes, bullet and numbered lists, thematic breaks, and HTML blocks.
+- **Inlines:** `*emphasis*` and `**strong**` (with `_` too), code spans, links (`[text](url)` and by reference),
+  images, entities and escapes, and hard line breaks after a `\`.
+- **Scala 3's extensions:** tables, task lists, `~~strikethrough~~`, bare URLs and email addresses as links,
+  footnotes (`[^1]`), and scaladoc's own `[[links]]` and `{{{ code }}}`.
+- **Javadoc's inline tags**, as in wiki: `{@code x}`, `{@link x}` and the rest.
+
+HTML is cleaned first, as Scala 3's scaladoc does it: the tags it keeps stay (`<b>`, `<code>`, `<span>`, `<table>` and
+the like), `<p>` and `<div>` are paragraph breaks, and other tags go. As in Scala 3, that includes what only looks
+like a tag, `<https://x.y>` or the `<A>` in `List<A>`:
+
+```scala mdoc
+parseMarkdown("/** A <b>safe</b> tag, a <font>gone</font> one, and List<A> or <https://x.y> */")
+```
+
+### How it was checked
+
+The parser is checked against the examples of the GitHub Flavored Markdown spec, CommonMark's plus GitHub's: 650 of
+the 672 parse to what the spec expects. The others differ on purpose, the way Scala 3's scaladoc does, which reads
+Markdown with flexmark: as a check, the same examples run through flexmark with Scala 3's options, and the two parse
+635 of them alike. The rest are corners where flexmark follows an earlier CommonMark. The parser stays linear on
+pathological input, like ten thousand unclosed brackets, and nests at most 100 deep, as markdown-it does.
+
+Two things Scala 3 does, the parser doesn't: `:emoji:` stays text, since the model has no node for it, and a table's
+rows are as wide as its header, missing cells added and extra ones dropped.
 
 ## How this differs from scaladoc
 
