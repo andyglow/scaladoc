@@ -23,8 +23,8 @@
 <meta property="og:description" content="scaladoc-docs">
 <meta name="twitter:card" content="summary">
 <link rel="shortcut icon" href="assets/images/favicon.png">
-<title>Migrating to 0.4 · Scaladoc</title>
-<meta property="og:title" content="Migrating to 0.4 · Scaladoc">
+<title>Migrating · Scaladoc</title>
+<meta property="og:title" content="Migrating · Scaladoc">
 <link rel="stylesheet" href="assets/stylesheets/application.451f80e5.css">
 <link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
 <meta name="theme-color" content="#03a9f4" />
@@ -64,7 +64,7 @@ data-md-color-accent="cyan"
 Scaladoc
 </span>
 <span class="md-header-nav__topic">
-Migrating to 0.4
+Migrating
 </span>
 </div>
 </div>
@@ -148,19 +148,15 @@ andyglow/scaladoc
   <li><a href="model.html" class="page">The model</a></li>
   <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
-  <li><a href="migration.html" class="active page">Migrating to 0.4</a></li>
+  <li><a href="migration.html" class="active page">Migrating</a></li>
 </ul>
 <nav class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">Table of contents</label>
 <ul>
-  <li><a href="migration.html#migrating-to-0-4" class="header">Migrating to 0.4</a>
+  <li><a href="migration.html#migrating" class="header">Migrating</a>
   <ul>
-    <li><a href="migration.html#spans-hold-spans" class="header">Spans hold spans</a></li>
-    <li><a href="migration.html#headings-hold-spans" class="header">Headings hold spans</a></li>
-    <li><a href="migration.html#links-have-a-target-and-a-title" class="header">Links have a target and a title</a></li>
-    <li><a href="migration.html#new-nodes" class="header">New nodes</a></li>
-    <li><a href="migration.html#text-that-changed" class="header">Text that changed</a></li>
-    <li><a href="migration.html#fixes-that-change-results" class="header">Fixes that change results</a></li>
+    <li><a href="migration.html#to-0-5" class="header">To 0.5</a></li>
+    <li><a href="migration.html#to-0-4" class="header">To 0.4</a></li>
   </ul></li>
 </ul>
 </nav>
@@ -169,7 +165,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.4.1*
+<i class="md-icon" title="Version">label_outline</i> 0.5.0
 </label>
 </li>
 </ul>
@@ -182,14 +178,10 @@ andyglow/scaladoc
 <nav class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">Table of contents</label>
 <ul>
-  <li><a href="migration.html#migrating-to-0-4" class="header">Migrating to 0.4</a>
+  <li><a href="migration.html#migrating" class="header">Migrating</a>
   <ul>
-    <li><a href="migration.html#spans-hold-spans" class="header">Spans hold spans</a></li>
-    <li><a href="migration.html#headings-hold-spans" class="header">Headings hold spans</a></li>
-    <li><a href="migration.html#links-have-a-target-and-a-title" class="header">Links have a target and a title</a></li>
-    <li><a href="migration.html#new-nodes" class="header">New nodes</a></li>
-    <li><a href="migration.html#text-that-changed" class="header">Text that changed</a></li>
-    <li><a href="migration.html#fixes-that-change-results" class="header">Fixes that change results</a></li>
+    <li><a href="migration.html#to-0-5" class="header">To 0.5</a></li>
+    <li><a href="migration.html#to-0-4" class="header">To 0.4</a></li>
   </ul></li>
 </ul>
 </nav>
@@ -200,13 +192,27 @@ andyglow/scaladoc
 <div class="md-content">
 <article class="md-content__inner md-typeset">
 <div class="md-content__searchable">
-<h1><a href="#migrating-to-0-4" name="migrating-to-0-4" class="anchor"><span class="anchor-link"></span></a>Migrating to 0.4</h1>
+<h1><a href="#migrating" name="migrating" class="anchor"><span class="anchor-link"></span></a>Migrating</h1>
 <blockquote>
   <p>No man ever steps in the same river twice, for it&rsquo;s not the same river and he&rsquo;s not the same man.</p>
   <p>— attributed to Heraclitus</p>
 </blockquote>
+<h2><a href="#to-0-5" name="to-0-5" class="anchor"><span class="anchor-link"></span></a>To 0.5</h2>
+<p>0.5 gives a module only what its part needs. A module that publishes its scaladoc no longer gets the scaladoc libraries along with the compiler plugin, and a module that reads it asks for them.</p>
+<p><strong>The sbt and Gradle plugins</strong> publish by default, as before, but now add no libraries for that: on Scala 2 just the compiler plugin, on Scala 3 nothing. Reading is opt-in. A module that calls <code>Scaladoc.of</code> sets:</p>
+<pre class="prettyprint"><code class="language-sbt">scaladocRead := true          // sbt
+</code></pre>
+<pre class="prettyprint"><code class="language-kotlin">scaladoc { read.set(true) }   // Gradle
+</code></pre>
+<p>Without it, a module that reads gets &ldquo;not found: value Scaladoc&rdquo; when compiling, and setting it fixes that. A module that only reads can also turn publishing off, with <code>scaladocEmbed := false</code> or <code>embed.set(false)</code>.</p>
+<p><strong>By hand</strong>, a Scala 2 module that publishes can drop <code>scaladoc-ast</code> (now <code>scaladoc-core</code>) and <code>scaladoc-parser</code>, and keep just the compiler plugin. A Scala 3 module that publishes needs nothing, and <code>-Yread-docs</code> belongs only to modules that read.</p>
+<p><strong><code>scaladoc-ast</code> is now <code>scaladoc-core</code>.</strong> It holds <code>Scaladoc</code> itself, the model of tags and markup, and the helpers like <code>textParams</code> and <code>summary</code>, which is more than a syntax tree. Only the artifact&rsquo;s name changed; the package is <code>scaladoc</code> as before, so no code changes. The plugins add the new name themselves. By hand, rename the dependency:</p>
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-core&quot; % &quot;0.5.0&quot;   // was scaladoc-ast
+</code></pre>
+<p><strong><code>scaladoc-annotation</code></strong> is a new jar with just the <code>ScaladocCarrier</code> annotation, for anyone who reads embedded scaladoc without this library; see <a href="compiler-plugin.html#reading-embedded-scaladoc-without-this-library">Reading embedded scaladoc without this library</a>. The annotation&rsquo;s name and package haven&rsquo;t changed, so classes compiled with earlier versions read as before. <code>scaladoc-parser</code> depends on it on Scala 2, so readers don&rsquo;t need to add it.</p>
+<h2><a href="#to-0-4" name="to-0-4" class="anchor"><span class="anchor-link"></span></a>To 0.4</h2>
 <p>0.4 is the release where the parser learned the rest of scaladoc&rsquo;s syntax: nested markup, link titles, lists, tables, rules, HTML, javadoc&rsquo;s inline tags and <code>@define</code>. A model that couldn&rsquo;t hold those had to grow, and code that takes it apart needs a few changes. Code that only builds markup, or only reads text through the <code>text*</code> helpers, mostly doesn&rsquo;t.</p>
-<h2><a href="#spans-hold-spans" name="spans-hold-spans" class="anchor"><span class="anchor-link"></span></a>Spans hold spans</h2>
+<h3><a href="#spans-hold-spans" name="spans-hold-spans" class="anchor"><span class="anchor-link"></span></a>Spans hold spans</h3>
 <p><code>Italic</code>, <code>Bold</code>, <code>Underline</code>, <code>Superscript</code> and <code>Subscript</code> held a <code>String</code>. They now hold a <code>List[Span]</code>, so markup can nest. Building one from a string still works, through a shorthand on each companion:</p>
 <pre class="prettyprint"><code class="language-scala">Bold(&quot;text&quot;)                           // still compiles, now Bold(List(PlainText(&quot;text&quot;)))
 </code></pre>
@@ -217,11 +223,11 @@ case Bold(text)        =&gt; text
 case b @ Bold(spans)   =&gt; b.trimmed.plainString     // or walk the spans
 </code></pre>
 <p><code>Monospace</code> still holds a <code>String</code>: code is taken literally.</p>
-<h2><a href="#headings-hold-spans" name="headings-hold-spans" class="anchor"><span class="anchor-link"></span></a>Headings hold spans</h2>
+<h3><a href="#headings-hold-spans" name="headings-hold-spans" class="anchor"><span class="anchor-link"></span></a>Headings hold spans</h3>
 <p><code>Heading(level, text: String)</code> is now <code>Heading(level, spans: List[Span])</code>, so a title can have markup. <code>Heading(One, &quot;Title&quot;)</code> and <code>Heading(1, &quot;Title&quot;)</code> still build one. A heading&rsquo;s title is also trimmed now: <code>= Title =</code> gives <code>&quot;Title&quot;</code>, not <code>&quot; Title &quot;</code>.</p>
-<h2><a href="#links-have-a-target-and-a-title" name="links-have-a-target-and-a-title" class="anchor"><span class="anchor-link"></span></a>Links have a target and a title</h2>
+<h3><a href="#links-have-a-target-and-a-title" name="links-have-a-target-and-a-title" class="anchor"><span class="anchor-link"></span></a>Links have a target and a title</h3>
 <p><code>Link(value: String)</code> held whatever was between the brackets, so <code>[[https://x.y Site]]</code> gave <code>Link(&quot;https://x.y Site&quot;)</code>. It&rsquo;s now <code>Link(target: String, title: List[Span])</code>, and that link gives <code>Link(&quot;https://x.y&quot;, List(PlainText(&quot;Site&quot;)))</code>. <code>Link(&quot;scala.Option&quot;)</code> still builds one without a title.</p>
-<h2><a href="#new-nodes" name="new-nodes" class="anchor"><span class="anchor-link"></span></a>New nodes</h2>
+<h3><a href="#new-nodes" name="new-nodes" class="anchor"><span class="anchor-link"></span></a>New nodes</h3>
 <p>Code that matches on <code>Markup</code> exhaustively will hear from the compiler about these:</p>
 <ul>
   <li><code>UnorderedList</code> and <code>OrderedList</code>, whose items are <code>Document</code>s</li>
@@ -229,7 +235,7 @@ case b @ Bold(spans)   =&gt; b.trimmed.plainString     // or walk the spans
   <li><code>HorizontalRule</code></li>
   <li><code>HtmlTag</code>, a span for HTML tags the model has no node for</li>
 </ul>
-<h2><a href="#text-that-changed" name="text-that-changed" class="anchor"><span class="anchor-link"></span></a>Text that changed</h2>
+<h3><a href="#text-that-changed" name="text-that-changed" class="anchor"><span class="anchor-link"></span></a>Text that changed</h3>
 <p>The parser now understands more, so some comments that came back as plain text before don&rsquo;t anymore:</p>
 <ul>
   <li>a line like <code>- item</code> is a list item, and <code>| a | b |</code> lines with a delimiter row are a table</li>
@@ -237,7 +243,7 @@ case b @ Bold(spans)   =&gt; b.trimmed.plainString     // or walk the spans
   <li><code>{@link X}</code> is a link, <code>{@code x}</code> monospace</li>
   <li><code>$name</code> is replaced when the comment defines <code>name</code> with <code>@define</code></li>
 </ul>
-<h2><a href="#fixes-that-change-results" name="fixes-that-change-results" class="anchor"><span class="anchor-link"></span></a>Fixes that change results</h2>
+<h3><a href="#fixes-that-change-results" name="fixes-that-change-results" class="anchor"><span class="anchor-link"></span></a>Fixes that change results</h3>
 <p>0.4 also fixes a number of things that 0.3 got wrong. They don&rsquo;t change the API, but they do change what some comments parse to:</p>
 <ul>
   <li><code>@return</code> is the returns tag, as in scaladoc. <code>@returns</code> still works</li>
@@ -258,7 +264,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.4.1*
+0.5.0
 </span>
 </div>
 </article>

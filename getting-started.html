@@ -148,7 +148,7 @@ andyglow/scaladoc
   <li><a href="model.html" class="page">The model</a></li>
   <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
-  <li><a href="migration.html" class="page">Migrating to 0.4</a></li>
+  <li><a href="migration.html" class="page">Migrating</a></li>
 </ul>
 <nav class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">Table of contents</label>
@@ -167,7 +167,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.4.1*
+<i class="md-icon" title="Version">label_outline</i> 0.5.0
 </label>
 </li>
 </ul>
@@ -201,22 +201,49 @@ andyglow/scaladoc
   <p>Talk is cheap. Show me the code.</p>
   <p>— Linus Torvalds</p>
 </blockquote>
-<p>Whatever builds your project, a module needs the same few things, and what they are depends on which Scala it speaks. Scala 2 and Scala 3 keep doc comments in very different places:</p>
-<ul>
-  <li><strong>Scala 2</strong> forgets doc comments once it&rsquo;s done compiling. A module whose scaladoc should be readable later needs  the <a href="compiler-plugin.html">compiler plugin</a>, which writes the comments into the bytecode before they&rsquo;re lost,  plus <code>scaladoc-ast</code> at runtime and <code>scaladoc-parser</code> to compile. A module that only reads scaladoc, and has none of  its own worth keeping, needs just the two libraries.</li>
-  <li><strong>Scala 3</strong> keeps doc comments in its TASTy files, so there&rsquo;s no compiler plugin (none is needed). A module needs  <code>scaladoc-ast</code>, <code>scaladoc-parser</code> and <code>-Yread-docs</code>, the option that tells the compiler to load those comments for  <a href="extractor.html"><code>Scaladoc.of</code></a>.</li>
-</ul>
-<p>sbt and Gradle have plugins that work this out for you. Maven gets a few lines of POM.</p>
+<p>A module plays one of two parts, sometimes both. It <strong>publishes</strong> its scaladoc, keeping the doc comments of its classes readable after it&rsquo;s compiled. Or it <strong>reads</strong> scaladoc, calling <a href="extractor.html"><code>Scaladoc.of</code></a> to get it. In a typical project, a module of models publishes, and the module that derives schemas from them reads.</p>
+<p>Each part needs something different, and what that is depends on the Scala version, because Scala 2 and Scala 3 keep doc comments in very different places:</p>
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>Scala 2 </th>
+      <th>Scala 3 </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Publishing</strong> </td>
+      <td>the <a href="compiler-plugin.html">compiler plugin</a>, nothing else </td>
+      <td>nothing </td>
+    </tr>
+    <tr>
+      <td><strong>Reading</strong> </td>
+      <td><code>scaladoc-core</code> and <code>scaladoc-parser</code> </td>
+      <td>the same, and <code>-Yread-docs</code> </td>
+    </tr>
+  </tbody>
+</table>
+<p>Scala 2 forgets doc comments once it&rsquo;s done compiling, so a publishing module needs the compiler plugin, which writes them into the bytecode before they&rsquo;re lost. The plugin&rsquo;s jar has everything it needs, so the module needs no library for it. Scala 3 keeps doc comments in its TASTy files on its own; a reading module needs <code>-Yread-docs</code>, the option that tells the compiler to load them.</p>
+<p>sbt and Gradle have plugins that set this up for you. Maven gets a few lines of POM.</p>
 <h2><a href="#sbt" name="sbt" class="anchor"><span class="anchor-link"></span></a>sbt</h2>
 <h3><a href="#the-sbt-plugin" name="the-sbt-plugin" class="anchor"><span class="anchor-link"></span></a>The sbt plugin</h3>
 <p>Add <code>sbt-scaladoc</code> to <code>project/plugins.sbt</code>:</p>
-<pre class="prettyprint"><code class="language-sbt">addSbtPlugin(&quot;io.github.andyglow&quot; % &quot;sbt-scaladoc&quot; % &quot;0.4.0&quot;)
+<pre class="prettyprint"><code class="language-sbt">addSbtPlugin(&quot;io.github.andyglow&quot; % &quot;sbt-scaladoc&quot; % &quot;0.5.0&quot;)
 </code></pre>
-<p>and enable it on the modules that need it:</p>
+<p>and enable it on the modules that publish or read scaladoc. A module publishes by default, and one that reads says so:</p>
 <pre class="prettyprint"><code class="language-sbt">lazy val model = project
+  .enablePlugins(ScaladocPlugin)            // publishes its scaladoc
+
+lazy val schemas = project
+  .dependsOn(model)
   .enablePlugins(ScaladocPlugin)
+  .settings(
+    scaladocEmbed := false,                 // has no scaladoc of its own to keep
+    scaladocRead  := true                   // reads it with Scaladoc.of
+  )
 </code></pre>
-<p>That&rsquo;s it. On Scala 2 the module gets the compiler plugin and the two libraries, on Scala 3 the libraries and <code>-Yread-docs</code>. On Scala.js it gets the <code>_sjs1</code> libraries; the compiler plugin runs inside scalac, which is a JVM program however its output is used, so the JVM artifact serves Scala.js modules too.</p>
+<p>On Scala.js, a reading module gets the <code>_sjs1</code> libraries. The compiler plugin runs inside scalac, which is a JVM program however its output is used, so the JVM artifact serves Scala.js modules too.</p>
 <p>The libraries get the plugin&rsquo;s own version, and <code>scaladocVersion</code> overrides it. The other settings tune what the compiler plugin embeds:</p>
 <table>
   <thead>
@@ -228,14 +255,19 @@ andyglow/scaladoc
   </thead>
   <tbody>
     <tr>
+      <td><code>scaladocEmbed</code> </td>
+      <td><code>true</code> </td>
+      <td>publish: Scala 2, embed scaladoc into bytecode with the compiler plugin </td>
+    </tr>
+    <tr>
+      <td><code>scaladocRead</code> </td>
+      <td><code>false</code> </td>
+      <td>read: add the libraries, and <code>-Yread-docs</code> on Scala 3 </td>
+    </tr>
+    <tr>
       <td><code>scaladocVersion</code> </td>
       <td>plugin&rsquo;s </td>
       <td>the version of the libraries and the compiler plugin </td>
-    </tr>
-    <tr>
-      <td><code>scaladocEmbed</code> </td>
-      <td><code>true</code> </td>
-      <td>Scala 2: embed scaladoc into bytecode with the compiler plugin </td>
     </tr>
     <tr>
       <td><code>scaladocIncludePaths</code> </td>
@@ -261,54 +293,37 @@ andyglow/scaladoc
 </table>
 <p>The patterns are explained in <a href="compiler-plugin.html#choosing-what-to-embed">Choosing what to embed</a>.</p>
 <h3><a href="#by-hand" name="by-hand" class="anchor"><span class="anchor-link"></span></a>By hand</h3>
-<p>The libraries are two ordinary dependencies:</p>
-<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-ast&quot;    % &quot;0.4.0&quot;
-libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.4.0&quot;
+<p>A Scala 2 module that publishes its scaladoc needs only the compiler plugin:</p>
+<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.5.0&quot;)
 </code></pre>
-<p>To embed scaladoc into bytecode (Scala 2 only), add the compiler plugin as well. The parser is then only needed while compiling, so it can stay out of the runtime classpath:</p>
-<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.4.0&quot;)
-
-libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-ast&quot;    % &quot;0.4.0&quot;
-libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.4.0&quot; % Provided
+<p>A module that reads scaladoc needs the two libraries:</p>
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-core&quot;    % &quot;0.5.0&quot;
+libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % &quot;0.5.0&quot;
 </code></pre>
-<p>On Scala 3, compile the modules that call <code>Scaladoc.of</code> with <code>-Yread-docs</code>:</p>
+<p>and on Scala 3, <code>-Yread-docs</code> as well:</p>
 <pre class="prettyprint"><code class="language-sbt">scalacOptions += &quot;-Yread-docs&quot;
 </code></pre>
-<p>On Scala.js, use <code>%%%</code> for <code>scaladoc-ast</code> and <code>scaladoc-parser</code>. The compiler plugin stays <code>%%</code>.</p>
+<p>On Scala.js, use <code>%%%</code> for <code>scaladoc-core</code> and <code>scaladoc-parser</code>. The compiler plugin stays <code>%%</code>.</p>
 <h2><a href="#gradle" name="gradle" class="anchor"><span class="anchor-link"></span></a>Gradle</h2>
 <p>Apply the plugin next to Gradle&rsquo;s <code>scala</code> plugin:</p>
 <pre class="prettyprint"><code class="language-kotlin">plugins {
     scala
-    id(&quot;io.github.andyglow.scaladoc&quot;) version &quot;0.4.0&quot;
+    id(&quot;io.github.andyglow.scaladoc&quot;) version &quot;0.5.0&quot;
 }
 </code></pre>
-<p>It reads the module&rsquo;s Scala version from its <code>scala-library</code> or <code>scala3-library_3</code> dependency and adds what that version needs. On Scala 2 the parser is only needed to compile, so it goes on <code>compileOnly</code> and <code>testImplementation</code>, not on the runtime classpath.</p>
-<p>A <code>scaladoc</code> block holds the settings, with the same meaning as the sbt plugin&rsquo;s:</p>
+<p>It reads the module&rsquo;s Scala version from its <code>scala-library</code> or <code>scala3-library_3</code> dependency and adds what that version needs. Like the sbt plugin, it publishes the module&rsquo;s scaladoc by default, and reads when asked to, in a <code>scaladoc</code> block whose settings mean what the sbt plugin&rsquo;s do:</p>
 <pre class="prettyprint"><code class="language-kotlin">scaladoc {
-    version.set(&quot;0.4.0&quot;)                       // the plugin&#39;s own by default
-    embed.set(false)                               // Scala 2: read scaladoc, don&#39;t embed any
+    embed.set(false)                               // publish: Scala 2, embed scaladoc (true by default)
+    read.set(true)                                 // read it with Scaladoc.of (false by default)
     excludeClasses.add(&quot;com.acme.**.internal.*&quot;)   // also includePaths, excludePaths and includeClasses
+    version.set(&quot;0.5.0&quot;)                       // the plugin&#39;s own by default
 }
 </code></pre>
 <p>The plugin runs on Gradle 8.5 and later.</p>
 <h2><a href="#maven" name="maven" class="anchor"><span class="anchor-link"></span></a>Maven</h2>
 <p>Maven builds Scala with <code>scala-maven-plugin</code>, and what a module needs fits into its configuration. The examples below are for Scala 2.13; for 2.12, change the <code>_2.13</code> suffixes.</p>
-<p><strong>A Scala 2 module whose scaladoc gets embedded</strong> needs the compiler plugin, <code>scaladoc-ast</code>, and <code>scaladoc-parser</code> to compile:</p>
-<pre class="prettyprint"><code class="language-xml">&lt;dependencies&gt;
-  &lt;dependency&gt;
-    &lt;groupId&gt;io.github.andyglow&lt;/groupId&gt;
-    &lt;artifactId&gt;scaladoc-ast_2.13&lt;/artifactId&gt;
-    &lt;version&gt;0.4.0&lt;/version&gt;
-  &lt;/dependency&gt;
-  &lt;dependency&gt;
-    &lt;groupId&gt;io.github.andyglow&lt;/groupId&gt;
-    &lt;artifactId&gt;scaladoc-parser_2.13&lt;/artifactId&gt;
-    &lt;version&gt;0.4.0&lt;/version&gt;
-    &lt;scope&gt;provided&lt;/scope&gt;
-  &lt;/dependency&gt;
-&lt;/dependencies&gt;
-
-&lt;build&gt;
+<p><strong>A Scala 2 module that publishes its scaladoc</strong> needs only the compiler plugin:</p>
+<pre class="prettyprint"><code class="language-xml">&lt;build&gt;
   &lt;plugins&gt;
     &lt;plugin&gt;
       &lt;groupId&gt;net.alchim31.maven&lt;/groupId&gt;
@@ -318,7 +333,7 @@ libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&q
           &lt;compilerPlugin&gt;
             &lt;groupId&gt;io.github.andyglow&lt;/groupId&gt;
             &lt;artifactId&gt;scaladoc-compiler-plugin_2.13&lt;/artifactId&gt;
-            &lt;version&gt;0.4.0&lt;/version&gt;
+            &lt;version&gt;0.5.0&lt;/version&gt;
           &lt;/compilerPlugin&gt;
         &lt;/compilerPlugins&gt;
         &lt;args&gt;
@@ -330,23 +345,23 @@ libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&q
   &lt;/plugins&gt;
 &lt;/build&gt;
 </code></pre>
-<p>The include and exclude patterns are the compiler plugin&rsquo;s options, one <code>&lt;arg&gt;</code> each; see <a href="compiler-plugin.html#choosing-what-to-embed">Choosing what to embed</a>.</p>
-<p><strong>A Scala 2 module that only reads scaladoc</strong> needs just the two libraries, both with the default scope.</p>
-<p><strong>A Scala 3 module</strong> needs the two libraries, with the <code>_3</code> suffix, and <code>-Yread-docs</code>:</p>
+<p>The include and exclude patterns are the compiler plugin&rsquo;s options, one <code>&lt;arg&gt;</code> each; see <a href="compiler-plugin.html#choosing-what-to-embed">Choosing what to embed</a>. A Scala 3 module that publishes needs nothing at all.</p>
+<p><strong>A module that reads scaladoc</strong> needs the two libraries:</p>
 <pre class="prettyprint"><code class="language-xml">&lt;dependencies&gt;
   &lt;dependency&gt;
     &lt;groupId&gt;io.github.andyglow&lt;/groupId&gt;
-    &lt;artifactId&gt;scaladoc-ast_3&lt;/artifactId&gt;
-    &lt;version&gt;0.4.0&lt;/version&gt;
+    &lt;artifactId&gt;scaladoc-core_2.13&lt;/artifactId&gt;
+    &lt;version&gt;0.5.0&lt;/version&gt;
   &lt;/dependency&gt;
   &lt;dependency&gt;
     &lt;groupId&gt;io.github.andyglow&lt;/groupId&gt;
-    &lt;artifactId&gt;scaladoc-parser_3&lt;/artifactId&gt;
-    &lt;version&gt;0.4.0&lt;/version&gt;
+    &lt;artifactId&gt;scaladoc-parser_2.13&lt;/artifactId&gt;
+    &lt;version&gt;0.5.0&lt;/version&gt;
   &lt;/dependency&gt;
 &lt;/dependencies&gt;
-
-&lt;build&gt;
+</code></pre>
+<p>On Scala 3, that&rsquo;s with the <code>_3</code> suffix, and <code>-Yread-docs</code> as well:</p>
+<pre class="prettyprint"><code class="language-xml">&lt;build&gt;
   &lt;plugins&gt;
     &lt;plugin&gt;
       &lt;groupId&gt;net.alchim31.maven&lt;/groupId&gt;
@@ -360,7 +375,7 @@ libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&q
   &lt;/plugins&gt;
 &lt;/build&gt;
 </code></pre>
-<p>This setup is tested as a real Maven build, on Scala 2.13, 2.12 and 3, with <code>scala-maven-plugin</code> 4.10 and Maven 3.10: see <a href="https://github.com/andyglow/scaladoc/tree/master/maven-tests">maven-tests</a> in the repository.</p><div class="callout note "><div class="callout-title">Note</div>
+<p>This setup is tested as a real Maven build, on Scala 2.13, 2.12 and 3, with <code>scala-maven-plugin</code> 4.10 and Maven 3.10: see <a href="https://github.com/andyglow/scaladoc/tree/master/modules/tests/maven">modules/tests/maven</a> in the repository.</p><div class="callout note "><div class="callout-title">Note</div>
 <p>The groupId changed in 0.1.0, from <code>com.github.andyglow</code> to <code>io.github.andyglow</code>. Versions up to 0.0.14 stay available under the old one. To upgrade from them, change the groupId along with the version.</p></div>
 <h2><a href="#a-first-look" name="a-first-look" class="anchor"><span class="anchor-link"></span></a>A first look</h2>
 <p>Before reaching for macros, it helps to see the parser on its own. Give it a comment, and it gives back what the comment says:</p>
@@ -424,7 +439,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.4.1*
+0.5.0
 </span>
 </div>
 </article>
