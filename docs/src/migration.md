@@ -23,8 +23,16 @@ scaladoc { read.set(true) }   // Gradle
 Without it, a module that reads gets "not found: value Scaladoc" when compiling, and setting it fixes that. A module
 that only reads can also turn publishing off, with `scaladocEmbed := false` or `embed.set(false)`.
 
-**By hand**, a Scala 2 module that publishes can drop `scaladoc-ast` and `scaladoc-parser`, and keep just the compiler
-plugin. A Scala 3 module that publishes needs nothing, and `-Yread-docs` belongs only to modules that read.
+**By hand**, a Scala 2 module that publishes can drop `scaladoc-ast` (now `scaladoc-core`) and `scaladoc-parser`, and
+keep just the compiler plugin. A Scala 3 module that publishes needs nothing, and `-Yread-docs` belongs only to modules that read.
+
+**`scaladoc-ast` is now `scaladoc-core`.** It holds `Scaladoc` itself, the model of tags and markup, and the helpers
+like `textParams` and `summary`, which is more than a syntax tree. Only the artifact's name changed; the package is
+`scaladoc` as before, so no code changes. The plugins add the new name themselves. By hand, rename the dependency:
+
+```sbt
+libraryDependencies += "io.github.andyglow" %% "scaladoc-core" % "@VERSION@"   // was scaladoc-ast
+```
 
 **`scaladoc-annotation`** is a new jar with just the `ScaladocCarrier` annotation, for anyone who reads embedded
 scaladoc without this library; see @ref:[Reading embedded scaladoc without this library](compiler-plugin.md#reading-embedded-scaladoc-without-this-library).

@@ -56,7 +56,7 @@ each field means. A schema generator needs nothing more to give every property a
 
 | Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.3+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|
-| `scaladoc-ast`             |     ✓      |     ✓      |       ✓        |      ✓       |
+| `scaladoc-core`             |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |  JVM one     |
 | `scaladoc-annotation`      |     ✓      |     ✓      |       ✓        |      ✓       |

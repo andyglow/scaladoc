@@ -62,7 +62,7 @@ jobs:
 
       - name: Measure coverage
         if: matrix.scala == '2.13.18'
-        run: sbt '++ ${{ matrix.scala }}; coverage; astJVM/test; parserJVM/test; coverageAggregate'
+        run: sbt '++ ${{ matrix.scala }}; coverage; coreJVM/test; parserJVM/test; coverageAggregate'
 
       - name: Upload coverage to Codecov
         if: matrix.scala == '2.13.18'
