@@ -17,7 +17,9 @@ The compiler plugin writes the prose down before it's forgotten. For every docum
 @ref:[`Scaladoc.of`](extractor.md) finds the annotation, so it works for classes from any module or jar compiled with the
 plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn't need it, since it keeps comments in TASTy on its own.
 
-The @ref:[sbt plugin](getting-started.md#with-the-sbt-plugin) adds it on Scala 2 modules. By hand:
+The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it on Scala 2
+modules, and @ref:[Maven](getting-started.md#maven) builds list it in `scala-maven-plugin`'s `compilerPlugins`. In sbt,
+by hand:
 
 ```sbt
 addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "@VERSION@")

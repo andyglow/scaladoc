@@ -58,10 +58,11 @@ ThisBuild / githubWorkflowBuild := Seq(
     name = Some("sbt plugin scripted tests"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
-  // the Gradle plugin against real Gradle builds; they resolve this build's libraries from the local Maven repository
+  // the Gradle plugin, and the Maven setup the docs show, against real Gradle and Maven builds; they resolve this
+  // build's libraries from the local Maven repository
   WorkflowStep.Sbt(
-    List("+publishM2", "gradlePluginCheck"),
-    name = Some("Gradle plugin tests"),
+    List("+publishM2", "gradlePluginCheck", "mavenCheck"),
+    name = Some("Gradle plugin and Maven tests"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
   // the site: mdoc compiles and runs its snippets, Paradox checks its links
@@ -387,6 +388,18 @@ lazy val docs = project
 lazy val gradlePluginCheck   = taskKey[Unit]("Builds and tests the Gradle plugin; needs `+publishM2` first")
 lazy val gradlePluginPublish = taskKey[Unit]("Publishes the Gradle plugin to the Gradle Plugin Portal")
 
+// maven-tests/ is the Maven setup that the docs show, as a real build; it runs once per Scala version, from clean, so
+// one version's classes are never read by another
+lazy val mavenCheck = taskKey[Unit]("Tests the documented Maven setup on each Scala version; needs `+publishM2` first")
+
+def mvnw(base: File, version: String, log: Logger, scalaBinary: String): Unit = {
+  val command = Seq("./mvnw", "-B", s"-Dscala=$scalaBinary", s"-Dscaladoc.version=$version", "clean", "verify")
+  log.info(s"maven-tests: ${command.mkString(" ")}")
+  val exit = scala.sys.process.Process(command, base / "maven-tests").!(
+    scala.sys.process.ProcessLogger(line => log.info(line), line => log.warn(line)))
+  if (exit != 0) sys.error(s"maven-tests: Scala $scalaBinary failed with exit code $exit")
+}
+
 def gradlew(base: File, version: String, log: Logger, tasks: String*): Unit = {
   val command = Seq("./gradlew", s"-PscaladocVersion=$version") ++ tasks
   log.info(s"gradle-plugin: ${command.mkString(" ")}")
@@ -406,5 +419,8 @@ lazy val root = (project in file("."))
     name := "scaladoc-root",
     // uncached: they run Gradle, whose inputs sbt doesn't see
     gradlePluginCheck   := Def.uncached(gradlew(baseDirectory.value, version.value, streams.value.log, "check")),
-    gradlePluginPublish := Def.uncached(gradlew(baseDirectory.value, version.value, streams.value.log, "publishPlugins"))
+    gradlePluginPublish := Def.uncached(gradlew(baseDirectory.value, version.value, streams.value.log, "publishPlugins")),
+    mavenCheck := Def.uncached {
+      Seq("2.13", "2.12", "3").foreach(mvnw(baseDirectory.value, version.value, streams.value.log, _))
+    }
   )
