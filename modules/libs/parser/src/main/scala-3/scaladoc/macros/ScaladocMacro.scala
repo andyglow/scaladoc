@@ -57,6 +57,11 @@ object ScaladocMacro {
       case Underline(v)   => '{ Markup.Underline(${ spansExpr(v) }) }
       case Superscript(v) => '{ Markup.Superscript(${ spansExpr(v) }) }
       case Subscript(v)   => '{ Markup.Subscript(${ spansExpr(v) }) }
+      case Strikethrough(v) => '{ Markup.Strikethrough(${ spansExpr(v) }) }
+      case Image(src, alt)  => '{ Markup.Image(${ Expr(src) }, ${ Expr(alt) }) }
+      case LineBreak        => '{ Markup.LineBreak }
+      case Checkbox(v)      => '{ Markup.Checkbox(${ Expr(v) }) }
+      case FootnoteReference(v) => '{ Markup.FootnoteReference(${ Expr(v) }) }
       case HtmlTag(v)     => '{ Markup.HtmlTag(${ Expr(v) }) }
       case Link(t, title) => '{ Markup.Link(${ Expr(t) }, ${ spansExpr(title) }) }
     }
@@ -93,7 +98,9 @@ object ScaladocMacro {
     import Markup.*
     x match {
       case x: Span           => spanExpr(x)
-      case CodeBlock(v)      => '{ Markup.CodeBlock(${ Expr(v) }) }
+      case CodeBlock(v, l)   => '{ Markup.CodeBlock(${ Expr(v) }, ${ Expr(l) }) }
+      case BlockQuote(c)     => '{ Markup.BlockQuote(${ documentExpr(c) }) }
+      case Footnote(label, c) => '{ Markup.Footnote(${ Expr(label) }, ${ documentExpr(c) }) }
       case UnorderedList(items)      => '{ Markup.UnorderedList(${ Expr.ofList(items.map(documentExpr)) }) }
       case OrderedList(items, style) => '{ Markup.OrderedList(${ Expr.ofList(items.map(documentExpr)) }, ${ styleExpr(style) }) }
       case HorizontalRule    => '{ Markup.HorizontalRule }

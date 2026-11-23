@@ -37,13 +37,25 @@ object DumpAst {
       w.dec()
       w.writeln("</p>")
     case x: Span => w.write(inlineString(x))
-    case CodeBlock(text) =>
-      w.writeln("<code>")
+    case CodeBlock(text, language) =>
+      w.writeln(language.fold("<code>")(l => s"<code lang=$l>"))
       w.inc()
       w.dump(text)
       w.dec()
       w.writeln("</code>")
     case HorizontalRule => w.writeln("<hr>")
+    case BlockQuote(content) =>
+      w.writeln("<blockquote>")
+      w.inc()
+      apply(content, w)
+      w.dec()
+      w.writeln("</blockquote>")
+    case Footnote(label, content) =>
+      w.writeln(s"<footnote label=$label>")
+      w.inc()
+      apply(content, w)
+      w.dec()
+      w.writeln("</footnote>")
     case Table(header, alignments, rows) =>
       def row(r: Table.Row, cell: String): Unit = w.writeln(r.cells.zip(alignments).map { case (c, a) =>
         s"<$cell align=${a.toString.toLowerCase}>${c.markup.map(inlineString).mkString}</$cell>"
@@ -85,6 +97,11 @@ object DumpAst {
       case Underline(spans)   => tag("u", spans)
       case Superscript(spans) => tag("sup", spans)
       case Subscript(spans)   => tag("sub", spans)
+      case Strikethrough(spans) => tag("s", spans)
+      case Image(src, alt)    => s"""<img src="$src" alt="$alt">"""
+      case LineBreak          => "<br>"
+      case Checkbox(checked)  => if (checked) "<input type=checkbox checked>" else "<input type=checkbox>"
+      case FootnoteReference(label) => s"<sup>[$label]</sup>"
       case HtmlTag(data)      => data
       case Link(target, Nil)  => s"<a>$target</a>"
       case Link(target, title) => s"""<a href="$target">${title.map(inlineString).mkString}</a>"""

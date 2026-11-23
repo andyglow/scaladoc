@@ -99,7 +99,7 @@ class ParseScaladocTagsSpec extends FSpec {
 
     doc.textParams must contain only ("a" -> "A")
     val codeBlocks = doc.tags.collect { case scaladoc.Tag.Example(scaladoc.Markup.Document(els)) =>
-      els.collect { case scaladoc.Markup.CodeBlock(code) => code }
+      els.collect { case scaladoc.Markup.CodeBlock(code, _) => code }
     }
     codeBlocks must contain only (List("@main def run(): Unit = ()\n@param x not a tag"))
   }
