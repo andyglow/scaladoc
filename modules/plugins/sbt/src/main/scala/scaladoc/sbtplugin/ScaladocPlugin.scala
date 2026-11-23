@@ -1,19 +1,19 @@
 package scaladoc.sbtplugin
 
+import scala.annotation.nowarn
+
 import sbt._
 import sbt.Keys._
 
-/** Sets a project up for scaladoc. Enable it on the modules that need it with `enablePlugins(ScaladocPlugin)`.
+/** Sets the Scala compiler up for scaladoc. Enable it on the modules that need it with `enablePlugins(ScaladocPlugin)`.
   *
-  * A module can publish its scaladoc, read scaladoc with `Scaladoc.of`, or both, and gets only what that takes:
+  *   - '''Scala 2:''' the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode
+  *     (`scaladocEmbed`, on by default); the `scaladocInclude*` / `scaladocExclude*` settings become its options.
+  *   - '''Scala 3:''' `-Yread-docs`, so that `Scaladoc.of` also reads doc comments from other modules and jars. Scala 3
+  *     keeps doc comments in TASTy on its own, so nothing else is needed.
   *
-  *   - '''publishing''' (`scaladocEmbed`, on by default): on Scala 2, the compiler plugin, which embeds the scaladoc of
-  *     the module's classes into their bytecode, and nothing else; the `scaladocInclude*` / `scaladocExclude*` settings
-  *     become its options. Scala 3 keeps doc comments in TASTy on its own, so there it adds nothing.
-  *   - '''reading''' (`scaladocRead`, off by default): `scaladoc-core` and `scaladoc-parser`, and on Scala 3
-  *     `-Yread-docs`, so that `Scaladoc.of` also reads doc comments from other modules and jars.
-  *
-  * On Scala.js projects the libraries are the `_sjs1` ones; the compiler plugin is always the JVM artifact.
+  * It adds no library: a module that reads scaladoc with `Scaladoc.of` depends on `scaladoc-parser` itself, like on any
+  * library it calls. On Scala.js the compiler plugin is the JVM artifact too, as it runs inside scalac.
   */
 object ScaladocPlugin extends AutoPlugin {
 
@@ -22,10 +22,13 @@ object ScaladocPlugin extends AutoPlugin {
   override def trigger = noTrigger
 
   object autoImport {
-    val scaladocVersion = settingKey[String]("Version of the scaladoc libraries and compiler plugin")
+    val scaladocVersion = settingKey[String]("Version of the scaladoc compiler plugin")
     val scaladocEmbed   = settingKey[Boolean]("Scala 2: embed scaladoc into bytecode with the compiler plugin")
-    val scaladocRead    =
-      settingKey[Boolean]("Read scaladoc with Scaladoc.of: adds scaladoc-core and scaladoc-parser, and -Yread-docs on Scala 3")
+    @deprecated(
+      "add scaladoc-parser as a dependency instead: libraryDependencies += \"io.github.andyglow\" %% \"scaladoc-parser\" % <version>",
+      "0.5.1")
+    val scaladocRead =
+      settingKey[Boolean]("Deprecated: adds scaladoc-core and scaladoc-parser; depend on scaladoc-parser instead")
     val scaladocIncludePaths =
       settingKey[Seq[String]]("Scala 2: embed only classes from source files matching these globs")
     val scaladocExcludePaths =
@@ -55,6 +58,7 @@ object ScaladocPlugin extends AutoPlugin {
 
   private def isScala3(binaryVersion: String): Boolean = binaryVersion.startsWith("3")
 
+  @nowarn("cat=deprecation")
   override def projectSettings = Seq(
     scaladocVersion        := BuildInfo.version,
     scaladocEmbed          := true,
@@ -66,23 +70,22 @@ object ScaladocPlugin extends AutoPlugin {
     libraryDependencies ++= {
       val v      = scaladocVersion.value
       val scala3 = isScala3(scalaBinaryVersion.value)
-      val cross  = PlatformCompat.libraryCrossVersion.value
       // the compiler plugin runs in scalac, so it is the JVM artifact on Scala.js too, where `%%` (which follows
-      // `platform`) would pick a `_sjs1` one that doesn't exist. Its jar has everything it needs, so the module needs
-      // nothing else to publish its scaladoc.
+      // `platform`) would pick a `_sjs1` one that doesn't exist. Its jar has everything it needs.
       val plugin =
         if (!scala3 && scaladocEmbed.value)
           Seq(compilerPlugin(organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v))
         else Nil
+      // deprecated: until 0.6.0, `scaladocRead := true` still adds the libraries
       val libraries =
-        if (scaladocRead.value)
+        if (scaladocRead.value) {
+          val cross = PlatformCompat.libraryCrossVersion.value
           Seq((organization % "scaladoc-core" % v).cross(cross), (organization % "scaladoc-parser" % v).cross(cross))
-        else Nil
+        } else Nil
       plugin ++ libraries
     },
     scalacOptions ++= {
-      val scala3 = isScala3(scalaBinaryVersion.value)
-      if (scala3) { if (scaladocRead.value) Seq("-Yread-docs") else Nil }
+      if (isScala3(scalaBinaryVersion.value)) Seq("-Yread-docs")
       else if (scaladocEmbed.value)
         compilerPluginOptions(
           scaladocIncludePaths.value,

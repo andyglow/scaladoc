@@ -14,20 +14,21 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.scala.ScalaCompile;
 
 /**
- * Sets a Scala module up for scaladoc, as sbt-scaladoc does for sbt. Apply it next to Gradle's {@code scala} plugin.
- * A module can publish its scaladoc, read scaladoc with {@code Scaladoc.of}, or both, and gets only what that takes:
+ * Sets the Scala compiler up for scaladoc, as sbt-scaladoc does for sbt. Apply it next to Gradle's {@code scala} plugin:
  *
  * <ul>
- *   <li><b>Publishing</b> ({@code embed}, on by default): on Scala 2, the compiler plugin, which embeds the scaladoc of
- *       the module's classes into their bytecode, and nothing else; the {@code scaladoc} block's include and exclude
- *       patterns become its options. Scala 3 keeps doc comments in TASTy on its own, so there it adds nothing.</li>
- *   <li><b>Reading</b> ({@code read}, off by default): {@code scaladoc-core} and {@code scaladoc-parser}, and on
- *       Scala 3 {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and jars.</li>
+ *   <li><b>Scala 2:</b> the compiler plugin, which embeds the scaladoc of the module's classes into their bytecode
+ *       ({@code embed}, on by default); the {@code scaladoc} block's include and exclude patterns become its
+ *       options.</li>
+ *   <li><b>Scala 3:</b> {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and
+ *       jars. Scala 3 keeps doc comments in TASTy on its own, so nothing else is needed.</li>
  * </ul>
  *
+ * It adds no library: a module that reads scaladoc with {@code Scaladoc.of} depends on {@code scaladoc-parser} itself.
  * The Scala version is the one of the module's {@code scala-library} or {@code scala3-library_3} dependency.
  */
 public class ScaladocPlugin implements Plugin<Project> {
@@ -45,7 +46,9 @@ public class ScaladocPlugin implements Plugin<Project> {
         ScaladocExtension extension = project.getExtensions().create("scaladoc", ScaladocExtension.class);
         extension.getVersion().convention(ownVersion());
         extension.getEmbed().convention(true);
-        extension.getRead().convention(false);
+        @SuppressWarnings("deprecation")
+        Property<Boolean> read = extension.getRead();
+        read.convention(false);
         extension.getIncludePaths().convention(Collections.emptyList());
         extension.getExcludePaths().convention(Collections.emptyList());
         extension.getIncludeClasses().convention(Collections.emptyList());
@@ -69,16 +72,22 @@ public class ScaladocPlugin implements Plugin<Project> {
         String core = GROUP + ":scaladoc-core_" + scala + ":" + version;
         String parser = GROUP + ":scaladoc-parser_" + scala + ":" + version;
 
-        boolean scala3 = scala.equals("3");
-        // publishing: the compiler plugin's jar has everything it needs, so the module needs nothing else
-        if (!scala3 && extension.getEmbed().get()) {
+        if (scala.equals("3")) {
+            addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
+        } else if (extension.getEmbed().get()) {
+            // the compiler plugin's jar has everything it needs, so the module needs nothing else
             dependencies.add("scalaCompilerPlugins", GROUP + ":" + COMPILER_PLUGIN + "_" + scala + ":" + version);
             addCompilerOptions(project, compilerPluginOptions(extension));
         }
-        if (extension.getRead().get()) {
+        @SuppressWarnings("deprecation")
+        boolean read = extension.getRead().get();
+        if (read) {
+            // deprecated, until 0.6.0
+            project.getLogger().warn(
+                "scaladoc: `read` is deprecated and will be removed in 0.6.0; depend on scaladoc-parser instead: "
+                    + "implementation(\"{}\")", parser);
             dependencies.add("implementation", core);
             dependencies.add("implementation", parser);
-            if (scala3) addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
         }
     }
 
