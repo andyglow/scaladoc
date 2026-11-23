@@ -171,4 +171,24 @@ class MarkdownBlocksSpec extends FSpec {
       List(Document(Heading(Heading.One, "Title"), text("# not a heading"))))
     description(comment) mustBe List(text("= Title ="), Heading(Heading.One, "not a heading"))
   }
+
+  test("pseudoCode shows Markdown's nodes") {
+    val dump = parse(
+      """/** ~~a~~ ![i](i.png) b\
+        |  * c [x][^1] <span>s</span>
+        |  *
+        |  * > q
+        |  *
+        |  * - [ ] t
+        |  *
+        |  * ```scala
+        |  * v
+        |  * ```
+        |  *
+        |  * [^1]: n
+        |  * [x]: https://x.y
+        |  */""".stripMargin).pseudoCode
+    Seq("<s>a</s>", "<img src=\"i.png\" alt=\"i\">", "<br>", "<sup>[1]</sup>", "<blockquote>", "<input type=checkbox>",
+      "<code lang=scala>", "<footnote label=1>").foreach(part => dump must include(part))
+  }
 }

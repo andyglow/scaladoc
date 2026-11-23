@@ -56,18 +56,4 @@ class MarkdownHtmlCleaningSpec extends FSpec {
       text("= A =\nx\n=== B ===\ny\n==== C ====\nz"),
       UnorderedList(List(Document(UnorderedList(List(Document(text("one"))))))))
   }
-
-  test("pseudoCode shows Markdown's nodes") {
-    val doc = Scaladoc.fromString(
-      "/** ~~a~~ ![i](i.png) b\\\n  * c [x][^1] <span>s</span>\n  *\n  * > q\n  *\n  * - [ ] t\n  *\n  * ```scala\n  * v\n  * ```\n  *\n  * [^1]: n\n  * [x]: https://x.y\n  */",
-      syntax = CommentSyntax.Markdown).fold(err => fail(err.getMessage), identity)
-    val dump = doc.pseudoCode
-    Seq("<s>a</s>", "<img src=\"i.png\" alt=\"i\">", "<br>", "<sup>[1]</sup>", "<blockquote>", "<input type=checkbox>",
-      "<code lang=scala>", "<footnote label=1>").foreach(part => dump must include(part))
-  }
-
-  test("an unknown @syntax is no syntax: the default stays") {
-    Scaladoc.fromString("/** Some '''bold'''.\n  *\n  * @syntax latex\n  */").map(_.descriptions) mustBe
-      Scaladoc.fromString("/** Some '''bold'''. */").map(_.descriptions)
-  }
 }

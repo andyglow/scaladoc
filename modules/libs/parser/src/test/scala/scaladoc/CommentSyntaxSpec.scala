@@ -48,4 +48,9 @@ class CommentSyntaxSpec extends FSpec {
     right(Scaladoc.fromString(body, hasTags = false, syntax = CommentSyntax.Wiki)) mustBe
       right(Scaladoc.fromString(body, hasTags = false))
   }
+
+  test("an unknown @syntax is no syntax: the default stays") {
+    right(Scaladoc.fromString("/** Some '''bold'''.\n  *\n  * @syntax latex\n  */")).descriptions mustBe
+      right(Scaladoc.fromString("/** Some '''bold'''. */")).descriptions
+  }
 }
