@@ -3,8 +3,9 @@ package scaladoc.parser
 import org.scalatest.funsuite.AnyFunSuite
 
 /** Inputs that make a careless Markdown parser quadratic or worse, after cmark's `pathological_tests.py`. Each is big
-  * enough for that to take a hundred times as long as ordinary text of its size, and has to parse in at most 20 times
-  * as long: measured against that, rather than the clock, it holds on a slow machine and with coverage instrumentation.
+  * enough for that to take hundreds of times as long as ordinary text of its size, and has to parse in at most 50 times
+  * as long (linear cases with big constants, like nested quotes parsed once a level, run at about 20): measured against
+  * that, rather than the clock, it holds on a slow machine and with coverage instrumentation.
   */
 class MarkdownPathologicalSuite extends AnyFunSuite {
 
@@ -12,21 +13,28 @@ class MarkdownPathologicalSuite extends AnyFunSuite {
 
   private def r(s: String, n: Int = N): String = s * n
 
-  private def millis(f: => Any): Long = {
-    f // warm up
-    val start = System.nanoTime()
+  // the fastest of a few runs, after a warm-up: a single run is off by a GC pause or a JIT compile, and the baseline's
+  // error is multiplied by the factor
+  private def nanos(f: => Any): Long = {
     f
-    (System.nanoTime() - start) / 1000000
+    (1 to 3).map { _ =>
+      val start = System.nanoTime()
+      f
+      System.nanoTime() - start
+    }.min
   }
+
+  private def ms(nanos: Long): String = f"${nanos / 1e6}%.1f ms"
 
   // ordinary text of `length` characters: words, emphasis, code and links, in paragraphs
   private def ordinary(length: Int): String =
     ("Some *words*, a `code` span and [a link](https://x.y).\n\n" * (length / 55 + 1)).take(length)
 
   private def quick(input: String)(parse: String => Any): Unit = {
-    val baseline = millis(parse(ordinary(input.length)))
-    val took     = millis(parse(input))
-    assert(took <= math.max(50L, 20 * baseline), s"took $took ms, ordinary text of its size $baseline ms")
+    val text     = ordinary(input.length)
+    val baseline = nanos(parse(text))
+    val took     = nanos(parse(input))
+    assert(took <= math.max(50000000L, 50 * baseline), s"took ${ms(took)}, ordinary text of its size ${ms(baseline)}")
   }
 
   private val cases: List[(String, String)] = List(

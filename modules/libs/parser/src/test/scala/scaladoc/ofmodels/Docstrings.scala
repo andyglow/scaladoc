@@ -45,6 +45,24 @@ object Docstrings {
     "  */"
   ).mkString("\n")
 
+  val MarkdownSink: String = Seq(
+    "/** Markdown, as it says: ~~gone~~, ![the logo](logo.png), a break\\",
+    "  * here, and a note[^1].",
+    "  *",
+    "  * > quoted",
+    "  *",
+    "  * - [x] done",
+    "  *",
+    "  * ```scala",
+    "  * val x = 1",
+    "  * ```",
+    "  *",
+    "  * [^1]: The note.",
+    "  *",
+    "  * @syntax markdown",
+    "  */"
+  ).mkString("\n")
+
   val Html: String =
     """/** <b>Bold</b>, <code>a &lt; b</code>, <a href="https://x.y">a link</a> and <span>a span</span>. */"""
 

@@ -49,4 +49,11 @@ class MarkdownHtmlCleaningSpec extends FSpec {
   test("wiki's HTML is as before") {
     Scaladoc.fromString("/** One<p>Two</p> */").map(_.descriptions) mustBe Right(List(Document(text("One"), text("Two"))))
   }
+
+  test("headings of every level, and list items, as Scala 3 cleans them") {
+    // headings are `= ... =` text, and an item ` *  - `, which Markdown reads as a list in a list, as in Scala 3
+    description("/** <h1>A</h1>x <h3>B</h3>y <h5>C</h5>z <ul><li>one</li></ul> */") mustBe List(
+      text("= A =\nx\n=== B ===\ny\n==== C ====\nz"),
+      UnorderedList(List(Document(UnorderedList(List(Document(text("one"))))))))
+  }
 }

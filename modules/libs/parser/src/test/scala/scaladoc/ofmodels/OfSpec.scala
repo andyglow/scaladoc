@@ -86,6 +86,23 @@ class Tables
   */
 class Html
 
+/** Markdown, as it says: ~~gone~~, ![the logo](logo.png), a break\
+  * here, and a note[^1].
+  *
+  * > quoted
+  *
+  * - [x] done
+  *
+  * ```scala
+  * val x = 1
+  * ```
+  *
+  * [^1]: The note.
+  *
+  * @syntax markdown
+  */
+class MarkdownSink
+
 /** A plain class.
   *
   * Second paragraph.
@@ -196,6 +213,21 @@ class OfSpec extends scaladoc.FSpec {
         List(Table.Row(List(cell(PlainText("S")), cell(Monospace("1")))), Table.Row(List(cell(PlainText("M")), cell())))),
       HorizontalRule,
       Paragraph(PlainText("The end."))))
+  }
+
+  test("Markdown, when the comment says so, with Markdown's own nodes") {
+    import Markup._
+    val doc = Scaladoc.of[MarkdownSink]
+    doc mustBe Some(parsed(Docstrings.MarkdownSink))
+    doc.get.descriptions mustBe List(Document(
+      Paragraph(
+        PlainText("Markdown, as it says: "), Strikethrough("gone"), PlainText(", "), Image("logo.png", "the logo"),
+        PlainText(", a break"), LineBreak, PlainText("here, and a note"), FootnoteReference("1"), PlainText(".")),
+      BlockQuote(Paragraph(PlainText("quoted"))),
+      UnorderedList(List(Document(Paragraph(Checkbox(checked = true), PlainText(" done"))))),
+      CodeBlock("val x = 1", "scala"),
+      Footnote("1", Document(Paragraph(PlainText("The note."))))
+    ))
   }
 
   test("HTML") {
