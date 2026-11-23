@@ -453,11 +453,76 @@ object ParseMarkup {
     }
   }
 
-  /** `text`, written in `syntax`, as a document. */
+  /** `text`, written in `syntax`, as a document. Markdown's HTML is cleaned first, as Scala 3's scaladoc does. */
   def apply(text: String, syntax: scaladoc.CommentSyntax): Document = syntax match {
     case scaladoc.CommentSyntax.Wiki     => ParseMarkup(text)
-    case scaladoc.CommentSyntax.Markdown => MarkdownBlocks(text)
+    case scaladoc.CommentSyntax.Markdown => MarkdownBlocks(cleanHtml(text))
   }
+
+  // the tags Scala 3's scaladoc keeps in Markdown
+  private val MarkdownSafeTags = Set(
+    "a", "abbr", "address", "area", "blockquote", "br", "b", "caption", "cite", "code", "col", "colgroup", "dd",
+    "del", "dfn", "em", "hr", "img", "ins", "i", "kbd", "label", "legend", "pre", "q", "samp", "small", "span",
+    "strong", "sub", "sup", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "var")
+
+  /** HTML as Scala 3's scaladoc has it before it parses Markdown: a port of its `Cleaner`. The safe tags stay, `<p>`
+    * and `<div>` are paragraph breaks, headings become `= ... =` and list items ` *  - `, and other tags go. Fenced
+    * code (```` ``` ````) and `[[links]]` stay as they are.
+    *
+    * As in Scala 3, a tag's name goes up to its `>` or to the next space in the text, whichever comes first, and a `<`
+    * with a space right after it, or without a `>` anywhere after it, is text. Names are case sensitive. So
+    * `<https://x.y>`, and `<A>` in `List<A>`, go, as they do in Scala 3. Scala 3 cleans a whole comment, which always has
+    * a space further on, before its closing marker; this cleans a tag's text, whose end counts as one.
+    */
+  private[parser] def cleanHtml(text: String): String =
+    if (text.indexOf('<') < 0) text
+    else {
+      val out       = new StringBuilder
+      val len       = text.length
+      var i         = 0
+      // the next `>` and the next space from `i` on, found once for many `<`s: -2 when there's none
+      var nextGt    = -1
+      var nextSpace = -1
+      var inCode    = false
+      var inLink    = false
+      while (i < len) {
+        if (inCode) {
+          if (text.startsWith("```", i)) { out ++= "```"; i += 3; inCode = false }
+          else { out += text.charAt(i); i += 1 }
+        } else if (inLink) {
+          if (text.startsWith("]]", i)) { out ++= "]]"; i += 2; inLink = false }
+          else { out += text.charAt(i); i += 1 }
+        } else if (text.startsWith("```", i)) { out ++= "```"; i += 3; inCode = true }
+        else if (text.startsWith("[[", i)) { out ++= "[["; i += 2; inLink = true }
+        else if (text.charAt(i) != '<') { out += text.charAt(i); i += 1 }
+        else {
+          if (nextGt != -2 && nextGt < i) { nextGt = text.indexOf('>', i); if (nextGt < 0) nextGt = -2 }
+          if (nextSpace != -2 && nextSpace < i) { nextSpace = text.indexOf(' ', i); if (nextSpace < 0) nextSpace = -2 }
+          val nameEnd = if (nextSpace < 0) len else nextSpace
+          if (nameEnd == i + 1 || nextGt < 0) { out ++= "&lt;"; i += 1 }
+          else {
+            out ++= (text.substring(i + 1, math.min(nextGt, nameEnd)) match {
+              case ""                    => "&lt;"
+              case "p" | "div"           => "\n\n"
+              case "h1"                  => "\n= "
+              case "/h1"                 => " =\n"
+              case "h2"                  => "\n== "
+              case "/h2"                 => " ==\n"
+              case "h3"                  => "\n=== "
+              case "/h3"                 => " ===\n"
+              case "h4" | "h5" | "h6"    => "\n==== "
+              case "/h4" | "/h5" | "/h6" => " ====\n"
+              case "li"                  => "\n *  - "
+              case "/li"                 => ""
+              case name if MarkdownSafeTags(name.stripPrefix("/")) => text.substring(i, nextGt + 1)
+              case _                     => ""
+            })
+            i = nextGt + 1
+          }
+        }
+      }
+      out.toString
+    }
 
   def apply(chars: Array[Char], log: Log): Document = ParseMarkup(new String(chars), log)
 

@@ -116,12 +116,9 @@ private[parser] final class MarkdownInlines private (
         val end = runEnd(text, j, '`')
         if (end - j == n) closer = j else j = text.indexOf('`', end)
       }
-      // its line ends are spaces, and one space goes from both sides when both have one and it's not all spaces
-      val code = text.substring(open, closer).replace('\n', ' ')
-      val stripped =
-        if (code.length >= 2 && code.head == ' ' && code.last == ' ' && code.exists(_ != ' ')) code.substring(1, code.length - 1)
-        else code
-      Some((stripped, closer + n))
+      // as Scala 3's flexmark has it (CommonMark before 0.29): without the whitespace around it, and a run of it inside,
+      // line ends included, is one space
+      Some((collapseWhitespace(text.substring(open, closer)), closer + n))
     }
   }
 
@@ -719,6 +716,20 @@ private[parser] object MarkdownInlines {
     }
     if (buf.nonEmpty) out += PlainText(buf.toString)
     out.toList
+  }
+
+  private def collapseWhitespace(s: String): String = {
+    val sb    = new StringBuilder
+    var space = false
+    s.foreach { c =>
+      if (c == ' ' || c == '\t' || c == '\n' || c == '\r') space = true
+      else {
+        if (space && sb.nonEmpty) sb += ' '
+        space = false
+        sb += c
+      }
+    }
+    sb.toString
   }
 
   private def looseMarkers(s: Span): Boolean = s match {
