@@ -124,7 +124,8 @@ class MarkdownBlocksSpec extends FSpec {
         |  * | bob  |
         |  */""".stripMargin) mustBe List(
       Table(
-        Table.Row(List(text("name"), Paragraph(Monospace("a|b")), text("age"))),
+        // as in Scala 3, a `\|` in a code span stays one
+        Table.Row(List(text("name"), Paragraph(Monospace("a\\|b")), text("age"))),
         List(Table.Alignment.Left, Table.Alignment.Center, Table.Alignment.Right),
         List(
           Table.Row(List(text("ann"), text("x"), text("31"))),
@@ -134,14 +135,18 @@ class MarkdownBlocksSpec extends FSpec {
     )
   }
 
-  test("an HTML block stays as it is") {
+  test("an HTML block of safe tags stays as it is") {
     description(
-      """/** <div class="note">
-        |  * Careful.
-        |  * </div>
+      """/** <table>
+        |  * <tr><td>Careful.</td></tr>
+        |  * </table>
         |  *
         |  * After.
-        |  */""".stripMargin) mustBe List(HtmlTag("<div class=\"note\">\nCareful.\n</div>"), text("After."))
+        |  */""".stripMargin) mustBe List(HtmlTag("<table>\n<tr><td>Careful.</td></tr>\n</table>"), text("After."))
+  }
+
+  test("YAML front matter at the start goes, as in Scala 3") {
+    description("/** ---\n  * title: x\n  * ---\n  * Text.\n  */") mustBe List(text("Text."))
   }
 
   test("tags' bodies are Markdown too") {

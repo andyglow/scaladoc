@@ -15,7 +15,9 @@ import scala.io.Source
   * `src/test/resources/commonmark/gfm-spec.txt`. The spec is © John MacFarlane and GitHub, under CC BY-SA 4.0
   * (http://creativecommons.org/licenses/by-sa/4.0/); see the README next to it.
   *
-  * Each example's Markdown is parsed into the model, and the model rendered as HTML the way the spec's reference
+  * Each example's Markdown is parsed into the model by `MarkdownBlocks`, the parser itself: without the HTML cleaning
+  * Scala 3's scaladoc does first, which `ParseMarkup` does for Markdown comments, and `MarkdownHtmlCleaningSpec` tests.
+  * Then the model is rendered as HTML the way the spec's reference
   * implementation does, to compare with the spec's. A few things the model leaves out on purpose are normalized away on
   * both sides: whether a list is tight or loose, where an ordered list starts, a column's default alignment, and the
   * titles of links and images.
@@ -31,7 +33,7 @@ class CommonMarkSpecSuite extends AnyFunSuite {
   private val examples = parseSpec(read(new File(dir, "gfm-spec.txt")))
 
   private def passes(e: Example): Boolean =
-    try normalize(render(MarkupSyntax.Markdown.document(e.markdown))) == normalize(e.html)
+    try normalize(render(MarkdownBlocks(e.markdown))) == normalize(e.html)
     catch { case _: Exception => false }
 
   test("the spec's examples that pass are the ones in passing.txt") {
@@ -50,7 +52,7 @@ class CommonMarkSpecSuite extends AnyFunSuite {
         .filter(e => !passing(e.number) && (show == "all" || sections.exists(s => e.section.startsWith(s))))
         .foreach { e =>
           val actual =
-            try normalize(render(MarkupSyntax.Markdown.document(e.markdown)))
+            try normalize(render(MarkdownBlocks(e.markdown)))
             catch { case ex: Exception => s"!! $ex" }
           info(s"#${e.number} (${e.section})\n--- markdown\n${e.markdown}--- expected\n${normalize(e.html)}\n--- actual\n$actual\n")
         }

@@ -39,7 +39,7 @@ class MarkdownInlinesSpec extends FSpec {
 
   test("links: inline, by reference, and autolinks") {
     Scaladoc.fromString(
-      """/** See [the docs](https://x.y/docs "Docs"), [the spec][spec], [spec] and <https://x.y>.
+      """/** See [the docs](https://x.y/docs "Docs"), [the spec][spec], [spec] and https://x.y.
         |  *
         |  * [spec]: https://x.y/spec
         |  */""".stripMargin,
@@ -47,6 +47,7 @@ class MarkdownInlinesSpec extends FSpec {
       PlainText("See "), Link("https://x.y/docs", "the docs"), PlainText(", "), Link("https://x.y/spec", "the spec"),
       PlainText(", "), Link("https://x.y/spec", "spec"), PlainText(" and "), Link("https://x.y", "https://x.y"),
       PlainText(".")))))
+    // `<https://x.y>`: Scala 3's scaladoc takes it for an HTML tag, and drops it
   }
 
   test("bare URLs and email addresses are links, as GFM has them") {
@@ -84,9 +85,9 @@ class MarkdownInlinesSpec extends FSpec {
   }
 
   test("javadoc's inline tags, as in wiki") {
-    spans("{@code Map<K, V>}, {@link scala.Option the *option*} and {@literal <x>}") mustBe List(
-      Monospace("Map<K, V>"), PlainText(", "), Link("scala.Option", List(PlainText("the "), Italic("option"))),
-      PlainText(" and <x>"))
+    spans("{@code Map[K, V]}, {@link scala.Option the *option*} and {@literal a & b}") mustBe List(
+      Monospace("Map[K, V]"), PlainText(", "), Link("scala.Option", List(PlainText("the "), Italic("option"))),
+      PlainText(" and a & b"))
     spans("{@inheritDoc} and {@code open") mustBe List(PlainText("{@inheritDoc} and {@code open"))
   }
 

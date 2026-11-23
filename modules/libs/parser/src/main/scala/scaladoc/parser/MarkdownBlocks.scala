@@ -96,7 +96,8 @@ private[parser] final class MarkdownBlocks private (
       val c    = s.charAt(indent)
       val end  = runEnd(s, indent, c)
       val info = s.substring(end)
-      if (end - indent < 3 || (c == '`' && info.indexOf('`') >= 0)) None
+      // as Scala 3's flexmark has it, a tilde fence's info string has no backticks either
+      if (end - indent < 3 || info.indexOf('`') >= 0) None
       else Some((c, end - indent, indent, MarkdownInlines.unescape(info.trim)))
     }
   }
@@ -187,13 +188,15 @@ private[parser] final class MarkdownBlocks private (
     }
   }
 
-  // a header row and, on the next line, a delimiter row of as many cells: the header's cells and the alignments
+  // a header row and, on the next line, a delimiter row: the header's cells and the alignments. As Scala 3's flexmark
+  // has it, the delimiter row needn't have as many cells as the header: the columns it has none for are aligned left.
   private def tableAt(n: Int): Option[(List[String], List[Table.Alignment])] =
     if (n + 1 >= lines.length || indentOf(lines(n + 1)) > 3 || lines(n + 1).indexOf('|') < 0) None
     else
       alignmentsOf(lines(n + 1)).flatMap { alignments =>
         val header = splitRow(lines(n))
-        if (header.length == alignments.length) Some((header, alignments)) else None
+        if (header.isEmpty) None
+        else Some((header, alignments.padTo(header.length, Table.Alignment.Left).take(header.length)))
       }
 
   // whether a line ends a paragraph: a blank line, or a block that can start right after a paragraph's line. A list
@@ -388,11 +391,11 @@ private[parser] final class MarkdownBlocks private (
     new MarkdownBlocks(content.mkString("\n"), depth, refs, notes).blocks()
   }
 
-  // its rows: the lines after the delimiter row, up to a blank one or another block
+  // its rows: the lines after the delimiter row that have a `|`, as Scala 3's flexmark has them, up to another block
   private def table(header: List[String], alignments: List[Table.Alignment]): Block = {
     line += 2
     val rows = ListBuffer.empty[List[String]]
-    while (!eof && !isBlank(lines(line)) && !(quoteAt(line) || fenceAt(line).isDefined || wikiCodeAt(line) ||
+    while (!eof && lines(line).indexOf('|') >= 0 && !(quoteAt(line) || fenceAt(line).isDefined || wikiCodeAt(line) ||
              atxHeadingAt(line).isDefined || ruleAt(line) || htmlBlockAt(line).exists(_ < 7))) {
       rows += splitRow(lines(line))
       line += 1
@@ -403,7 +406,18 @@ private[parser] final class MarkdownBlocks private (
 
 private[parser] object MarkdownBlocks {
 
-  def apply(text: String): Document = {
+  def apply(text: String): Document = withoutFrontMatter(text)
+
+  // YAML front matter, `---` lines around anything at the start, as Scala 3's flexmark drops it
+  private def withoutFrontMatter(text: String): Document = {
+    val lines = splitLines(text)
+    val close =
+      if (lines.isEmpty || trimEnd(lines(0)) != "---") -1
+      else lines.indexWhere(l => trimEnd(l) == "---" || trimEnd(l) == "...", 1)
+    parse(if (close < 0) text else lines.drop(close + 1).mkString("\n"))
+  }
+
+  private def parse(text: String): Document = {
     val refs  = mutable.LinkedHashMap.empty[String, MarkdownInlines.Ref]
     val notes = mutable.Set.empty[String]
     toDocument(new MarkdownBlocks(text, 0, refs, notes).blocks(), refs, notes)
@@ -608,7 +622,7 @@ private[parser] object MarkdownBlocks {
   }
 
   /** A table row's cells: split at the `|`s that aren't escaped, without the leading and trailing one. An escaped `|`
-    * is a `|` in the cell.
+    * stays escaped, for the cell's inline markup: a `|` outside code, and `\|` in a code span, as in Scala 3.
     */
   def splitRow(row: String): List[String] = {
     val text  = row.trim
@@ -617,7 +631,7 @@ private[parser] object MarkdownBlocks {
     var i     = if (text.startsWith("|")) 1 else 0
     while (i < text.length) {
       text.charAt(i) match {
-        case '\\' if i + 1 < text.length && text.charAt(i + 1) == '|' => cell.append('|'); i += 2
+        case '\\' if i + 1 < text.length && text.charAt(i + 1) == '|' => cell.append("\\|"); i += 2
         case '|' => cells += cell.toString.trim; cell.setLength(0); i += 1
         case c   => cell.append(c); i += 1
       }
