@@ -36,7 +36,10 @@ trait MarkupMatchers {
           case (Subscript(l), Subscript(r))    => spans(path :+ "subscript", l, r)
           case (Link(lt, l), Link(rt, r))     =>
             if (lt != rt) result(path :+ "link", lt, rt) else spans(path :+ "link", l, r)
-          case (CodeBlock(l), CodeBlock(r))       => result(path :+ "code-block", l, r)
+          case (CodeBlock(l, ll), CodeBlock(r, rl)) =>
+            if (ll != rl) result(path :+ "code-block-language", ll.toString, rl.toString)
+            else result(path :+ "code-block", l, r)
+          case (Strikethrough(l), Strikethrough(r)) => spans(path :+ "strikethrough", l, r)
           case (Heading(ll, l), Heading(rr, r))   =>
             if (ll != rr) fail(
               path :+ s"heading",

@@ -4,6 +4,25 @@
 >
 > — attributed to Heraclitus
 
+## To 0.6
+
+The model grows the nodes Markdown needs (see @ref:[The model](model.md#markup)): `Strikethrough`, `Image`,
+`LineBreak`, `Checkbox` and `FootnoteReference` among the spans, `BlockQuote` and `Footnote` among the blocks. Only
+Markdown comments produce them, so code that walks wiki comments sees nothing new, but a `match` over `Markup` that
+lists every node gets exhaustivity warnings until it handles them.
+
+**`CodeBlock` has a language:** `CodeBlock(value, language)`, where `language` is what a Markdown fence names, like
+`scala` in ```` ```scala ````, and `None` otherwise. Building one is unchanged, `CodeBlock("val x = 1")` still
+compiles, but a pattern needs the second field:
+
+```scala
+// 0.5
+case CodeBlock(code)    => code
+
+// 0.6
+case CodeBlock(code, _) => code
+```
+
 ## To 0.5.1
 
 The sbt and Gradle plugins set up the compiler and nothing else: the compiler plugin on Scala 2, and `-Yread-docs` on

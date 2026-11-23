@@ -114,6 +114,18 @@ object Markup {
     def apply(x: Span, xs: Span*): Subscript = Subscript(x :: xs.toList)
   }
 
+  /** Struck-through text: `~~gone~~` (Markdown). */
+  case class Strikethrough(spans: List[Span]) extends Span with HasSpans {
+    type Self = Strikethrough
+    override def plainString: String = s"~~$spansString~~"
+    def trimmed: Self with Trimmed = new Strikethrough(trimSpans(spans)) with Trimmed
+  }
+
+  object Strikethrough {
+    def apply(text: String): Strikethrough       = Strikethrough(List(PlainText(text)))
+    def apply(x: Span, xs: Span*): Strikethrough = Strikethrough(x :: xs.toList)
+  }
+
   /** A link to `target`, an entity like `scala.Option` or a URL like `https://scala-lang.org`, with an optional title:
     * `[[https://scala-lang.org Scala]]`.
     */
@@ -134,6 +146,46 @@ object Markup {
     private val SchemeUri                              = "[a-z][a-z0-9+.-]*:.*".r
   }
 
+  /** An image: `![alt](src)` (Markdown). `alt` is its text alternative, as plain text. */
+  case class Image(src: String, alt: String) extends Span {
+    type Self = Image
+    override def isBlank: Boolean    = src.forall(_.isWhitespace) && alt.forall(_.isWhitespace)
+    override def plainString: String = s"![$alt]($src)"
+    def trimmed: Self with Trimmed   = new Image(src.trim, trimML(alt)) with Trimmed
+  }
+
+  object Image {
+    def apply(src: String): Image = Image(src, "")
+  }
+
+  /** A line break inside a paragraph: a line that ends with two spaces or a `\` (Markdown). Other line ends in a
+    * paragraph are just whitespace.
+    */
+  case object LineBreak extends Span with Trimmed {
+    type Self = LineBreak.type
+    override def isBlank: Boolean    = true
+    override def plainString: String = "\n"
+    def trimmed: Self with Trimmed   = this
+  }
+
+  /** The checkbox of a task list item, `- [x] done` or `- [ ] to do` (Markdown): the first span of the item's first
+    * paragraph, as GitHub Flavored Markdown has it. Ordered lists can have them too.
+    */
+  case class Checkbox(checked: Boolean) extends Span {
+    type Self = Checkbox
+    override def isBlank: Boolean    = false
+    override def plainString: String = if (checked) "[x]" else "[ ]"
+    def trimmed: Self with Trimmed   = new Checkbox(checked) with Trimmed
+  }
+
+  /** A reference to a footnote, `[^1]` (Markdown). The footnote's text is the [[Footnote]] with the same label. */
+  case class FootnoteReference(label: String) extends Span {
+    type Self = FootnoteReference
+    override def isBlank: Boolean    = false
+    override def plainString: String = s"[^$label]"
+    def trimmed: Self with Trimmed   = new FootnoteReference(label.trim) with Trimmed
+  }
+
   /** An HTML tag with no equivalent in the model, like `<span class="x">` or `</td>`, as it was written. */
   case class HtmlTag(data: String) extends Span {
     type Self = HtmlTag
@@ -142,11 +194,47 @@ object Markup {
     def trimmed: Self with Trimmed   = new HtmlTag(data) with Trimmed
   }
 
-  case class CodeBlock(value: String) extends Markup with HasValue  {
+  /** A block of code: `{{{ ... }}}`, or in Markdown a fenced or an indented one. `language` is what a fence names,
+    * like `scala` in ```` ```scala ````: the first word of its info string.
+    */
+  case class CodeBlock(value: String, language: Option[String] = None) extends Markup with HasValue {
     override type Self = CodeBlock
     override def plainString: String = s"{{{$value}}}"
-    def trimmed: Self with Trimmed = new CodeBlock(trimML(value)) with Trimmed
+    def trimmed: Self with Trimmed = new CodeBlock(trimML(value), language) with Trimmed
+  }
 
+  object CodeBlock {
+    def apply(value: String, language: String): CodeBlock = CodeBlock(value, Some(language))
+  }
+
+  /** A quote: `> quoted` lines (Markdown). It holds blocks, so it can have paragraphs, lists, code and quotes of its
+    * own.
+    */
+  case class BlockQuote(content: Document) extends Markup {
+    type Self = BlockQuote
+    override def isBlank: Boolean = content.isBlank
+    // its lines, each after a `>`
+    override def plainString: String =
+      content.plainString.split("\n", -1).map(line => if (line.isEmpty) ">" else s"> $line").mkString("\n")
+    def trimmed: Self with Trimmed = new BlockQuote(content.trimmed) with Trimmed
+  }
+
+  object BlockQuote {
+    def apply(x: Markup, xs: Markup*): BlockQuote = BlockQuote(Document(x +: xs.toList))
+  }
+
+  /** A footnote's text, `[^1]: The text.` (Markdown), where it is in the comment. [[FootnoteReference]]s with the same
+    * label point to it.
+    */
+  case class Footnote(label: String, content: Document) extends Markup {
+    type Self = Footnote
+    override def isBlank: Boolean = content.isBlank
+    // `[^1]: ` and the text, its next lines indented
+    override def plainString: String = {
+      val lines = content.plainString.split("\n", -1).toList
+      (s"[^$label]: ${lines.head}" :: lines.tail.map(line => if (line.isEmpty) "" else s"    $line")).mkString("\n")
+    }
+    def trimmed: Self with Trimmed = new Footnote(label.trim, content.trimmed) with Trimmed
   }
 
   case class Paragraph(markup: List[Span]) extends Markup {

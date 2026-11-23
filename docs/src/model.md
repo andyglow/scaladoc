@@ -42,7 +42,9 @@ Scaladoc = List Tag
 ## Markup
 
 Markup comes in two kinds: blocks, which stack on top of each other, and spans, which run inline within a block. A
-`Document` holds blocks, and a tag's text is always a `Document`:
+`Document` holds blocks, and a tag's text is always a `Document`. The nodes are named for what the markup means, not
+how it's written, so `'''bold'''` in wiki syntax and `**bold**` in Markdown are both `Bold`. A few only come from
+Markdown, since the wiki syntax has no way to write them; they're marked below.
 
 ```
 Span     = PlainText   (String)
@@ -52,17 +54,24 @@ Span     = PlainText   (String)
          | Underline   (List Span)
          | Superscript (List Span)
          | Subscript   (List Span)
+         | Strikethrough     (List Span)           -- Markdown
          | Link        (String (List Span))        -- target, title
+         | Image       (String String)             -- Markdown: source, alternative text
+         | LineBreak                               -- Markdown: a hard line break
+         | Checkbox    (Boolean)                   -- Markdown: a task list item's, at its start
+         | FootnoteReference (String)              -- Markdown: a footnote's label
          | HtmlTag     (String)                    -- an HTML tag the model has no node for
 
 Markup   = Span
          | Paragraph     (List Span)
          | Heading       (Level (List Span))       -- Level: One to Six
-         | CodeBlock     (String)
+         | CodeBlock     (String (Option String))  -- code, the language a Markdown fence names
+         | BlockQuote    (Document)                -- Markdown
          | UnorderedList (List Document)           -- each item: its text and nested lists
          | OrderedList   (List Document Style)     -- Style: Decimal, LowerRoman, UpperRoman, LowerAlpha, UpperAlpha
          | Table         (Row (List Alignment) (List Row))   -- a Row: one Paragraph a cell
          | HorizontalRule
+         | Footnote      (String Document)         -- Markdown: label, text
          | Document      (List Markup)
 ```
 
@@ -78,6 +87,8 @@ def links(m: Markup): List[String] = m match {
   case x: HasSpans             => x.spans.flatMap(links)
   case x: ListBlock            => x.items.flatMap(links)
   case Table(header, _, rows)  => (header :: rows).flatMap(_.cells).flatMap(links)
+  case BlockQuote(content)     => links(content)
+  case Footnote(_, content)    => links(content)
   case _                       => Nil
 }
 
