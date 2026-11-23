@@ -1,4 +1,4 @@
-ThisBuild / scalaVersion := "3.3.9"
+ThisBuild / scalaVersion := "3.9.0"
 
 // publishes: on Scala 3 the doc comments go into TASTy anyway, so the plugin adds no library
 lazy val model = project

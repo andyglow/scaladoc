@@ -54,7 +54,7 @@ each field means. A schema generator needs nothing more to give every property a
 
 ## Supported versions
 
-| Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.3+) | Scala.js 1.x |
+| Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.9+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|
 | `scaladoc-core`             |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
@@ -62,8 +62,8 @@ each field means. A schema generator needs nothing more to give every property a
 | `scaladoc-annotation`      |     ✓      |     ✓      |       ✓        |      ✓       |
 
 `scaladoc-annotation` is a single Java jar, with no Scala suffix, for all of them. `sbt-scaladoc` works with sbt 1.5.8+
-and sbt 2.x, and the Gradle plugin with Gradle 8.5+. All artifacts target
-Java 8 and run on any later JDK.
+and sbt 2.x, and the Gradle plugin with Gradle 8.5+. Scala 2 artifacts
+target Java 8, Scala 3 ones Java 17 (Scala 3.9 needs it), and run on any later JDK.
 
 ## Where to go next
 

@@ -16,7 +16,7 @@ val scriptedSbt2      = "2.1.0"
 val scriptedSbt1      = "1.13.1"
 
 // `core` and `parser` cross-build to Scala 3; the compiler plugin (and the integration tests that need it)
-// are Scala 2 only. They are still listed for Scala 3 so that `++3.3.9 <task>` keeps a consistent build, but
+// are Scala 2 only. They are still listed for Scala 3 so that `++3.9.0 <task>` keeps a consistent build, but
 // on Scala 3 they have no sources and publish nothing (see `scala2Only`).
 val allScalaVersions = Seq(scala213, scala212, scala3)
 
@@ -84,8 +84,10 @@ ThisBuild / githubWorkflowBuild := Seq(
   )
 )
 
-// Built on JDK 21, but bytecode and JDK API are pinned to Java 8 so the artifacts keep working on older JDKs
-def compilerOptions(v: String, jvmRelease: Int = 8): Seq[String] = {
+// Built on JDK 21, but bytecode and JDK API are pinned to the oldest JDK each Scala supports: Java 8 for Scala 2, so
+// the artifacts keep working on older JDKs, and Java 17 for Scala 3, which can't target older JVMs from 3.8 on
+def compilerOptions(v: String): Seq[String] = {
+  val jvmRelease = if (isScala3(v)) 17 else 8
   val base = Seq("-encoding", "UTF-8", "-feature", "-unchecked", "-deprecation")
   CrossVersion.partialVersion(v) match {
     case Some((2, 12)) => base ++ Seq(s"-release:$jvmRelease", "-Ywarn-unused:imports", "-language:higherKinds")
@@ -276,8 +278,7 @@ lazy val sbtScaladoc = (project in file("modules/plugins/sbt"))
     name               := "sbt-scaladoc",
     scalaVersion       := sbt2Scala,
     crossScalaVersions := Seq(sbt2Scala, scala212),
-    // sbt 2 runs on JDK 17+, and Scala 3.8 can't target older JVMs; the sbt 1 build keeps Java 8
-    scalacOptions := compilerOptions(scalaVersion.value, jvmRelease = if (isScala3(scalaVersion.value)) 17 else 8),
+    scalacOptions := compilerOptions(scalaVersion.value),
     pluginCrossBuild / sbtVersion := {
       if (isScala3(scalaVersion.value)) sbt2Version else sbt1Version
     },

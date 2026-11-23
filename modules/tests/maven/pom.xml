@@ -57,7 +57,7 @@
       <id>scala-3</id>
       <activation><property><name>scala</name><value>3</value></property></activation>
       <properties>
-        <scala.version>3.3.9</scala.version>
+        <scala.version>3.9.0</scala.version>
         <scala.binary>3</scala.binary>
         <scala.library>scala3-library_3</scala.library>
         <!-- Scala 3 has no compiler plugin, so nothing is excluded -->
