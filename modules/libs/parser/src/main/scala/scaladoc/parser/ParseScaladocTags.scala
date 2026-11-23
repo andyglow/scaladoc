@@ -4,14 +4,14 @@ import scaladoc.{Markup, Scaladoc, ScaladocException}
 
 import scala.collection.mutable
 
-final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
+final class ParseScaladocTags(val chars: Array[Char], syntax: MarkupSyntax = MarkupSyntax.Wiki) extends Tokenizer {
   import MutableTag._
 
   private val tags = new mutable.ArrayBuffer[MutableTag]()
   private def top: Option[MutableTag] = tags.lastOption
   private val buf = new StringBuilder
   private def parseMarkup(): Markup =
-    if (buf.forall(_.isWhitespace)) Markup.Document(Nil) else ParseMarkup(buf.toString)
+    if (buf.forall(_.isWhitespace)) Markup.Document(Nil) else syntax.document(buf.toString)
   private def flush(): Unit = top match {
     case None =>
       if (buf.nonEmpty) throwBufferFlushError(None, buf)
@@ -49,15 +49,10 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
     ident
   }
 
-  private def isAtString(x: String): Boolean =
-    remaining >= x.length && x.indices.forall(i => chars(pos + i) == x.charAt(i))
-
-  private def isAtStringIgnoreCase(x: String): Boolean =
-    remaining >= x.length && x.indices.forall(i => chars(pos + i).toLower == x.charAt(i).toLower)
-
   def run(): Scaladoc = {
-    // inside `{{{ ... }}}` and `<pre>...</pre>` nothing is a tag, so code samples can have annotations like `@main`
-    var codeEnd: String = null
+    // inside code (wiki: `{{{ ... }}}` and `<pre>...</pre>`) nothing is a tag, so code samples can have annotations
+    // like `@main`
+    var codeEnd: MarkupSyntax.CodeEnd = null
     def inCode = codeEnd != null
     while (!isEOF) {
       // as in scaladoc, a tag starts a line: an `@` elsewhere (`foo@bar.com`, `{@link Foo}`) is text
@@ -149,9 +144,8 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
           case Some(tag) if !(tag.isOpen) => tags += Description(null)
           case _ => // println("Something is on stack, but.. Tags: \n" + tags.mkString("- ", "\n- ", ""))
         }
-        if (!inCode && isAtString("{{{")) codeEnd = "}}}"
-        else if (!inCode && isAtStringIgnoreCase("<pre")) codeEnd = "</pre>"
-        else if (inCode && isAtStringIgnoreCase(codeEnd)) codeEnd = null
+        if (!inCode) codeEnd = syntax.codeStartsAt(chars, pos).orNull
+        else if (codeEnd.endsAt(chars, pos)) codeEnd = null
         buf append char
         next()
       }
@@ -164,15 +158,15 @@ final class ParseScaladocTags(val chars: Array[Char]) extends Tokenizer {
 
 object ParseScaladocTags {
 
-  def pure(x: String): Either[ScaladocException, Scaladoc] = {
-    try Right(ParseScaladocTags(x.toCharArray)) catch {
+  def pure(x: String, syntax: MarkupSyntax = MarkupSyntax.Wiki): Either[ScaladocException, Scaladoc] = {
+    try Right(ParseScaladocTags(x.toCharArray, syntax)) catch {
       case ex: ScaladocException => Left(ex)
     }
   }
 
-  def apply(x: Array[Char]): Scaladoc = {
-    new ParseScaladocTags(x).run()
-  }
+  def apply(x: Array[Char], syntax: MarkupSyntax): Scaladoc = new ParseScaladocTags(x, syntax).run()
+
+  def apply(x: Array[Char]): Scaladoc = ParseScaladocTags(x, MarkupSyntax.Wiki)
 
   def apply(x: String): Scaladoc = ParseScaladocTags(x.toCharArray)
 

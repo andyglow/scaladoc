@@ -15,12 +15,22 @@ package object scaladoc {
 
   implicit class ScaladocCompanionOps(private val comp: Scaladoc.type) extends AnyVal {
 
-    def fromString(x: String, hasTags: Boolean = true, strict: Boolean = false): Either[ScaladocException, Scaladoc] =
-      ScaladocParser.fromString(x, hasTags, strict)
+    /** Parses a comment, written in `syntax`. See `scaladoc.parser.ScaladocParser.fromString`. */
+    def fromString(
+      x: String,
+      hasTags: Boolean = true,
+      strict: Boolean = false,
+      syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] =
+      ScaladocParser.fromString(x, hasTags, strict, syntax)
 
-    /** Parses a raw doc comment as Scala 3's `Symbol.docstring` returns it. See `scaladoc.parser.ScaladocParser.fromDocstring`. */
-    def fromDocstring(x: String, strict: Boolean = false): Either[ScaladocException, Scaladoc] =
-      ScaladocParser.fromDocstring(x, strict)
+    /** Parses a raw doc comment as Scala 3's `Symbol.docstring` returns it, written in `syntax`. See
+      * `scaladoc.parser.ScaladocParser.fromDocstring`.
+      */
+    def fromDocstring(
+      x: String,
+      strict: Boolean = false,
+      syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] =
+      ScaladocParser.fromDocstring(x, strict, syntax)
 
     /** Extracts the scaladoc of `T` at compile time from `Symbol.docstring`.
       *
