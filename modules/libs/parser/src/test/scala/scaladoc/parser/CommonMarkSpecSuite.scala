@@ -17,7 +17,8 @@ import scala.io.Source
   *
   * Each example's Markdown is parsed into the model, and the model rendered as HTML the way the spec's reference
   * implementation does, to compare with the spec's. A few things the model leaves out on purpose are normalized away on
-  * both sides: whether a list is tight or loose, where an ordered list starts, and a column's default alignment.
+  * both sides: whether a list is tight or loose, where an ordered list starts, a column's default alignment, and the
+  * titles of links and images.
   *
   * `passing.txt`, next to the spec, lists the examples that pass, and the suite fails if any other set does: one that
   * starts failing is a regression, and one that starts passing goes on the list. On a mismatch, the actual list is
@@ -144,15 +145,43 @@ object CommonMarkSpecSuite {
     case PlainText(text)          => escape(text)
     case Monospace(text)          => s"<code>${escape(text)}</code>"
     case Italic(spans)            => s"<em>${spans.map(span).mkString}</em>"
-    case Bold(spans)              => s"<strong>${spans.map(span).mkString}</strong>"
+    // as cmark-gfm's renderer: no `<strong>` right inside another
+    case Bold(List(inner: Bold))  => span(inner)
+    case Bold(spans)              => s"<strong>${spans.map(inStrong).mkString}</strong>"
     case Strikethrough(spans)     => s"<del>${spans.map(span).mkString}</del>"
-    case Link(target, title)      => s"""<a href="${escape(target)}">${title.map(span).mkString}</a>"""
-    case Image(src, alt)          => s"""<img src="${escape(src)}" alt="${escape(alt)}" />"""
+    case Link(target, title)      => s"""<a href="${escape(encodeUri(target))}">${title.map(span).mkString}</a>"""
+    case Image(src, alt)          => s"""<img src="${escape(encodeUri(src))}" alt="${escape(alt)}" />"""
     case LineBreak                => "<br />\n"
     case Checkbox(true)           => """<input checked="" disabled="" type="checkbox">"""
     case Checkbox(false)          => """<input disabled="" type="checkbox">"""
     case HtmlTag(data)            => data
     case other                    => sys.error(s"can't render $other")
+  }
+
+  // as the reference implementation writes a URL: percent-encoded, but what's encoded already stays
+  private def encodeUri(uri: String): String = {
+    val keep = ";/?:@&=+$,-_.!~*'()#"
+    val sb   = new StringBuilder
+    var i    = 0
+    while (i < uri.length) {
+      val c = uri.charAt(i)
+      if (c == '%' && i + 2 < uri.length && isHex(uri.charAt(i + 1)) && isHex(uri.charAt(i + 2))) {
+        sb.append(uri.substring(i, i + 3)); i += 3
+      } else if (c < 128 && (c.isLetterOrDigit || keep.indexOf(c) >= 0)) { sb.append(c); i += 1 }
+      else {
+        val cp = uri.codePointAt(i)
+        new String(Character.toChars(cp)).getBytes(StandardCharsets.UTF_8).foreach(b => sb.append(f"%%${b & 0xff}%02X"))
+        i += Character.charCount(cp)
+      }
+    }
+    sb.toString
+  }
+
+  private def isHex(c: Char): Boolean = c.isDigit || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+
+  private def inStrong(x: Span): String = x match {
+    case Bold(spans) => spans.map(inStrong).mkString
+    case other       => span(other)
   }
 
   private val Void       = Set("hr", "br", "img", "input")
@@ -167,6 +196,7 @@ object CommonMarkSpecSuite {
       .replaceAll("(?<=>)\n", "")
       .replaceAll(" start=\"\\d+\"", "")
       .replace(" align=\"left\"", "")
+      .replaceAll(" title=\"[^\"]*\"", "")
     val out   = new StringBuilder
     val stack = mutable.Stack.empty[String]
     "<[^>]*>|[^<]+".r.findAllIn(flat).foreach { token =>

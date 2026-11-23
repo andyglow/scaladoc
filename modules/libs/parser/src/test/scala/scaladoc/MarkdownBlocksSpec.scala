@@ -4,7 +4,6 @@ import scaladoc.Markup._
 import scaladoc.Tag._
 
 // Markdown's blocks, through `Scaladoc.fromString`: the comment's border is stripped and its tags split off first.
-// Inline markup comes in #167's next step; until then, text is plain text.
 class MarkdownBlocksSpec extends FSpec {
 
   private def parse(comment: String): Scaladoc =
@@ -125,7 +124,7 @@ class MarkdownBlocksSpec extends FSpec {
         |  * | bob  |
         |  */""".stripMargin) mustBe List(
       Table(
-        Table.Row(List(text("name"), text("`a|b`"), text("age"))),
+        Table.Row(List(text("name"), Paragraph(Monospace("a|b")), text("age"))),
         List(Table.Alignment.Left, Table.Alignment.Center, Table.Alignment.Right),
         List(
           Table.Row(List(text("ann"), text("x"), text("31"))),
@@ -156,7 +155,7 @@ class MarkdownBlocksSpec extends FSpec {
         |  *   returns
         |  */""".stripMargin) mustBe Scaladoc(
       Description(Document(text("Description."))),
-      Param("x", Document(text("one of"), UnorderedList(List(Document(text("`a`")), Document(text("`b`")))))),
+      Param("x", Document(text("one of"), UnorderedList(List(Document(Paragraph(Monospace("a"))), Document(Paragraph(Monospace("b"))))))),
       Returns(Document(text("what it\nreturns")))
     )
   }

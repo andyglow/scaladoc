@@ -3,6 +3,7 @@ package scaladoc.parser
 import scaladoc.Markup
 import scaladoc.Markup._
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /** Markdown's blocks, for [[ParseMarkup]], the parser of every syntax: CommonMark's blocks, with GitHub Flavored Markdown's tables and task list
@@ -11,11 +12,12 @@ import scala.collection.mutable.ListBuffer
   * A recursive descent parser like [[ParseMarkup]]: a document is a sequence of blocks, each recognized at the start of
   * a line. A block quote's or a list item's content is its lines without the `>` or the item's indentation, parsed as a
   * document of its own. A paragraph's, a heading's and a table cell's text becomes inline markup once all blocks are
-  * parsed, by `inlines`.
+  * parsed, by [[MarkdownInlines]], since a link can refer to a definition further down.
   *
   * @param depth how deep in quotes and list items the text is: what would nest deeper than `MaxNesting` is text
+  * @param refs  the link reference definitions found so far, which paragraphs start with
   */
-private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
+private[parser] final class MarkdownBlocks private (text: String, depth: Int, refs: mutable.Map[String, MarkdownInlines.Ref]) {
   import MarkdownBlocks._
 
   // the lines, with the tabs in their indentation expanded to the next multiple of 4
@@ -58,7 +60,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
                     case _ =>
                       tableAt(n) match {
                         case Some((header, alignments)) => Some(table(header, alignments))
-                        case None                       => Some(paragraph())
+                        case None                       => paragraph()
                       }
                   }
               }
@@ -89,7 +91,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
       val end  = runEnd(s, indent, c)
       val info = s.substring(end)
       if (end - indent < 3 || (c == '`' && info.indexOf('`') >= 0)) None
-      else Some((c, end - indent, indent, unescapeInfo(info.trim)))
+      else Some((c, end - indent, indent, MarkdownInlines.unescape(info.trim)))
     }
   }
 
@@ -207,7 +209,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
         else more = false
       }
     }
-    new MarkdownBlocks(s, MaxNesting).startsWithText
+    new MarkdownBlocks(s, MaxNesting, mutable.Map.empty).startsWithText
   }
 
   // a lazy line goes on its paragraph as is, whatever it would be on its own: indented, it can't start a block
@@ -215,9 +217,11 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
 
   // ---- blocks
 
-  // its lines, up to one that ends it; a line of `=`s or `-`s under them makes them a heading
-  private def paragraph(): Block = {
-    val text = ListBuffer(lines(line).trim)
+  // its lines, up to one that ends it; a line of `=`s or `-`s under them makes them a heading. The link reference
+  // definitions it starts with are definitions, not text: a paragraph of only them is none.
+  private def paragraph(): Option[Block] = {
+    // without the spaces before each line; those after it are a hard break's
+    val text = ListBuffer(lines(line).substring(indentOf(lines(line))))
     line += 1
     var heading: Option[Int] = None
     var more                 = true
@@ -225,10 +229,14 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
       setextAt(line) match {
         case Some(level) => heading = Some(level); line += 1
         case None if interruptsAt(line) => more = false
-        case None => text += lines(line).trim; line += 1
+        case None => text += lines(line).substring(indentOf(lines(line))); line += 1
       }
     }
-    heading.fold[Block](ParagraphBlock(text.mkString("\n")))(HeadingBlock(_, text.mkString("\n")))
+    val rest = MarkdownInlines.takeReferences(text.mkString("\n"), refs)
+    if (isBlank(rest.replace('\n', ' '))) {
+      if (heading.isDefined) line -= 1 // then the underline is a line of its own
+      None
+    } else Some(heading.fold[Block](ParagraphBlock(rest))(HeadingBlock(_, rest)))
   }
 
   private def indentedCode(): Block = {
@@ -301,7 +309,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
         lazily = true
       } else more = false
     }
-    QuoteBlock(new MarkdownBlocks(content.mkString("\n"), depth + 1).blocks())
+    QuoteBlock(new MarkdownBlocks(content.mkString("\n"), depth + 1, refs).blocks())
   }
 
   // a list's items: of the same kind of marker, with blank lines between them or not
@@ -346,7 +354,7 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
         lazily = true
       } else more = false
     }
-    new MarkdownBlocks(content.mkString("\n"), depth + 2).blocks()
+    new MarkdownBlocks(content.mkString("\n"), depth + 2, refs).blocks()
   }
 
   // its rows: the lines after the delimiter row, up to a blank one or another block
@@ -364,7 +372,10 @@ private[parser] final class MarkdownBlocks private (text: String, depth: Int) {
 
 private[parser] object MarkdownBlocks {
 
-  def apply(text: String): Document = toDocument(new MarkdownBlocks(text, 0).blocks())
+  def apply(text: String): Document = {
+    val refs = mutable.LinkedHashMap.empty[String, MarkdownInlines.Ref]
+    toDocument(new MarkdownBlocks(text, 0, refs).blocks(), refs)
+  }
 
   /** How deep quotes and lists nest at most, as markdown-it's `maxNesting`: what would nest deeper is text. The model
     * is a tree, and what walks it recurses.
@@ -397,60 +408,56 @@ private[parser] object MarkdownBlocks {
   /** A list item's first line: its marker, where its content starts, the content on it, and whether there's none. */
   final case class ItemStart(marker: ListMarker, contentOffset: Int, firstLine: String, empty: Boolean)
 
-  def toDocument(blocks: List[Block]): Document = Document(blocks.flatMap(toMarkup))
+  private def toDocument(blocks: List[Block], refs: collection.Map[String, MarkdownInlines.Ref]): Document = {
+    def inlines(text: String): List[Span] = MarkdownInlines(text.trim, refs)
 
-  private def toMarkup(b: Block): List[Markup] = b match {
-    case ParagraphBlock(text) =>
-      val spans = inlines(text)
-      if (spans.isEmpty) Nil else List(Paragraph(spans))
-    case HeadingBlock(level, text) => List(Heading(Heading.levelOf(level), inlines(text)))
-    case Code(code, language)      => List(CodeBlock(code, language))
-    case HtmlBlock(html)           => List(HtmlTag(html))
-    case RuleBlock                 => List(HorizontalRule)
-    case QuoteBlock(content)       => List(BlockQuote(toDocument(content)))
-    case TableBlock(header, alignments, rows) =>
-      def row(cells: List[String]) =
-        Table.Row(cells.padTo(header.length, "").take(header.length).map(cell => Paragraph(inlines(cell))))
-      List(Table(row(header), alignments, rows.map(row)))
-    case Items(marker, items) =>
-      val documents = items.map(taskItem)
-      marker match {
-        case _: Bullet  => List(UnorderedList(documents))
-        case _: Ordered => List(OrderedList(documents, OrderedList.Decimal))
-      }
-  }
-
-  // a GFM task list item: its first paragraph starts with `[ ]` or `[x]` and a space
-  private def taskItem(item: List[Block]): Document = item match {
-    case ParagraphBlock(text) :: rest =>
-      taskMarkerAt(text) match {
-        case Some((checked, textStart)) =>
-          // the space after the checkbox goes with the text: `[x] done` is `Checkbox(true)`, `PlainText(" done")`
-          val spans = inlines(text.substring(textStart)) match {
-            case PlainText(t) :: more => PlainText(" " + t) :: more
-            case Nil                  => Nil
-            case more                 => PlainText(" ") :: more
-          }
-          Document(Paragraph(Checkbox(checked) :: spans) :: toDocument(rest).elements)
-        case None => toDocument(item)
-      }
-    case _ => toDocument(item)
-  }
-
-  // `[ ]` or `[x]`, spaces, and text: whether it's checked, and where the text starts
-  private def taskMarkerAt(s: String): Option[(Boolean, Int)] =
-    if (s.length < 4 || s.charAt(0) != '[' || s.charAt(2) != ']' || " xX".indexOf(s.charAt(1)) < 0) None
-    else {
-      val text = runEnd(s, 3, ' ')
-      if (text == 3 || text >= s.length) None else Some((s.charAt(1) != ' ', text))
+    def toMarkup(b: Block): List[Markup] = b match {
+      case ParagraphBlock(text) =>
+        val spans = inlines(text)
+        if (spans.isEmpty) Nil else List(Paragraph(spans))
+      case HeadingBlock(level, text) => List(Heading(Heading.levelOf(level), inlines(text)))
+      case Code(code, language)      => List(CodeBlock(code, language))
+      case HtmlBlock(html)           => List(HtmlTag(html))
+      case RuleBlock                 => List(HorizontalRule)
+      case QuoteBlock(content)       => List(BlockQuote(toDocument(content, refs)))
+      case TableBlock(header, alignments, rows) =>
+        def row(cells: List[String]) =
+          Table.Row(cells.padTo(header.length, "").take(header.length).map(cell => Paragraph(inlines(cell))))
+        List(Table(row(header), alignments, rows.map(row)))
+      case Items(marker, items) =>
+        val documents = items.map(taskItem)
+        marker match {
+          case _: Bullet  => List(UnorderedList(documents))
+          case _: Ordered => List(OrderedList(documents, OrderedList.Decimal))
+        }
     }
 
-  /** The inline markup of a paragraph's, a heading's or a table cell's text. For now just its text, without the spaces
-    * around its lines.
-    */
-  def inlines(text: String): List[Span] = {
-    val lines = splitLines(text).map(_.trim).filter(_.nonEmpty)
-    if (lines.isEmpty) Nil else List(PlainText(lines.mkString("\n")))
+    // a GFM task list item: its first paragraph starts with `[ ]` or `[x]` and a space
+    def taskItem(item: List[Block]): Document = item match {
+      case ParagraphBlock(text) :: rest =>
+        taskMarkerAt(text) match {
+          case Some((checked, textStart)) =>
+            // the space after the checkbox goes with the text: `[x] done` is `Checkbox(true)`, `PlainText(" done")`
+            val spans = inlines(text.substring(textStart)) match {
+              case PlainText(t) :: more => PlainText(" " + t) :: more
+              case Nil                  => Nil
+              case more                 => PlainText(" ") :: more
+            }
+            Document(Paragraph(Checkbox(checked) :: spans) :: toDocument(rest, refs).elements)
+          case None => toDocument(item, refs)
+        }
+      case _ => toDocument(item, refs)
+    }
+
+    // `[ ]` or `[x]`, spaces, and text: whether it's checked, and where the text starts
+    def taskMarkerAt(s: String): Option[(Boolean, Int)] =
+      if (s.length < 4 || s.charAt(0) != '[' || s.charAt(2) != ']' || " xX".indexOf(s.charAt(1)) < 0) None
+      else {
+        val text = runEnd(s, 3, ' ')
+        if (text == 3 || text >= s.length) None else Some((s.charAt(1) != ' ', text))
+      }
+
+    Document(blocks.flatMap(toMarkup))
   }
 
   // ---- characters
@@ -534,20 +541,6 @@ private[parser] object MarkdownBlocks {
     else if (isBlank(t.substring(0, j))) ""
     else if (isSpaceOrTab(t.charAt(j - 1))) trimEnd(t.substring(0, j))
     else t
-  }
-
-  private val Escapable = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-
-  // backslash escapes in a code fence's info string
-  private def unescapeInfo(s: String): String = {
-    val sb = new StringBuilder
-    var i  = 0
-    while (i < s.length) {
-      if (s.charAt(i) == '\\' && i + 1 < s.length && Escapable.indexOf(s.charAt(i + 1)) >= 0) {
-        sb.append(s.charAt(i + 1)); i += 2
-      } else { sb.append(s.charAt(i)); i += 1 }
-    }
-    sb.toString
   }
 
   // as scaladoc has a `{{{ }}}` block's code: no blank lines at the start, no whitespace at the end, and without the
