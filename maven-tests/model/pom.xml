@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- documents classes; on Scala 2 the compiler plugin embeds their scaladoc, except demo.model.internal.* -->
+<!-- publishes the scaladoc of its classes; on Scala 2 the compiler plugin embeds it, except demo.model.internal.* -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -30,21 +30,11 @@
   </build>
 
   <profiles>
-    <!-- Scala 2: what getting-started.md shows for a module whose scaladoc gets embedded -->
+    <!-- Scala 2: what getting-started.md shows for a module whose scaladoc gets embedded: the compiler plugin, whose jar
+         has everything it needs, and nothing else. On Scala 3 such a module needs nothing at all. -->
     <profile>
       <id>embed</id>
       <activation><property><name>scala</name><value>!3</value></property></activation>
-      <dependencies>
-        <dependency>
-          <groupId>io.github.andyglow</groupId>
-          <artifactId>scaladoc-ast_${scala.binary}</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>io.github.andyglow</groupId>
-          <artifactId>scaladoc-parser_${scala.binary}</artifactId>
-          <scope>provided</scope>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>

@@ -46,8 +46,9 @@ and enable it on the modules that need it:
 lazy val model = project.enablePlugins(ScaladocPlugin)
 ```
 
-It sets each module up for its Scala version: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3, the `_sjs1`
-libraries on Scala.js.
+A module that has the plugin publishes its scaladoc, with the compiler plugin on Scala 2 (Scala 3 keeps it in TASTy on
+its own). From 0.5.0, a module that reads scaladoc with `Scaladoc.of` also sets `scaladocRead := true`, which adds the
+libraries, and `-Yread-docs` on Scala 3; a module that only publishes gets no library at all.
 
 Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
 
@@ -66,16 +67,19 @@ hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-s
 | `scaladoc-ast`             |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-compiler-plugin` |     ✓      |     ✓      |       –        |   JVM one    |
+| `scaladoc-annotation`      |     ✓      |     ✓      |       ✓        |      ✓       |
 
-`sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, the Gradle plugin with Gradle 8.5+. All artifacts target Java 8. The groupId is `io.github.andyglow`
-from 0.1.0; versions up to 0.0.14 are under `com.github.andyglow`.
+`scaladoc-annotation` (from 0.5.0) is a single Java jar, with no Scala suffix, that holds just the annotation embedded
+scaladoc is kept in, for tools that read it their own way. `sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, the
+Gradle plugin with Gradle 8.5+. All artifacts target Java 8. The groupId is `io.github.andyglow` from 0.1.0; versions
+up to 0.0.14 are under `com.github.andyglow`.
 
 ## Documentation
 
 The [site](https://andyglow.github.io/scaladoc) covers the [comment syntax](https://andyglow.github.io/scaladoc/syntax.html),
 [the model](https://andyglow.github.io/scaladoc/model.html), [Scaladoc.of](https://andyglow.github.io/scaladoc/extractor.html),
 the [compiler plugin](https://andyglow.github.io/scaladoc/compiler-plugin.html) and
-[migrating to 0.4](https://andyglow.github.io/scaladoc/migration.html). Its sources are in [docs/src](docs/src), and
+[migrating](https://andyglow.github.io/scaladoc/migration.html). Its sources are in [docs/src](docs/src), and
 every snippet in them is compiled and run when the site is built. To preview it locally:
 
 ```

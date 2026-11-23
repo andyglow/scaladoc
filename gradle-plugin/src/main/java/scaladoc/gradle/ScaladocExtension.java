@@ -15,6 +15,12 @@ public abstract class ScaladocExtension {
     /** Scala 2: embed the scaladoc of this module's classes into their bytecode. {@code true} by default. */
     public abstract Property<Boolean> getEmbed();
 
+    /**
+     * Read scaladoc with {@code Scaladoc.of}: adds {@code scaladoc-ast} and {@code scaladoc-parser}, and on Scala 3
+     * {@code -Yread-docs}. {@code false} by default.
+     */
+    public abstract Property<Boolean> getRead();
+
     /** Scala 2: embed only classes from source files matching these globs. */
     public abstract ListProperty<String> getIncludePaths();
 

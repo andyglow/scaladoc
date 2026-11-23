@@ -55,8 +55,8 @@ module that calls `Scaladoc.of` with `-Yread-docs`:
 scalacOptions += "-Yread-docs"
 ```
 
-The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it on Scala 3
-modules; @ref:[Maven](getting-started.md#maven) builds pass it in `scala-maven-plugin`'s `args`.
+The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it to Scala 3
+modules that read scaladoc; @ref:[Maven](getting-started.md#maven) builds pass it in `scala-maven-plugin`'s `args`.
 
 ## A misaligned comment is a compile error
 

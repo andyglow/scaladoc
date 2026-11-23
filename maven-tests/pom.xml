@@ -59,22 +59,6 @@
         <!-- Scala 3 has no compiler plugin, so nothing is excluded -->
         <excluded>none</excluded>
       </properties>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <!-- on Scala 3, -Yread-docs lets Scaladoc.of read doc comments from TASTy: other modules and jars -->
-            <plugin>
-              <groupId>net.alchim31.maven</groupId>
-              <artifactId>scala-maven-plugin</artifactId>
-              <configuration>
-                <args>
-                  <arg>-Yread-docs</arg>
-                </args>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
     </profile>
   </profiles>
 

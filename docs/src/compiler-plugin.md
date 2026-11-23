@@ -25,6 +25,37 @@ by hand:
 addCompilerPlugin("io.github.andyglow" %% "scaladoc-compiler-plugin" % "@VERSION@")
 ```
 
+The plugin's jar has everything it needs, so a module whose scaladoc gets embedded needs no library besides it.
+
+## Reading embedded scaladoc without this library
+
+The annotation is a public, documented format, and `Scaladoc.of` is just one way to read it. It's a plain Java
+annotation, `scaladoc.annotation.ScaladocCarrier`, with runtime retention:
+
+| Element  | Holds                                                                                  |
+|----------|----------------------------------------------------------------------------------------|
+| `text()` | the doc comment as it is in the source                                                 |
+| `tags()` | whether `text()` has the comment's `/**` and `*/` markers and `*` border (`true`), or is just its content |
+
+It lives in a jar of its own, `scaladoc-annotation`, which has no dependencies and no Scala version suffix. A tool that
+reads embedded scaladoc its own way, at runtime with reflection or in any JVM language, needs only that jar:
+
+```sbt
+libraryDependencies += "io.github.andyglow" % "scaladoc-annotation" % "@VERSION@"
+```
+
+```java
+ScaladocCarrier carrier = User.class.getAnnotation(ScaladocCarrier.class);
+String comment = carrier == null ? null : carrier.text();   // null: no scaladoc was embedded
+```
+
+The text is then yours to process, with this library's parser (`Scaladoc.fromString(text, hasTags = carrier.tags())`)
+or anything else. Tools that read class files directly, without loading them, find the annotation by its name and
+need no jar at all.
+
+The annotation's class doesn't have to be present wherever the annotated classes are used: the JVM loads and runs
+them without it, and Java reflection then just leaves the annotation out.
+
 ## Choosing what to embed
 
 By default the plugin embeds the scaladoc of every documented class. That's often more than needed, and a comment
