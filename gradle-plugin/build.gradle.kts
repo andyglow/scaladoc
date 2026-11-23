@@ -39,8 +39,8 @@ gradlePlugin {
             id = "io.github.andyglow.scaladoc"
             implementationClass = "scaladoc.gradle.ScaladocPlugin"
             displayName = "Scaladoc"
-            description = "Sets Scala modules up for scaladoc: Scaladoc.of and, on Scala 2, the compiler plugin that " +
-                "embeds scaladoc into bytecode. https://andyglow.github.io/scaladoc"
+            description = "A companion of the scaladoc library (https://github.com/andyglow/scaladoc): it makes " +
+                "compiled Scala classes carry their documentation, so the library can read it."
             tags = listOf("scala", "scaladoc", "documentation")
         }
     }
