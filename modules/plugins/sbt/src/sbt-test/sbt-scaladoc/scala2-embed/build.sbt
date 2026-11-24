@@ -13,15 +13,18 @@ lazy val app = project
   .dependsOn(model)
   .settings(libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % sys.props("plugin.version"))
 
-// uses `model`'s classes from Scala 3, as a Scala 3 project uses a 2.13 library. It compiles because `model` brings
-// scaladoc-annotation along: Scala 3 fails on the annotation in their signatures without it ("Bad symbolic
+// uses `model`'s classes from Scala 3, as a Scala 3 project uses a 2.13 library: published (the test publishes it
+// locally first), not `dependsOn`, which sbt 2 refuses between Scala 2.13 and Scala 3.8+. It compiles because `model`'s
+// POM brings scaladoc-annotation along: Scala 3 fails on the annotation in their signatures without it ("Bad symbolic
 // reference"). And it reads their scaladoc with `Scaladoc.of`, which on Scala 3 finds it in that annotation
 lazy val consumer3 = project
-  .dependsOn(model)
   .settings(
-    scalaVersion       := "3.3.9",
-    crossScalaVersions := Seq("3.3.9"),
-    libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % sys.props("plugin.version")
+    scalaVersion       := "3.9.0",
+    crossScalaVersions := Seq("3.9.0"),
+    libraryDependencies ++= Seq(
+      ((model / organization).value %% "model" % (model / version).value).cross(CrossVersion.for3Use2_13),
+      "io.github.andyglow" %% "scaladoc-parser" % sys.props("plugin.version")
+    )
   )
 
 // a module that only publishes depends on scaladoc-annotation, and none of the scaladoc libraries

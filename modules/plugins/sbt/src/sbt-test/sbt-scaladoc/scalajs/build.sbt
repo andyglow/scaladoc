@@ -1,5 +1,5 @@
 ThisBuild / scalaVersion       := "2.13.18"
-ThisBuild / crossScalaVersions := Seq("2.13.18", "2.12.21", "3.3.9")
+ThisBuild / crossScalaVersions := Seq("2.13.18", "2.12.21", "3.9.0")
 
 // Scala.js: on Scala 2 `model` publishes its scaladoc with the (JVM) compiler plugin, which embeds it into its
 // classes; on Scala 3 its TASTy keeps it. `app` reads it with `Scaladoc.of`: it depends on the `_sjs1` parser itself,

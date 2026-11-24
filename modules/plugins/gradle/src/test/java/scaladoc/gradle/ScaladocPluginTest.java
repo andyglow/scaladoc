@@ -47,7 +47,7 @@ class ScaladocPluginTest {
 
     @Test
     void scala3ReadsScaladocFromTasty() {
-        fixture("implementation 'org.scala-lang:scala3-library_3:3.3.9'", true);
+        fixture("implementation 'org.scala-lang:scala3-library_3:3.9.0'", true);
         BuildResult result = runner(":app:run").build();
         assertTrue(result.getOutput().contains("scaladoc: ok"), result.getOutput());
     }
@@ -97,9 +97,10 @@ class ScaladocPluginTest {
             "}",
             "repositories { mavenLocal(); mavenCentral() }",
             "dependencies {",
-            "  implementation 'org.scala-lang:scala3-library_3:3.3.9'",
+            "  implementation 'org.scala-lang:scala3-library_3:3.9.0'",
             "  implementation project(':model')",
             "}",
+            SCALA3_JAVA_OUTPUT,
             "application { mainClass.set('demo.consumer.Main') }",
             ""));
         write("model/src/main/scala/demo/model/User.scala",
@@ -158,7 +159,7 @@ class ScaladocPluginTest {
 
     @Test
     void scala3PublisherGetsNothing() {
-        fixture("implementation 'org.scala-lang:scala3-library_3:3.3.9'", false);
+        fixture("implementation 'org.scala-lang:scala3-library_3:3.9.0'", false);
         String model = runner(":model:dependencies", "--configuration", "compileClasspath").build().getOutput();
         assertTrue(!model.contains("io.github.andyglow"), model);
     }
@@ -178,6 +179,14 @@ class ScaladocPluginTest {
         return version;
     }
 
+    // Gradle without a Java toolchain tells Scala 3 to target Java 8, which Scala 3.8 and later reject
+    private static final String SCALA3_JAVA_OUTPUT =
+        "tasks.withType(ScalaCompile).configureEach { scalaCompileOptions.additionalParameters = ['-java-output-version', '17'] }";
+
+    private static String javaOutput(String scalaLibrary) {
+        return scalaLibrary.contains("scala3-library_3") ? SCALA3_JAVA_OUTPUT : "";
+    }
+
     private static String scala2(String version) {
         return "implementation 'org.scala-lang:scala-library:" + version + "'";
     }
@@ -192,6 +201,7 @@ class ScaladocPluginTest {
             "}",
             "repositories { mavenLocal(); mavenCentral() }",
             "dependencies { " + scalaLibrary + " }",
+            javaOutput(scalaLibrary),
             "scaladoc { excludeClasses.add('demo.model.internal.*') }",
             ""));
         write("app/build.gradle", String.join("\n",
@@ -207,6 +217,7 @@ class ScaladocPluginTest {
             "  // reads scaladoc: depends on the parser like on any library it calls",
             "  implementation 'io.github.andyglow:scaladoc-parser_" + binary(scalaLibrary) + ":" + VERSION + "'",
             "}",
+            javaOutput(scalaLibrary),
             "application { mainClass.set('demo.app.Main') }",
             ""));
         if (sources) copySources();

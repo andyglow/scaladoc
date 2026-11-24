@@ -6,6 +6,10 @@
 
 ## To 0.6
 
+**On Scala 3, the libraries need Scala 3.9 and Java 17.** They are built with Scala 3.9, the LTS after 3.3, and a
+project on Scala 3.3 can't read what a newer Scala compiled, so a Scala 3 project moves to 3.9 or stays on 0.5. Scala
+3.9 targets Java 17 and up. On Scala 2 nothing changes: Scala 2.12 and 2.13, and Java 8.
+
 **On Scala 3, `Scaladoc.of` reads doc comments as Markdown**, Scala 3's default syntax, where it read them as wiki
 before. A codebase that writes its comments in wiki syntax, as with scaladoc's `-comment-syntax wiki`, says so with a
 given in scope at the call site, or a comment with a tag, as in Scala 3's scaladoc:

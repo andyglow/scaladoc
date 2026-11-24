@@ -67,7 +67,7 @@ plugins {
 Maven builds add a few lines to `scala-maven-plugin`'s configuration. For those, and for adding the dependencies by
 hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-started.html).
 
-| Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.3+) | Scala.js 1.x |
+| Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.9+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|
 | `scaladoc-core`            |     ✓      |     ✓      |       ✓        |      ✓       |
 | `scaladoc-parser`          |     ✓      |     ✓      |       ✓        |      ✓       |
@@ -76,7 +76,7 @@ hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-s
 
 `scaladoc-core` was `scaladoc-ast` up to 0.4. `scaladoc-annotation` (from 0.5.0) is a single Java jar, with no Scala suffix, that holds just the annotation embedded
 scaladoc is kept in, for tools that read it their own way. `sbt-scaladoc` works with sbt 1.5.8+ and sbt 2.x, the
-Gradle plugin with Gradle 8.5+. All artifacts target Java 8. The groupId is `io.github.andyglow` from 0.1.0; versions
+Gradle plugin with Gradle 8.5+. Scala 2 artifacts target Java 8, Scala 3 ones Java 17 (Scala 3.9 needs it). The groupId is `io.github.andyglow` from 0.1.0; versions
 up to 0.0.14 are under `com.github.andyglow`.
 
 ## Documentation
