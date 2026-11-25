@@ -3,7 +3,7 @@ package scaladoc.ofmodels
 // The documented models are in wiki syntax: the ones whose markup is wiki's say so with `@syntax wiki`, which Scala 3
 // reads as Markdown otherwise. They live in this file on purpose: Scala 2 reads the doc comment from the source text,
 // which is only available when the model's file is compiled in the same run as the `Scaladoc.of` call site
-// (Scala 3 without `-Yread-docs` has the same limitation). `Undocumented` has its own file, see there.
+// (Scala 3 without `-Xread-docs` has the same limitation). `Undocumented` has its own file, see there.
 
 /** = Kitchen sink =
   *

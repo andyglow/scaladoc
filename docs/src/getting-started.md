@@ -14,19 +14,19 @@ doc comments in very different places:
 |                | Scala 2                                                               | Scala 3                          |
 |----------------|-----------------------------------------------------------------------|----------------------------------|
 | **Publishing** | the @ref:[compiler plugin](compiler-plugin.md), `scaladoc-annotation` | nothing                          |
-| **Reading**    | `scaladoc-parser`                                                     | `scaladoc-parser`, `-Yread-docs` |
+| **Reading**    | `scaladoc-parser`                                                     | `scaladoc-parser`, `-Xread-docs` |
 
 Scala 2 forgets doc comments once it's done compiling, so a publishing module needs the compiler plugin, which writes
 them into the bytecode before they're lost, in an annotation. The annotation lives in `scaladoc-annotation`, a jar with
 one class and no dependencies, and the publishing module depends on it: its classes refer to the annotation, and
 whatever uses them gets the jar along, the way it gets `scala-library`. Scala 2 would do without it, but Scala 3
 doesn't compile against such classes when it's missing, so a Scala 3 project couldn't use a 2.13 library published
-this way. Scala 3 keeps doc comments in its TASTy files on its own; a reading module needs `-Yread-docs`, the option
+this way. Scala 3 keeps doc comments in its TASTy files on its own; a reading module needs `-Xread-docs`, the option
 that tells the compiler to load them.
 
 A reading module calls `Scaladoc.of`, so it depends on `scaladoc-parser` like on any library it calls; `scaladoc-core`,
 the model, comes with it. The rest is compiler setup, which is where the sbt and Gradle plugins help: they add the
-compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Yread-docs` on Scala 3. Maven gets a few lines of POM.
+compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Xread-docs` on Scala 3. Maven gets a few lines of POM.
 
 ## sbt
 
@@ -47,7 +47,7 @@ lazy val model = project
 
 lazy val schemas = project
   .dependsOn(model)
-  .enablePlugins(ScaladocPlugin)            // on Scala 3, for -Yread-docs; a Scala 2 reader doesn't need it
+  .enablePlugins(ScaladocPlugin)            // on Scala 3, for -Xread-docs; a Scala 2 reader doesn't need it
   .settings(
     // reads it with Scaladoc.of; scaladocVersion keeps the parser in step with the plugin
     libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value
@@ -90,10 +90,10 @@ A module that reads scaladoc needs the parser, which brings `scaladoc-core` alon
 libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "@VERSION@"
 ```
 
-and on Scala 3, `-Yread-docs` as well:
+and on Scala 3, `-Xread-docs` as well:
 
 ```sbt
-scalacOptions += "-Yread-docs"
+scalacOptions += "-Xread-docs"
 ```
 
 On Scala.js, the parser is the `_sjs1` artifact: `%%` picks it by itself on sbt 2, and sbt 1 needs `%%%`. The compiler
@@ -110,8 +110,8 @@ plugins {
 }
 ```
 
-It reads the module's Scala version from its `scala-library` or `scala3-library_3` dependency and sets the compiler
-up for it: the compiler plugin on Scala 2, `-Yread-docs` on Scala 3. On Scala 2 it also adds `scaladoc-annotation`,
+It reads the module's Scala version from its `scala3-library_3` or `scala-library` dependency and sets the compiler
+up for it: the compiler plugin on Scala 2, `-Xread-docs` on Scala 3 (`-Yread-docs` before 3.5). On Scala 2 it also adds `scaladoc-annotation`,
 and exposes it to the module's consumers, as `api` would, published POMs included. As with sbt, it belongs on the modules that
 publish on Scala 2 and those that read on Scala 3. A `scaladoc` block holds the settings, which mean what the sbt
 plugin's do:
@@ -187,7 +187,7 @@ nothing at all.
 </dependency>
 ```
 
-On Scala 3, that's with the `_3` suffix, and `-Yread-docs` as well:
+On Scala 3, that's with the `_3` suffix, and `-Xread-docs` as well:
 
 ```xml
 <build>
@@ -197,7 +197,7 @@ On Scala 3, that's with the `_3` suffix, and `-Yread-docs` as well:
       <artifactId>scala-maven-plugin</artifactId>
       <configuration>
         <args>
-          <arg>-Yread-docs</arg>
+          <arg>-Xread-docs</arg>
         </args>
       </configuration>
     </plugin>

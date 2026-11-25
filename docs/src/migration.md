@@ -10,6 +10,11 @@
 project on Scala 3.3 can't read what a newer Scala compiled, so a Scala 3 project moves to 3.9 or stays on 0.5. Scala
 3.9 targets Java 17 and up. On Scala 2 nothing changes: Scala 2.12 and 2.13, and Java 8.
 
+**The sbt and Gradle plugins pass `-Xread-docs`** on Scala 3, where they passed `-Yread-docs`. Scala 3.5 renamed the
+option and deprecates the old name, and Scala 3.3 and 3.4 don't know the new one, so a module on those still gets
+`-Yread-docs`. A build that sets it by hand, like a Maven one, renames it too. The Gradle plugin also counts a
+`scala-library` 3.x dependency as Scala 3, which it is from 3.8 on.
+
 **On Scala 3, `Scaladoc.of` reads doc comments as Markdown**, Scala 3's default syntax, where it read them as wiki
 before. A codebase that writes its comments in wiki syntax, as with scaladoc's `-comment-syntax wiki`, says so with a
 given in scope at the call site, or a comment with a tag, as in Scala 3's scaladoc:

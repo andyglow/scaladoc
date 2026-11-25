@@ -1,5 +1,7 @@
 package scaladoc.gradle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -50,6 +52,68 @@ class ScaladocPluginTest {
         fixture("implementation 'org.scala-lang:scala3-library_3:3.9.0'", true);
         BuildResult result = runner(":app:run").build();
         assertTrue(result.getOutput().contains("scaladoc: ok"), result.getOutput());
+    }
+
+    @Test
+    void scala3FromScalaLibraryAlone() {
+        // from Scala 3.8 on, scala-library is Scala 3's library too, and a build can declare just that. Gradle 9.9
+        // doesn't compile such a build yet ("Provider dotty.tools.xsbt.CompilerBridge not found"), so this checks what
+        // the plugin sets up: Scala 3's option, and no compiler plugin (it took 3.9 for a Scala 2 version and added a
+        // scaladoc-compiler-plugin_3.9, which doesn't exist)
+        write("settings.gradle", "rootProject.name = 'fixture'\n");
+        write("build.gradle", String.join("\n",
+            "plugins {",
+            "  id 'scala'",
+            "  id 'io.github.andyglow.scaladoc'",
+            "}",
+            "repositories { mavenLocal(); mavenCentral() }",
+            "dependencies { implementation 'org.scala-lang:scala-library:3.9.0' }",
+            PRINT_OPTIONS,
+            ""));
+        String output = runner("printOptions", "dependencies", "--configuration", "scalaCompilerPlugins").build()
+            .getOutput();
+        assertTrue(output.contains("options: [-Xread-docs]"), output);
+        assertTrue(!output.contains("scaladoc-compiler-plugin"), output);
+    }
+
+    @Test
+    void scala3LtsModelBuildsWithWerror() {
+        // the model on the 3.3 LTS, which takes -Yread-docs and only warns about -Xread-docs, a warning -Werror makes
+        // an error; the app on 3.9 reads the model's 3.3 TASTy
+        fixture("implementation 'org.scala-lang:scala3-library_3:3.9.0'", true);
+        write("model/build.gradle", String.join("\n",
+            "plugins {",
+            "  id 'scala'",
+            "  id 'io.github.andyglow.scaladoc'",
+            "}",
+            "repositories { mavenLocal(); mavenCentral() }",
+            "dependencies { implementation 'org.scala-lang:scala3-library_3:3.3.7' }",
+            "tasks.withType(ScalaCompile).configureEach { scalaCompileOptions.additionalParameters = ['-Werror'] }",
+            PRINT_OPTIONS,
+            ""));
+        BuildResult result = runner(":model:printOptions", ":app:run").build();
+        assertTrue(result.getOutput().contains("options: [-Werror, -Yread-docs]"), result.getOutput());
+        assertTrue(result.getOutput().contains("scaladoc: ok"), result.getOutput());
+    }
+
+    @Test
+    void readDocsOptionFollowsTheScalaVersion() {
+        assertEquals("-Yread-docs", ScaladocPlugin.readDocsOption("3.3.7"));
+        assertEquals("-Yread-docs", ScaladocPlugin.readDocsOption("3.4.3"));
+        assertEquals("-Xread-docs", ScaladocPlugin.readDocsOption("3.5.0"));
+        assertEquals("-Xread-docs", ScaladocPlugin.readDocsOption("3.9.0"));
+        assertEquals("-Xread-docs", ScaladocPlugin.readDocsOption("3.10.0-RC1"));
+        assertEquals("-Xread-docs", ScaladocPlugin.readDocsOption("3"));
+    }
+
+    @Test
+    void binaryVersionOfAScalaVersion() {
+        assertEquals("3", ScaladocPlugin.binaryVersion("3.9.0"));
+        assertEquals("3", ScaladocPlugin.binaryVersion("3"));
+        assertEquals("2.13", ScaladocPlugin.binaryVersion("2.13.18"));
+        assertEquals("2.12", ScaladocPlugin.binaryVersion("2.12.21"));
+        assertNull(ScaladocPlugin.binaryVersion("2"));
+        assertNull(ScaladocPlugin.binaryVersion("latest.release"));
     }
 
     @Test
@@ -173,18 +237,25 @@ class ScaladocPluginTest {
             result.getOutput());
     }
 
+    private static boolean isScala3(String scalaLibrary) {
+        return scalaLibrary.contains("scala3-library_3") || scalaLibrary.contains("scala-library:3.");
+    }
+
     private static String binary(String scalaLibrary) {
-        if (scalaLibrary.contains("scala3-library_3")) return "3";
+        if (isScala3(scalaLibrary)) return "3";
         String version = scalaLibrary.replaceAll(".*:(\\d+\\.\\d+)\\.\\d+'.*", "$1");
         return version;
     }
+
+    private static final String PRINT_OPTIONS =
+        "tasks.register('printOptions') { doLast { println('options: ' + compileScala.scalaCompileOptions.additionalParameters) } }";
 
     // Gradle without a Java toolchain tells Scala 3 to target Java 8, which Scala 3.8 and later reject
     private static final String SCALA3_JAVA_OUTPUT =
         "tasks.withType(ScalaCompile).configureEach { scalaCompileOptions.additionalParameters = ['-java-output-version', '17'] }";
 
     private static String javaOutput(String scalaLibrary) {
-        return scalaLibrary.contains("scala3-library_3") ? SCALA3_JAVA_OUTPUT : "";
+        return isScala3(scalaLibrary) ? SCALA3_JAVA_OUTPUT : "";
     }
 
     private static String scala2(String version) {
