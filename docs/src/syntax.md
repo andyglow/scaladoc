@@ -320,8 +320,9 @@ class MyList extends Coll  // Scaladoc.of[MyList]: "A list. Adds an element to t
 ```
 
 The parents' comments come from where `Scaladoc.of` finds any comment: TASTy on Scala 3, and on Scala 2 the source
-when the parent is compiled in the same run, or the scaladoc the compiler plugin embedded in it. `fromString` sees a
-single comment, so only its own defines.
+when the parent is compiled in the same run, or the scaladoc the compiler plugin embedded in it. On Scala 3, a class's
+self type counts when the class is compiled in the same run, since it's read from the class's definition. `fromString`
+sees a single comment, so only its own defines.
 
 ## Markdown
 

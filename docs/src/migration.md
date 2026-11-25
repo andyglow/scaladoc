@@ -29,7 +29,8 @@ import scaladoc.syntax.wiki.given    // every Scaladoc.of in scope reads wiki
 too. On Scala 2, `Scaladoc.of` reads wiki, Scala 2's only syntax, as before.
 
 **`Scaladoc.of` expands the defines of parents and enclosing classes**, as scaladoc does, where it left `$name` as
-written unless the comment itself defined it. See @ref:[Macros](syntax.md#macros).
+written unless the comment itself defined it. See @ref:[Macros](syntax.md#macros). And `\$` is a `$` in every comment,
+as in scaladoc, where it stayed `\$` in a comment without defines.
 
 **On Scala 3, `Scaladoc.of` also reads the scaladoc of Scala 2.13 classes**, that a library published with the
 compiler plugin embedded in them, in wiki syntax. It returned `None` for them before.

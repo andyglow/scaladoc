@@ -14,12 +14,12 @@ private[scaladoc] object Defines {
   private val MaxDepth = 10
 
   /** The comment body without its `@define` sections, which run up to the next tag, and its variables expanded, with
-    * its own defines and then `outer`'s.
+    * its own defines and then `outer`'s. `\$` is a `$` either way, as in scaladoc, so what a comment says doesn't
+    * depend on whether its parents define anything.
     */
   def expand(body: String, outer: Map[String, String] = Map.empty): String = {
     val (kept, own) = split(body)
-    val defines     = outer ++ own
-    if (defines.isEmpty) body else substitute(kept, defines, 0)
+    if (kept.indexOf('$') < 0) kept else substitute(kept, outer ++ own, 0)
   }
 
   /** The `@define`s of a comment body. Of two with the same name, the later one counts, as in scaladoc. */

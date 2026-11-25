@@ -32,8 +32,6 @@ trait ExtractScaladoc extends AnnotationSupport {
     }
   }
 
-  def fromAttachment: Option[Scaladoc] = c.internal.attachments(c.prefix.tree).get[Scaladoc]
-
   def fromAnnotatedType(t: Type, outer: => Map[String, String]): Option[Scaladoc] = {
     carrier(t.typeSymbol) map { case (body, hasTags) =>
       ScaladocParser.within(body, hasTags, strict = true, CommentSyntax.Wiki, outer) match {

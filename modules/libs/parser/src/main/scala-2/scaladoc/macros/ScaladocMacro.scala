@@ -14,7 +14,7 @@ class ScaladocMacro(val c: blackbox.Context) extends ExtractScaladoc with Annota
 
   def scaladoc[T](implicit t: WeakTypeTag[T]): c.Expr[Option[Scaladoc]] = {
     lazy val outer = outerDefines(t.tpe.typeSymbol)
-    val scd = fromAttachment orElse fromAnnotatedType(t.tpe, outer) orElse fromSourceCode(t.tpe.typeSymbol.pos, outer)
+    val scd = fromAnnotatedType(t.tpe, outer) orElse fromSourceCode(t.tpe.typeSymbol.pos, outer)
 
 //    c.info(c.enclosingPosition, s"${show(t.tpe)} -> ${show(scd)}", force = true)
 

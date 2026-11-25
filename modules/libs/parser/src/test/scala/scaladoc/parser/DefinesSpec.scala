@@ -27,8 +27,10 @@ class DefinesSpec extends FSpec {
     Defines.expand("$a\n@define a <$a>") mustBe "<" * 11 + "$a" + ">" * 11
   }
 
-  test("a comment without defines stays as it is") {
-    Defines.expand("cost: \\$5 or $x") mustBe "cost: \\$5 or $x"
+  test("a comment without defines: an escaped dollar is a dollar all the same, and unknown variables stay") {
+    Defines.expand("cost: \\$5 or $x") mustBe "cost: $5 or $x"
+    Defines.expand("cost: \\$5 or $x", Map("y" -> "z")) mustBe "cost: $5 or $x"
+    Defines.expand("no variables") mustBe "no variables"
   }
 
   test("what is and isn't a define line") {
