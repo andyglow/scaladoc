@@ -28,6 +28,9 @@ import scaladoc.syntax.wiki.given    // every Scaladoc.of in scope reads wiki
 `fromString` and `fromDocstring` take the syntax as a parameter, `CommentSyntax.Wiki` by default, and honor `@syntax`
 too. On Scala 2, `Scaladoc.of` reads wiki, Scala 2's only syntax, as before.
 
+**`Scaladoc.of` expands the defines of parents and enclosing classes**, as scaladoc does, where it left `$name` as
+written unless the comment itself defined it. See @ref:[Macros](syntax.md#macros).
+
 **On Scala 3, `Scaladoc.of` also reads the scaladoc of Scala 2.13 classes**, that a library published with the
 compiler plugin embedded in them, in wiki syntax. It returned `None` for them before.
 

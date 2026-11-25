@@ -296,9 +296,32 @@ Scaladoc.fromString(
     |  */""".stripMargin).map(doc => (doc.textDescriptions, doc.textParams))
 ```
 
-A define runs up to the next tag, can use other defines, and doesn't show up in the parsed comment. Scaladoc also lets
-a comment use the defines of its enclosing and parent classes. Only the compiler knows those classes, though, so here
-a comment can use its own defines only, and an unknown variable stays as written.
+A define runs up to the next tag, can use other defines, and doesn't show up in the parsed comment. An unknown variable
+stays as written.
+
+A comment also uses the defines of its class's parents and enclosing classes, as scaladoc has it. Only the compiler
+knows those classes, so that's `Scaladoc.of`'s doing: it looks a variable up in the comment itself, then in the base
+classes in linearization order, and then in the enclosing classes and objects, the same way, outward. The first one
+found wins, and a define is expanded where it's used, so a class can change what a parent's `$coll` means:
+
+```scala
+/** A collection of things.
+  *
+  * @define coll collection
+  * @define adds Adds an element to this $coll.
+  */
+trait Coll
+
+/** A list. $adds
+  *
+  * @define coll list
+  */
+class MyList extends Coll  // Scaladoc.of[MyList]: "A list. Adds an element to this list."
+```
+
+The parents' comments come from where `Scaladoc.of` finds any comment: TASTy on Scala 3, and on Scala 2 the source
+when the parent is compiled in the same run, or the scaladoc the compiler plugin embedded in it. `fromString` sees a
+single comment, so only its own defines.
 
 ## Markdown
 
@@ -385,4 +408,4 @@ follow from that difference, and a few from fixing what scaladoc leaves to warni
 - **HTML becomes the model.** Scaladoc passes `<b>` on as HTML; here it's `Bold`, and HTML in code blocks is left
   alone.
 - **`{@literal}` is text**, as in javadoc. Scaladoc shows it as code.
-- **`@define` sees only its own comment**, as described above.
+- **`$super` stays as written.** In a class comment, Scala 3's scaladoc replaces it with the nearest parent's comment.

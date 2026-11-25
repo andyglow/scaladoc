@@ -1,7 +1,7 @@
 package scaladoc.macros
 
 import scaladoc.*
-import scaladoc.parser.ScaladocParser
+import scaladoc.parser.{Defines, ScaladocParser}
 
 import scala.quoted.*
 
@@ -33,13 +33,46 @@ object ScaladocMacro {
     }
 
     sym.docstring match {
-      case Some(raw) => parsed(raw, ScaladocParser.fromDocstring(raw, strict = true, syntax = syntaxInScope))
+      case Some(raw) =>
+        parsed(raw, ScaladocParser.docstringWithin(raw, strict = true, syntaxInScope, outerDefines(sym)))
       case None =>
         carrier(sym) match {
-          case Some((text, tags)) => parsed(text, ScaladocParser.fromString(text, tags, strict = true, CommentSyntax.Wiki))
-          case None               => '{ None }
+          case Some((text, tags)) =>
+            parsed(text, ScaladocParser.within(text, tags, strict = true, CommentSyntax.Wiki, outerDefines(sym)))
+          case None => '{ None }
         }
     }
+  }
+
+  // The defines a comment uses besides its own, where Scala 3's scaladoc looks them up (`CommentExpander.lookupVariable`):
+  // the class's self type and base classes, in linearization order, then its enclosing classes and objects, searched
+  // the same way, outward. The first one found wins.
+  private def outerDefines(using q: Quotes)(sym: q.reflect.Symbol): Map[String, String] = {
+    import q.reflect.*
+    // the classes of the declared self type, from the class's tree, which a class from another module or a jar may not
+    // have: then it has no self type here. The tree's self type is the class's own type and the declared one, `A & C`
+    def selfType(site: Symbol): List[Symbol] = {
+      def parts(t: TypeRepr): List[TypeRepr] = t match {
+        case AndType(a, b) => parts(a) ++ parts(b)
+        case other         => List(other)
+      }
+      scala.util.Try(site.tree).toOption match {
+        case Some(cls: ClassDef) =>
+          cls.self.toList.flatMap(self => parts(self.tpt.tpe)).map(_.typeSymbol).filterNot(s => s.isNoSymbol || s == site)
+        case _ => Nil
+      }
+    }
+    def searchList(site: Symbol): List[Symbol] =
+      if (site.isClassDef) selfType(site) ++ site.typeRef.baseClasses else Nil
+    val sites   = Iterator.iterate(sym)(_.owner).takeWhile(s => !s.isNoSymbol && !s.isPackageDef).toList
+    val outer   = sites.flatMap(searchList).distinct.filterNot(_ == sym)
+    val defines = outer.map { s =>
+      s.docstring match {
+        case Some(raw) => ScaladocParser.defines(raw, hasTags = true)
+        case None      => carrier(s).fold(Map.empty[String, String]) { case (text, tags) => ScaladocParser.defines(text, tags) }
+      }
+    }
+    Defines.inOrder(defines)
   }
 
   // the syntax a given in scope says, `import scaladoc.syntax.wiki.given`: its type is the syntax

@@ -22,7 +22,16 @@ object ScaladocParser {
     x: String,
     hasTags: Boolean = true,
     strict: Boolean = false,
-    syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] = {
+    syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] =
+    within(x, hasTags, strict, syntax, Map.empty)
+
+  /** `fromString`, with the defines of the comment's parents and enclosing classes, which the macros look up. */
+  private[scaladoc] def within(
+    x: String,
+    hasTags: Boolean,
+    strict: Boolean,
+    syntax: CommentSyntax,
+    outer: Map[String, String]): Either[ScaladocException, Scaladoc] = {
     val comment =
       if (hasTags) StripCommentTags.pure(x, strict)
       else Right(StripCommentTags.Comment(Style.Stripped, x))
@@ -31,7 +40,7 @@ object ScaladocParser {
       c.style match {
         // `Stripped` only comes from the `hasTags = false` branch above
         case Style.Stripped | Style.Scaladoc =>
-          val body = Defines.expand(c.body)
+          val body = Defines.expand(c.body, outer)
           ParseScaladocTags.pure(body, MarkupSyntax(syntaxTag(body).getOrElse(syntax))).map { doc =>
             Scaladoc(doc.tags.filterNot {
               case Tag.OtherTag("syntax", _) => true
@@ -42,6 +51,15 @@ object ScaladocParser {
       }
     }
   }
+
+  /** The `@define`s of a comment, for the comments of the classes it's in or extends; none if it isn't scaladoc.
+    * Its alignment isn't checked: the comment that uses them is.
+    */
+  private[scaladoc] def defines(x: String, hasTags: Boolean): Map[String, String] =
+    (if (hasTags) StripCommentTags.pure(x, strict = false) else Right(StripCommentTags.Comment(Style.Stripped, x))) match {
+      case Right(c) if c.style == Style.Stripped || c.style == Style.Scaladoc => Defines.of(c.body)
+      case _                                                                  => Map.empty
+    }
 
   /** The syntax a comment says it's written in, as Scala 3's scaladoc has it: `@syntax wiki` or `@syntax markdown`,
     * on a line of its own. An unknown one is none. The tag isn't in the parsed `Scaladoc`.
@@ -78,7 +96,15 @@ object ScaladocParser {
     docstring: String,
     strict: Boolean = false,
     syntax: CommentSyntax = CommentSyntax.Wiki): Either[ScaladocException, Scaladoc] =
-    fromString(if (strict) restoreIndentation(docstring) else docstring, strict = strict, syntax = syntax)
+    docstringWithin(docstring, strict, syntax, Map.empty)
+
+  /** `fromDocstring`, with the defines of the comment's parents and enclosing classes, which the macros look up. */
+  private[scaladoc] def docstringWithin(
+    docstring: String,
+    strict: Boolean,
+    syntax: CommentSyntax,
+    outer: Map[String, String]): Either[ScaladocException, Scaladoc] =
+    within(if (strict) restoreIndentation(docstring) else docstring, hasTags = true, strict, syntax, outer)
 
   // `/** a\n    * b\n    */` -> `  /** a\n    * b\n    */`. A scaladoc-style border sits 2 columns to the right of
   // the opening marker, a javadoc-style one 1 column; assuming 2 (but never a negative indentation) satisfies both.
