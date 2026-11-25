@@ -37,6 +37,7 @@ class DefinesSpec extends FSpec {
     Defines.expand("$a $b $c\n   @define a indented\n@defined b no\n@define\n@define  c   spaced  ") mustBe
       "indented $b spaced\n@defined b no\n@define"
     Defines.of("@define a one\n@define a two") mustBe Map("a" -> "two")
+    Defines.of("@define -a not a name\n@define ") mustBe Map.empty
     Defines.of("text\n@define a x\n  more\n@param p y") mustBe Map("a" -> "x\n  more")
   }
 

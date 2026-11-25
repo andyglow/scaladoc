@@ -48,6 +48,13 @@ trait DefinesSelf
 /** Uses a define $selfish. */
 trait DefinesWithSelf { self: DefinesSelf => }
 
+// scaladoc the compiler plugin embedded, written by hand: a class from a Scala 2 jar, with a parent from one too
+@scaladoc.annotation.ScaladocCarrier(text = "/** Carried.\n  *\n  * @define carried from a carrier\n  */", tags = true)
+trait DefinesCarried
+
+@scaladoc.annotation.ScaladocCarrier(text = "An embedded comment, $carried.", tags = false)
+class DefinesEmbedded extends DefinesCarried
+
 // `Scaladoc.of` expands the defines of a comment's parents and enclosing classes, as scaladoc does
 class OfDefinesSpec extends scaladoc.FSpec {
 
@@ -69,6 +76,10 @@ class OfDefinesSpec extends scaladoc.FSpec {
 
   test("the self type's defines") {
     description(Scaladoc.of[DefinesWithSelf]) mustBe "Uses a define from the self type."
+  }
+
+  test("embedded scaladoc, and a parent's embedded defines") {
+    description(Scaladoc.of[DefinesEmbedded]) mustBe "An embedded comment, from a carrier."
   }
 
   test("a comment's own defines are as before") {
