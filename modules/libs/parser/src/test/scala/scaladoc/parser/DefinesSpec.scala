@@ -27,7 +27,37 @@ class DefinesSpec extends FSpec {
     Defines.expand("$a\n@define a <$a>") mustBe "<" * 11 + "$a" + ">" * 11
   }
 
-  test("a comment without defines stays as it is") {
-    Defines.expand("cost: \\$5 or $x") mustBe "cost: \\$5 or $x"
+  test("a comment without defines: an escaped dollar is a dollar all the same, and unknown variables stay") {
+    Defines.expand("cost: \\$5 or $x") mustBe "cost: $5 or $x"
+    Defines.expand("cost: \\$5 or $x", Map("y" -> "z")) mustBe "cost: $5 or $x"
+    Defines.expand("no variables") mustBe "no variables"
+  }
+
+  test("what is and isn't a define line") {
+    Defines.expand("$a $b $c\n   @define a indented\n@defined b no\n@define\n@define  c   spaced  ") mustBe
+      "indented $b spaced\n@defined b no\n@define"
+    Defines.of("@define a one\n@define a two") mustBe Map("a" -> "two")
+    Defines.of("@define -a not a name\n@define ") mustBe Map.empty
+    Defines.of("text\n@define a x\n  more\n@param p y") mustBe Map("a" -> "x\n  more")
+  }
+
+  test("outer defines: the comment's own come first, and are expanded where they're used") {
+    val outer = Map("coll" -> "collection", "thing" -> "a $coll of things")
+    Defines.expand("$thing\n@define coll list", outer) mustBe "a list of things"
+    Defines.expand("$thing", outer) mustBe "a collection of things"
+    Defines.expand("no variables", outer) mustBe "no variables"
+  }
+
+  test("defines in lookup order: the first one with a name wins") {
+    Defines.inOrder(Seq(Map("a" -> "1"), Map("a" -> "2", "b" -> "2"), Map("b" -> "3", "c" -> "3"))) mustBe
+      Map("a" -> "1", "b" -> "2", "c" -> "3")
+    Defines.inOrder(Nil) mustBe Map.empty
+  }
+
+  test("a comment's defines, for the classes it's in or extends") {
+    ScaladocParser.defines("/** Text.\n  *\n  * @define coll list\n  */", hasTags = true) mustBe Map("coll" -> "list")
+    ScaladocParser.defines("Text.\n@define coll list", hasTags = false) mustBe Map("coll" -> "list")
+    ScaladocParser.defines("/* not scaladoc @define coll list */", hasTags = true) mustBe Map.empty
+    ScaladocParser.defines("not a comment", hasTags = true) mustBe Map.empty
   }
 }
