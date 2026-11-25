@@ -49,14 +49,14 @@ anything beyond a single module, the compiler plugin is the reliable way.
 Scala 3 keeps doc comments in TASTy, the format it stores type information in, and `Scaladoc.of` reads them from
 `Symbol.docstring`. By default, though, the compiler only loads the comments of the sources it compiles in the current
 run. To read them from TASTy as well (other modules, jars, and files skipped by an incremental compile), compile the
-module that calls `Scaladoc.of` with `-Yread-docs`:
+module that calls `Scaladoc.of` with `-Xread-docs` (`-Yread-docs` before Scala 3.5, and deprecated since):
 
 ```sbt
-scalacOptions += "-Yread-docs"
+scalacOptions += "-Xread-docs"
 ```
 
 The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it to every Scala 3
-module they're enabled on; @ref:[Maven](getting-started.md#maven) builds pass it in `scala-maven-plugin`'s `args`.
+module they're enabled on, under the name its Scala version takes; @ref:[Maven](getting-started.md#maven) builds pass it in `scala-maven-plugin`'s `args`.
 
 ## Which syntax
 

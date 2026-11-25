@@ -25,13 +25,14 @@ import org.gradle.api.tasks.scala.ScalaCompile;
  *       the {@code scaladoc} block's include and exclude patterns become its options. The module depends on
  *       {@code scaladoc-annotation}, the one-class jar of the annotation that holds it, and exposes it to its
  *       consumers: its classes refer to it, and Scala 3 modules that use them don't compile without it.</li>
- *   <li><b>Scala 3:</b> {@code -Yread-docs}, which lets {@code Scaladoc.of} read doc comments from other modules and
- *       jars. Scala 3 keeps doc comments in TASTy on its own, so nothing else is needed.</li>
+ *   <li><b>Scala 3:</b> {@code -Xread-docs} ({@code -Yread-docs} before Scala 3.5), which lets {@code Scaladoc.of}
+ *       read doc comments from other modules and jars. Scala 3 keeps doc comments in TASTy on its own, so nothing else
+ *       is needed.</li>
  * </ul>
  *
  * It adds no library for reading: a module that reads scaladoc with {@code Scaladoc.of} depends on
  * {@code scaladoc-parser} itself.
- * The Scala version is the one of the module's {@code scala-library} or {@code scala3-library_3} dependency.
+ * The Scala version is the one of the module's {@code scala3-library_3} or {@code scala-library} dependency.
  */
 public class ScaladocPlugin implements Plugin<Project> {
 
@@ -66,7 +67,8 @@ public class ScaladocPlugin implements Plugin<Project> {
     }
 
     private static void configure(Project project, ScaladocExtension extension) {
-        String scala = scalaBinaryVersion(project);
+        String scalaVersion = scalaVersion(project);
+        String scala = scalaVersion == null ? null : binaryVersion(scalaVersion);
         if (scala == null) {
             project.getLogger().warn(
                 "scaladoc: no scala-library or scala3-library_3 dependency in {}, so the plugin added nothing",
@@ -90,7 +92,7 @@ public class ScaladocPlugin implements Plugin<Project> {
         boolean embed = embedSetting == null || embedSetting;
 
         if (scala.equals("3")) {
-            addCompilerOptions(project, Collections.singletonList("-Yread-docs"));
+            addCompilerOptions(project, Collections.singletonList(readDocsOption(scalaVersion)));
         } else if (embed) {
             // the compiler plugin's jar has everything it needs to run
             dependencies.add("scalaCompilerPlugins", GROUP + ":" + COMPILER_PLUGIN + "_" + scala + ":" + version);
@@ -146,22 +148,57 @@ public class ScaladocPlugin implements Plugin<Project> {
         });
     }
 
-    /** {@code 3}, {@code 2.13} or {@code 2.12}, from the declared Scala library; {@code null} if there's none. */
-    static String scalaBinaryVersion(Project project) {
-        String scala2 = null;
+    /**
+     * The version of the declared Scala library: {@code scala3-library_3}'s, or {@code scala-library}'s, which is Scala
+     * 3's too from 3.8 on. {@code 3} for a {@code scala3-library_3} without a plain one: none, from a platform for
+     * instance, or a dynamic one, like {@code latest.release}. {@code null} if there's no Scala library.
+     */
+    static String scalaVersion(Project project) {
+        String found = null;
         for (String name : DECLARING) {
             Configuration configuration = project.getConfigurations().findByName(name);
             if (configuration == null) continue;
             for (Dependency dependency : configuration.getDependencies()) {
                 if (!"org.scala-lang".equals(dependency.getGroup())) continue;
-                if ("scala3-library_3".equals(dependency.getName())) return "3";
-                if ("scala-library".equals(dependency.getName()) && dependency.getVersion() != null) {
-                    String[] parts = dependency.getVersion().split("\\.");
-                    if (parts.length >= 2) scala2 = parts[0] + "." + parts[1];
-                }
+                String version = dependency.getVersion();
+                if ("scala3-library_3".equals(dependency.getName()))
+                    return version != null && version.startsWith("3.") ? version : "3";
+                if ("scala-library".equals(dependency.getName()) && version != null) found = version;
             }
         }
-        return scala2;
+        return found;
+    }
+
+    /** {@code 3}, {@code 2.13} or {@code 2.12}, for a Scala version; {@code null} for one that isn't. */
+    static String binaryVersion(String scalaVersion) {
+        int major = number(scalaVersion, 0);
+        if (major == 3) return "3";
+        int minor = minor(scalaVersion);
+        return major == 2 && minor >= 0 ? "2." + minor : null;
+    }
+
+    /**
+     * The option that makes Scala 3 read doc comments from TASTy: {@code -Xread-docs}, or {@code -Yread-docs} before
+     * Scala 3.5, which named it so. Each version takes only its own name without a warning, and the older ones ignore
+     * the newer name, a warning that fails builds with {@code -Werror}. A version without a minor is taken as a recent
+     * one.
+     */
+    static String readDocsOption(String scalaVersion) {
+        int minor = minor(scalaVersion);
+        return minor >= 0 && minor < 5 ? "-Yread-docs" : "-Xread-docs";
+    }
+
+    // the number after the first dot; -1 if there's none
+    private static int minor(String version) {
+        int dot = version.indexOf('.');
+        return dot < 0 ? -1 : number(version, dot + 1);
+    }
+
+    // the number that starts at `from`, up to the next non-digit; -1 if there's none
+    private static int number(String text, int from) {
+        int to = from;
+        while (to < text.length() && Character.isDigit(text.charAt(to))) to++;
+        return to == from || to - from > 9 ? -1 : Integer.parseInt(text.substring(from, to));
     }
 
     private static String ownVersion() {

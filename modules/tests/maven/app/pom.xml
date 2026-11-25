@@ -31,7 +31,7 @@
   </dependencies>
 
   <profiles>
-    <!-- Scala 3: a module that reads scaladoc also needs -Yread-docs, which lets Scaladoc.of read doc comments from
+    <!-- Scala 3: a module that reads scaladoc also needs -Xread-docs, which lets Scaladoc.of read doc comments from
          TASTy: other modules and jars -->
     <profile>
       <id>read-docs</id>
@@ -43,7 +43,7 @@
             <artifactId>scala-maven-plugin</artifactId>
             <configuration>
               <args>
-                <arg>-Yread-docs</arg>
+                <arg>-Xread-docs</arg>
               </args>
             </configuration>
           </plugin>

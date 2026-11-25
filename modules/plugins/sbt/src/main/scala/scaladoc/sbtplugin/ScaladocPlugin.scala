@@ -11,8 +11,8 @@ import sbt.Keys._
   *     `scaladocInclude*` / `scaladocExclude*` settings become its options. The module depends on `scaladoc-annotation`,
   *     the one-class jar of the annotation that holds it: its classes refer to it, and Scala 3 modules that use them
   *     don't compile without it.
-  *   - '''Scala 3:''' `-Yread-docs`, so that `Scaladoc.of` also reads doc comments from other modules and jars. Scala 3
-  *     keeps doc comments in TASTy on its own, so nothing else is needed.
+  *   - '''Scala 3:''' `-Xread-docs` (`-Yread-docs` before Scala 3.5), so that `Scaladoc.of` also reads doc comments
+  *     from other modules and jars. Scala 3 keeps doc comments in TASTy on its own, so nothing else is needed.
   *
   * It adds no library for reading: a module that reads scaladoc with `Scaladoc.of` depends on `scaladoc-parser` itself,
   * like on any library it calls. On Scala.js the compiler plugin is the JVM artifact too, as it runs inside scalac.
@@ -64,6 +64,15 @@ object ScaladocPlugin extends AutoPlugin {
 
   private def isScala3(binaryVersion: String): Boolean = binaryVersion.startsWith("3")
 
+  /** The option that makes Scala 3 read doc comments from TASTy: `-Xread-docs`, or `-Yread-docs` before Scala 3.5,
+    * which named it so. Each version takes only its own name without a warning, and the older ones ignore the newer
+    * name, a warning that fails builds with `-Werror`.
+    */
+  def readDocsOption(scalaVersion: String): String = CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3, minor)) if minor < 5 => "-Yread-docs"
+    case _                             => "-Xread-docs"
+  }
+
   @nowarn("cat=deprecation")
   override def projectSettings = Seq(
     scaladocVersion        := BuildInfo.version,
@@ -97,7 +106,7 @@ object ScaladocPlugin extends AutoPlugin {
       plugin ++ libraries
     },
     scalacOptions ++= {
-      if (isScala3(scalaBinaryVersion.value)) Seq("-Yread-docs")
+      if (isScala3(scalaBinaryVersion.value)) Seq(readDocsOption(scalaVersion.value))
       else if (scaladocEmbed.value)
         compilerPluginOptions(
           scaladocIncludePaths.value,

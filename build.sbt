@@ -269,7 +269,7 @@ def withScaladocPlugin(pluginOptions: String*) = Compile / scalacOptions ++= {
   }
 }
 
-// sbt plugin that adds the compiler plugin (Scala 2) or `-Yread-docs` (Scala 3) and the libraries to a project
+// sbt plugin that adds the compiler plugin (Scala 2) or `-Xread-docs` (Scala 3) and the libraries to a project
 lazy val sbtScaladoc = (project in file("modules/plugins/sbt"))
   .enablePlugins(SbtPlugin)
   .settings(

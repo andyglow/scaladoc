@@ -38,7 +38,7 @@ package object scaladoc {
       * read, in wiki syntax.
       *
       * The compiler only keeps doc comments of sources compiled in the same run, unless the calling module is
-      * compiled with `-Yread-docs`, which also reads them from TASTy (other modules, jars, files not recompiled
+      * compiled with `-Xread-docs`, which also reads them from TASTy (other modules, jars, files not recompiled
       * by an incremental compile).
       */
     inline def of[T]: Option[Scaladoc] = ${ ScaladocMacro.scaladoc[T] }
