@@ -5,7 +5,7 @@ import java.util.regex.Pattern
 
 import scala.util.Try
 
-/** Decides which classes get their scaladoc embedded into bytecode.
+/** Decides which classes and objects get their scaladoc embedded into bytecode.
   *
   * Configured with plugin options (each can be given several times):
   *   - `include:path:<glob>` / `exclude:path:<glob>`: a glob over the source file path, in `java.nio` glob syntax.
@@ -15,8 +15,9 @@ import scala.util.Try
   *     nested classes written with dots (`com.acme.Outer.Inner`). `*` matches within one name segment,
   *     `**` across segments (`com.acme.**`), and `**.` matches zero or more packages (`com.acme.**.internal.*`).
   *
-  * A class is embedded if it is included and not excluded. With no include options everything is included;
-  * otherwise a class is included when its file matches an include path or its name matches an include class.
+  * Objects are matched by their name, like classes. A class is embedded if it is included and not excluded. With no
+  * include options everything is included; otherwise a class is included when its file matches an include path or its
+  * name matches an include class.
   */
 final class EmbedFilter private (
   includePaths: List[EmbedFilter.Matcher],

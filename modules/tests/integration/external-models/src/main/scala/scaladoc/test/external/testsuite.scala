@@ -43,3 +43,24 @@ trait ExternalTrait {
     case class Deeper(d: String)
   }
 }
+
+/** External Object */
+object ExternalObject
+
+/** External Case Object */
+case object ExternalCaseObject
+
+/** External Companion, the class
+  *
+  * @param a A Param
+  */
+case class ExternalCompanion(a: String)
+
+/** External Companion, the object */
+object ExternalCompanion
+
+object ExternalHolder {
+
+  /** Nested in an object */
+  object Inner
+}

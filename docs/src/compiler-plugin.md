@@ -8,14 +8,15 @@ The Scala 2 compiler has a short memory. It reads every doc comment while it com
 nothing of the comment reaches the bytecode. A tool that looks at your classes later, from another module or out of a
 jar, finds the types intact and the prose gone.
 
-The compiler plugin writes the prose down before it's forgotten. For every documented class, it:
+The compiler plugin writes the prose down before it's forgotten. For every documented class and object, it:
 
 - validates the comment. One the parser can't read, like one with a misaligned border, is reported as a warning in
   the `scaladoc` category and isn't embedded. `-Xfatal-warnings`, or `-Wconf:cat=scaladoc:e` on 2.13, turns it into an error
-- packs the comment into a `@ScaladocCarrier` annotation on the class, which stays in the bytecode
+- packs the comment into a `@ScaladocCarrier` annotation on the class, which stays in the bytecode. For an object,
+  that's its class, `Obj$`, and the class of its static forwarders, `Obj`, when it has no companion class
 
-@ref:[`Scaladoc.of`](extractor.md) finds the annotation, so it works for classes from any module or jar compiled with the
-plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn't need it, since it keeps comments in TASTy on its own.
+@ref:[`Scaladoc.of`](extractor.md) finds the annotation, so it works for classes and objects from any module or jar compiled
+with the plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn't need it, since it keeps comments in TASTy on its own.
 
 The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it on Scala 2
 modules, and @ref:[Maven](getting-started.md#maven) builds list it in `scala-maven-plugin`'s `compilerPlugins`. In sbt,
@@ -63,7 +64,7 @@ them without it, and Java reflection then just leaves the annotation out.
 
 ## Choosing what to embed
 
-By default the plugin embeds the scaladoc of every documented class. That's often more than needed, and a comment
+By default the plugin embeds the scaladoc of every documented class and object. That's often more than needed, and a comment
 meant for the team may not be meant for every jar. Include and exclude patterns narrow it down. With `sbt-scaladoc`
 they're settings:
 
@@ -89,7 +90,7 @@ scalacOptions ++= Seq(
 |---------------------------|-------------------------------------------------------|
 | `include:path:<glob>`     | source files whose path matches the glob              |
 | `exclude:path:<glob>`     | the same, to leave out                                |
-| `include:class:<pattern>` | classes whose fully qualified name matches the pattern |
+| `include:class:<pattern>` | classes and objects whose fully qualified name matches the pattern |
 | `exclude:class:<pattern>` | the same, to leave out                                |
 
 The rules, in the order they're applied:
@@ -101,5 +102,6 @@ The rules, in the order they're applied:
   and are matched against the absolute path of the source file, so they usually start with `**/`.
 - In class patterns, `*` matches within one segment of the name, `**` across segments, and `**.` zero or more
   packages: `com.acme.**.internal.*` matches both `com.acme.internal.Secret` and `com.acme.a.b.internal.Secret`.
-  Nested classes are written with dots, as in `com.acme.Outer.Inner`.
+  Nested classes are written with dots, as in `com.acme.Outer.Inner`, and objects are matched by their name, like
+  classes: `com.acme.Registry`, not `com.acme.Registry$`.
 - A malformed option fails the compilation, rather than quietly embedding everything.

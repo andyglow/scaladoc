@@ -37,3 +37,9 @@ case class KeptOuter(o: Int) {
     */
   case class Nested(n: Int)
 }
+
+/** An object, included by class name */
+object KeptObject
+
+/** An object, not included */
+object DroppedObject
