@@ -15,6 +15,9 @@ option and deprecates the old name, and Scala 3.3 and 3.4 don't know the new one
 `-Yread-docs`. A build that sets it by hand, like a Maven one, renames it too. The Gradle plugin also counts a
 `scala-library` 3.x dependency as Scala 3, which it is from 3.8 on.
 
+**On Scala 3, `Scaladoc.of` reads objects from other modules and jars**, where it gave `None`: `Scaladoc.of[Guest.type]`
+for a documented `object Guest` in another module now has its scaladoc, as a class there has.
+
 **On Scala 3, `Scaladoc.of` reads doc comments as Markdown**, Scala 3's default syntax, where it read them as wiki
 before. A codebase that writes its comments in wiki syntax, as with scaladoc's `-comment-syntax wiki`, says so with a
 given in scope at the call site, or a comment with a tag, as in Scala 3's scaladoc:

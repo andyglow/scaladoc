@@ -32,7 +32,7 @@ object ScaladocMacro {
         )
     }
 
-    sym.docstring match {
+    docstring(sym) match {
       case Some(raw) =>
         parsed(raw, ScaladocParser.docstringWithin(raw, strict = true, syntaxInScope, outerDefines(sym)))
       case None =>
@@ -67,12 +67,20 @@ object ScaladocMacro {
     val sites   = Iterator.iterate(sym)(_.owner).takeWhile(s => !s.isNoSymbol && !s.isPackageDef).toList
     val outer   = sites.flatMap(searchList).distinct.filterNot(_ == sym)
     val defines = outer.map { s =>
-      s.docstring match {
+      docstring(s) match {
         case Some(raw) => ScaladocParser.defines(raw, hasTags = true)
         case None      => carrier(s).fold(Map.empty[String, String]) { case (text, tags) => ScaladocParser.defines(text, tags) }
       }
     }
     Defines.inOrder(defines)
+  }
+
+  // The symbol's doc comment. With `-Xread-docs`, a symbol from TASTy gets its comment when its TASTy is read, and an
+  // object's class can be there before that: `T.type` doesn't read it, so `docstring` would be `None`. Its declarations
+  // do, as any use of the object would.
+  private def docstring(using q: Quotes)(sym: q.reflect.Symbol): Option[String] = {
+    if (sym.isClassDef) sym.declarations
+    sym.docstring
   }
 
   // the syntax a given in scope says, `import scaladoc.syntax.wiki.given`: its type is the syntax
