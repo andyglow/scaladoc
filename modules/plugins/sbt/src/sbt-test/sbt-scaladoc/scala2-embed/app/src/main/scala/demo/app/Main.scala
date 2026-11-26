@@ -19,5 +19,22 @@ object Main {
     require(guest.contains("The guest, who needs no account."), s"Guest: $guest")
     val root = Scaladoc.of[demo.model.Root.type].map(_.textDescriptions.mkString)
     require(root.contains("The root entity: an object's comment uses its parent's define too."), s"Root: $root")
+    // a sealed trait, as a tree, from the embedded scaladoc: a jar has no order, so its variants come by name
+    val plan = show(Typedoc.of[demo.model.Plan])
+    require(
+      plan == "Plan(A subscription plan.)[Free(Free, for everyone.), Lifetime(Paid once.), Monthly(Paid by the month.){price: the price}]",
+      s"Plan: $plan")
+  }
+
+  // the tree, one line: names, descriptions and fields' docs
+  private def show(t: Typedoc): String = {
+    def text(doc: Option[Scaladoc]) = doc.map(_.textDescriptions.mkString).getOrElse("-")
+    t match {
+      case Typedoc.Sum(name, doc, variants) => s"$name(${text(doc)})[${variants.map(show).mkString(", ")}]"
+      case Typedoc.Product(name, doc, fields) =>
+        s"$name(${text(doc)}){${fields.map(f => f.name + ": " + f.doc.fold("-")(_.trimmed.plainString)).mkString(", ")}}"
+      case Typedoc.Singleton(name, doc) => s"$name(${text(doc)})"
+      case Typedoc.Plain(name, doc)     => s"$name(${text(doc)})"
+    }
   }
 }

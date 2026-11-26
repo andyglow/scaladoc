@@ -12,16 +12,51 @@ class ScaladocMacro(val c: blackbox.Context) extends ExtractScaladoc with Annota
   val carrierTpe = typeOf[ScaladocCarrier]
   val prefix     = q"_root_.scaladoc"
 
-  def scaladoc[T](implicit t: WeakTypeTag[T]): c.Expr[Option[Scaladoc]] = {
-    lazy val outer = outerDefines(t.tpe.typeSymbol)
-    val scd = fromAnnotatedType(t.tpe, outer) orElse fromSourceCode(t.tpe.typeSymbol.pos, outer)
+  def scaladoc[T](implicit t: WeakTypeTag[T]): c.Expr[Option[Scaladoc]] =
+    c.Expr[Option[Scaladoc]](optionTree(docOf(t.tpe.typeSymbol)))
 
-//    c.info(c.enclosingPosition, s"${show(t.tpe)} -> ${show(scd)}", force = true)
+  def typedoc[T](implicit t: WeakTypeTag[T]): c.Expr[Typedoc] = c.Expr[Typedoc](typedocTree(t.tpe.typeSymbol))
 
-    scd match {
-      case Some(doc) => c.Expr[Option[Scaladoc]](q"scala.Some(${materialize(doc)})")
-      case None      => c.Expr[Option[Scaladoc]](q"scala.None")
+  private def optionTree(doc: Option[Scaladoc]): Tree = doc match {
+    case Some(doc) => q"scala.Some(${materialize(doc)})"
+    case None      => q"scala.None"
+  }
+
+  // the node of a class or object, with its variants or fields
+  private def typedocTree(sym: Symbol): Tree = {
+    sym.info // a class from a jar has its children and constructor once it's loaded
+    val name = sym.name.decodedName.toString
+    val doc  = docOf(sym)
+    val cls  = if (sym.isClass) Some(sym.asClass) else None
+    cls match {
+      case Some(cls) if cls.isSealed =>
+        val variants = inDeclarationOrder(cls.knownDirectSubclasses.toList) map typedocTree
+        q"$prefix.Typedoc.Sum($name, ${optionTree(doc)}, scala.List(..$variants))"
+      case Some(cls) if cls.isModuleClass =>
+        q"$prefix.Typedoc.Singleton($name, ${optionTree(doc)})"
+      case Some(cls) if cls.isCaseClass =>
+        val params = cls.primaryConstructor.asMethod.paramLists.headOption.getOrElse(Nil)
+        val fields = params map { p =>
+          val field = p.name.decodedName.toString
+          val fieldDoc = doc.flatMap(_.params.get(field)) match {
+            case Some(m) => q"scala.Some(${markupTree(m)})"
+            case None    => q"scala.None"
+          }
+          q"$prefix.Typedoc.Field($field, $fieldDoc)"
+        }
+        q"$prefix.Typedoc.Product($name, ${optionTree(doc)}, scala.List(..$fields))"
+      case _ =>
+        q"$prefix.Typedoc.Plain($name, ${optionTree(doc)})"
     }
+  }
+
+  // `knownDirectSubclasses` is a set: in the order of the source when the hierarchy is compiled in this run, and by
+  // name otherwise, as classes from a jar have no positions
+  private def inDeclarationOrder(children: List[Symbol]): List[Symbol] = {
+    val positions = children.map(declarationPos)
+    if (positions.forall(_ != NoPosition))
+      children.zip(positions).sortBy { case (_, pos) => (pos.source.path, pos.point) }.map(_._1)
+    else children.sortBy(s => (s.name.decodedName.toString, s.fullName))
   }
 
   // plain functions rather than the extractors in patterns: keeps the pattern matches checkable for exhaustivity

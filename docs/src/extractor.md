@@ -95,6 +95,54 @@ A comment whose `*` border wanders from line to line is usually a sign of a botc
 alignment, on Scala 2 and on Scala 3 alike, and reports a comment it can't make sense of as a compile error at the call
 site, with the comment and the reason. A comment without borders is fine; only a border that's there gets checked.
 
+## Typedoc.of
+
+`Scaladoc.of[T]` gives one comment. A type made of others, a sealed hierarchy or an enum, has a comment on each part,
+and `Typedoc.of[T]` gives them all, as a tree:
+
+```scala mdoc
+object shapes {
+
+  /** A shape. */
+  sealed trait Shape
+
+  /** A circle.
+    *
+    * @param radius the radius
+    */
+  case class Circle(radius: Double) extends Shape
+
+  /** No shape at all. */
+  case object Empty extends Shape
+}
+
+Typedoc.of[shapes.Shape] match {
+  case Typedoc.Sum(name, _, variants) => name -> variants.map(v => v.name -> v.doc.flatMap(_.textSummary))
+  case other                          => other.name -> Nil
+}
+```
+
+Each node has the type's name and its scaladoc, as `Scaladoc.of` gives it:
+
+| Node | For | Has |
+|---|---|---|
+| `Typedoc.Sum` | a sealed trait or class, a Scala 3 enum | its direct children as `variants` |
+| `Typedoc.Product` | a case class, a Scala 3 enum case with parameters | its constructor's parameters as `fields`, each with its `@param` |
+| `Typedoc.Singleton` | an object, a Scala 3 enum case without parameters | |
+| `Typedoc.Plain` | anything else | |
+
+Variants are nodes themselves, so a variant that's sealed is a nested `Sum`. Fields have just their name and their
+`@param`, not their type's tree: a tree of fields' types could loop on a recursive type, and deriving a whole schema
+is for the code that walks the tree.
+
+Variants come in declaration order, where the compiler knows it: always on Scala 3, and on Scala 2 when the hierarchy
+is compiled in the same run. A Scala 2 hierarchy from a jar has no order, and its variants come by name, on Scala 2
+and Scala 3 alike.
+
+`Typedoc.of` finds comments where `Scaladoc.of` does, so on Scala 3 it reads other modules with `-Xread-docs`, and a
+Scala 2 hierarchy from another module or a jar needs the @ref:[compiler plugin](compiler-plugin.md). A malformed
+comment anywhere in the tree is a compile error.
+
 ## From a string
 
 When you have the comment as text, there's no need for a macro. `Scaladoc.fromString` parses it, in wiki syntax unless

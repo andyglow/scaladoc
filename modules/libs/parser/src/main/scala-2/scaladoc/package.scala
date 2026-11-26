@@ -38,4 +38,12 @@ package object scaladoc {
       */
     def of[T]: Option[Scaladoc] = macro ScaladocMacro.scaladoc[T]
   }
+
+  implicit class TypedocCompanionOps(private val comp: Typedoc.type) extends AnyVal {
+
+    /** Extracts the docs of `T` as a tree at compile time: its scaladoc, as `Scaladoc.of[T]` gives it, and those of
+      * its variants if it's sealed, or of its fields if it's a case class. See [[Typedoc]].
+      */
+    def of[T]: Typedoc = macro ScaladocMacro.typedoc[T]
+  }
 }

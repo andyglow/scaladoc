@@ -14,11 +14,51 @@ object ScaladocMacro {
     */
   def scaladoc[T: Type](using q: Quotes): Expr[Option[Scaladoc]] = {
     import q.reflect.*
+    optionExpr(docOf(TypeRepr.of[T].typeSymbol))
+  }
 
-    val sym = TypeRepr.of[T].typeSymbol
+  /** The docs of `T` as a tree: its scaladoc, as `scaladoc[T]` gives it, and those of its variants or fields. */
+  def typedoc[T: Type](using q: Quotes): Expr[Typedoc] = {
+    import q.reflect.*
+    typedocExpr(TypeRepr.of[T].typeSymbol)
+  }
 
-    def parsed(raw: String, result: Either[ScaladocException, Scaladoc]): Expr[Option[Scaladoc]] = result match {
-      case Right(doc) => '{ Some(${ Expr(doc) }) }
+  private def optionExpr(doc: Option[Scaladoc])(using Quotes): Expr[Option[Scaladoc]] = doc match {
+    case Some(doc) => '{ Some(${ Expr(doc) }) }
+    case None      => '{ None }
+  }
+
+  // The node of a class, an object or an enum case. A sealed type's children are its variants, in declaration order:
+  // classes, objects as their module classes, and the enum cases without parameters, which are values. Scala 2
+  // classes from a jar come by name.
+  private def typedocExpr(using q: Quotes)(sym: q.reflect.Symbol): Expr[Typedoc] = {
+    import q.reflect.*
+    val flags = sym.flags
+    val doc   = docOf(sym)
+    if (sym.isTerm) '{ Typedoc.Singleton(${ Expr(sym.name) }, ${ optionExpr(doc) }) }
+    else if (flags.is(Flags.Module))
+      '{ Typedoc.Singleton(${ Expr(sym.name.stripSuffix("$")) }, ${ optionExpr(doc) }) }
+    else if (flags.is(Flags.Sealed)) {
+      val variants = sym.children.map(typedocExpr)
+      '{ Typedoc.Sum(${ Expr(sym.name) }, ${ optionExpr(doc) }, ${ Expr.ofList(variants) }) }
+    } else if (flags.is(Flags.Case)) {
+      val fields = sym.caseFields.map { field =>
+        val fieldDoc = doc.flatMap(_.params.get(field.name)) match {
+          case Some(m) => '{ Some(${ markupExpr(m) }) }
+          case None    => '{ None }
+        }
+        '{ Typedoc.Field(${ Expr(field.name) }, $fieldDoc) }
+      }
+      '{ Typedoc.Product(${ Expr(sym.name) }, ${ optionExpr(doc) }, ${ Expr.ofList(fields) }) }
+    } else '{ Typedoc.Plain(${ Expr(sym.name) }, ${ optionExpr(doc) }) }
+  }
+
+  // The scaladoc of `sym`: its doc comment, or else the `ScaladocCarrier` the Scala 2 compiler plugin embedded.
+  private def docOf(using q: Quotes)(sym: q.reflect.Symbol): Option[Scaladoc] = {
+    import q.reflect.*
+
+    def parsed(raw: String, result: Either[ScaladocException, Scaladoc]): Scaladoc = result match {
+      case Right(doc) => doc
       case Left(err) =>
         val pos = sym.pos.getOrElse(Position.ofMacroExpansion)
         report.errorAndAbort(
@@ -34,12 +74,10 @@ object ScaladocMacro {
 
     docstring(sym) match {
       case Some(raw) =>
-        parsed(raw, ScaladocParser.docstringWithin(raw, strict = true, syntaxInScope, outerDefines(sym)))
+        Some(parsed(raw, ScaladocParser.docstringWithin(raw, strict = true, syntaxInScope, outerDefines(sym))))
       case None =>
-        carrier(sym) match {
-          case Some((text, tags)) =>
-            parsed(text, ScaladocParser.within(text, tags, strict = true, CommentSyntax.Wiki, outerDefines(sym)))
-          case None => '{ None }
+        carrier(sym) map { case (text, tags) =>
+          parsed(text, ScaladocParser.within(text, tags, strict = true, CommentSyntax.Wiki, outerDefines(sym)))
         }
     }
   }

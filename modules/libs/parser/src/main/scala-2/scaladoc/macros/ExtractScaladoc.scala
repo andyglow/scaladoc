@@ -32,14 +32,25 @@ trait ExtractScaladoc extends AnnotationSupport {
     }
   }
 
-  def fromAnnotatedType(t: Type, outer: => Map[String, String]): Option[Scaladoc] = {
-    carrier(t.typeSymbol) map { case (body, hasTags) =>
+  def fromCarrier(sym: Symbol, outer: => Map[String, String]): Option[Scaladoc] = {
+    carrier(sym) map { case (body, hasTags) =>
       ScaladocParser.within(body, hasTags, strict = true, CommentSyntax.Wiki, outer) match {
         case Right(doc) => doc
-        case Left(err)  => c.abort(t.typeSymbol.pos, err.getMessage)
+        case Left(err)  => c.abort(sym.pos, err.getMessage)
       }
     }
   }
+
+  /** The scaladoc of the class or object `sym`: from its `ScaladocCarrier`, or else its source, with the defines of
+    * its parents and enclosing classes.
+    */
+  def docOf(sym: Symbol): Option[Scaladoc] = {
+    lazy val outer = outerDefines(sym)
+    fromCarrier(sym, outer) orElse fromSourceCode(declarationPos(sym), outer)
+  }
+
+  /** Where `sym` is declared: an object's class is at its object. */
+  def declarationPos(sym: Symbol): Position = if (sym.isModuleClass) sym.asClass.module.pos else sym.pos
 
   // the text of the class's `ScaladocCarrier`, which the compiler plugin adds, and whether it has the comment's markers
   private def carrier(sym: Symbol): Option[(String, Boolean)] = {
@@ -57,10 +68,8 @@ trait ExtractScaladoc extends AnnotationSupport {
     def searchList(site: Symbol): List[Symbol] =
       if (site.isModuleClass) site :: bases(site) ++ bases(site.asClass.module.companion) else bases(site)
     def isTop(k: Symbol)  = k == NoSymbol || k.isPackage || k.isPackageClass
-    def comment(k: Symbol): Option[(String, Boolean)] = {
-      val pos = if (k.isModuleClass) k.asClass.module.pos else k.pos
-      SourceCodeUtils.extractComment(pos).map(_ -> true) orElse carrier(k)
-    }
+    def comment(k: Symbol): Option[(String, Boolean)] =
+      SourceCodeUtils.extractComment(declarationPos(k)).map(_ -> true) orElse carrier(k)
     val sites = Iterator.iterate(sym)(_.owner).takeWhile(k => !isTop(k)).toList
     val outer = sites.flatMap(searchList).distinct.filterNot(_ == sym)
     Defines.inOrder(outer.map(k => comment(k).fold(Map.empty[String, String]) { case (text, tags) => ScaladocParser.defines(text, tags) }))

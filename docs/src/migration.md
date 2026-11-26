@@ -23,6 +23,9 @@ reads a documented object from a Scala 2 jar, on Scala 2 and Scala 3. Objects go
 patterns, by their name like classes: a pattern that matches `com.acme.Registry` now embeds `object Registry` too, so a
 build that embeds selectively may want to check what its patterns now cover.
 
+**`Typedoc.of[T]` is new:** the scaladoc of a sealed hierarchy or an enum, with its variants', and of a case class with
+its fields', as a tree. See @ref:[Typedoc.of](extractor.md). `Scaladoc.of` stays as it is.
+
 **On Scala 3, `Scaladoc.of` reads doc comments as Markdown**, Scala 3's default syntax, where it read them as wiki
 before. A codebase that writes its comments in wiki syntax, as with scaladoc's `-comment-syntax wiki`, says so with a
 given in scope at the call site, or a comment with a tag, as in Scala 3's scaladoc:

@@ -15,7 +15,8 @@ generators that can use it for titles and descriptions:
 - **a model** of scaladoc's tags and markup: paragraphs, headings, lists, tables, code, links and the rest
 - **a parser** that turns comment text into the model. It reads scaladoc's wiki markup and Markdown, as Scala 3's
   scaladoc does, with HTML and javadoc's inline tags, on the JVM and on Scala.js
-- **`Scaladoc.of[T]`**, the scaladoc of a type at compile time, for macros and type class derivation
+- **`Scaladoc.of[T]`**, the scaladoc of a type at compile time, for macros and type class derivation, and
+  **`Typedoc.of[T]`**, the scaladoc of a sealed hierarchy or an enum with its variants', as a tree
 - **a compiler plugin** (Scala 2) that embeds scaladoc into bytecode, so it can be read from jars
 
 ```scala
