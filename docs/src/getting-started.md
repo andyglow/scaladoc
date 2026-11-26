@@ -26,7 +26,8 @@ that tells the compiler to load them.
 
 A reading module calls `Scaladoc.of`, so it depends on `scaladoc-parser` like on any library it calls; `scaladoc-core`,
 the model, comes with it. The rest is compiler setup, which is where the sbt and Gradle plugins help: they add the
-compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Xread-docs` on Scala 3. Maven gets a few lines of POM.
+compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Xread-docs` on Scala 3. Maven gets a few lines of POM,
+and scala-cli a few `using` directives.
 
 ## sbt
 
@@ -214,6 +215,43 @@ The groupId changed in 0.1.0, from `com.github.andyglow` to `io.github.andyglow`
 available under the old one. To upgrade from them, change the groupId along with the version.
 
 @@@
+
+## scala-cli
+
+A scala-cli project says what it needs in `using` directives, in any of its files, as in a `project.scala`.
+
+**A Scala 2 module that publishes its scaladoc** needs the compiler plugin, and the annotation it embeds scaladoc in,
+which the module's POM then brings to its consumers:
+
+```scala
+//> using plugin io.github.andyglow::scaladoc-compiler-plugin:@VERSION@
+//> using dep io.github.andyglow:scaladoc-annotation:@VERSION@
+```
+
+The include and exclude patterns are the compiler plugin's options, a `using option` each; see
+@ref:[Choosing what to embed](compiler-plugin.md#choosing-what-to-embed):
+
+```scala
+//> using option -P:scaladoc-compiler-plugin:exclude:class:com.acme.**.internal.*
+```
+
+A Scala 3 module that publishes needs nothing at all.
+
+**A module that reads scaladoc** needs the parser, which brings `scaladoc-core` along:
+
+```scala
+//> using dep io.github.andyglow::scaladoc-parser:@VERSION@
+```
+
+and on Scala 3, `-Xread-docs` as well:
+
+```scala
+//> using option -Xread-docs
+```
+
+This setup is tested with scala-cli on Scala 2.13, 2.12 and 3: a model is published locally, and read by an app and by
+a Scala 3 project that uses the 2.13 model. See
+[modules/tests/scala-cli](https://github.com/andyglow/scaladoc/tree/master/modules/tests/scala-cli) in the repository.
 
 ## A first look
 
