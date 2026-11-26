@@ -42,6 +42,12 @@ jobs:
       - name: Setup sbt
         uses: sbt/setup-sbt@v1
 
+      - name: Install scala-cli
+        if: matrix.scala == '2.13.18'
+        uses: VirtusLab/scala-cli-setup@v1
+        with:
+          jvm: 'temurin:21'
+
       - name: Check that workflows are up to date
         run: sbt '++ ${{ matrix.scala }}; githubWorkflowCheck'
 
@@ -51,12 +57,6 @@ jobs:
       - name: sbt plugin scripted tests
         if: matrix.scala == '2.13.18'
         run: sbt '++ ${{ matrix.scala }}; +publishLocal; +sbtScaladoc/scripted'
-
-      - name: Install scala-cli
-        if: matrix.scala == '2.13.18'
-        uses: VirtusLab/scala-cli-setup@v1
-        with:
-          jvm: 'temurin:21'
 
       - name: Gradle plugin, Maven and scala-cli tests
         if: matrix.scala == '2.13.18'

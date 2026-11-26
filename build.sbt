@@ -50,19 +50,22 @@ ThisBuild / githubWorkflowTargetBranches        := Seq("master")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("21"))
 // Tests on every Scala version; coverage of core and parser measured once, on 2.13, and uploaded to Codecov
+// scala-cli, for `scalaCliCheck`: before the first sbt step, as sbt runs as a server that the later steps reuse, with
+// the PATH it started with. By default the action installs Java 17, which the steps after it would then run on
+ThisBuild / githubWorkflowJobSetup ++= Seq(
+  WorkflowStep.Use(
+    UseRef.Public("VirtusLab", "scala-cli-setup", "v1"),
+    params = Map("jvm" -> "temurin:21"),
+    name = Some("Install scala-cli"),
+    cond = Some(s"matrix.scala == '$scala213'")
+  )
+)
 ThisBuild / githubWorkflowBuild := Seq(
   WorkflowStep.Sbt(List("test"), name = Some("Build project")),
   // sbt-scaladoc against real sbt 2 and sbt 1 builds; they need this build's artifacts in the local repository
   WorkflowStep.Sbt(
     List("+publishLocal", "+sbtScaladoc/scripted"),
     name = Some("sbt plugin scripted tests"),
-    cond = Some(s"matrix.scala == '$scala213'")
-  ),
-  // by default the action installs Java 17, which the steps after it would then run on
-  WorkflowStep.Use(
-    UseRef.Public("VirtusLab", "scala-cli-setup", "v1"),
-    params = Map("jvm" -> "temurin:21"),
-    name = Some("Install scala-cli"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
   // the Gradle plugin, and the Maven and scala-cli setups the docs show, against real Gradle, Maven and scala-cli
