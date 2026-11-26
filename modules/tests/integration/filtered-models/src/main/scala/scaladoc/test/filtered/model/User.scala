@@ -14,3 +14,6 @@ object Holder {
     */
   case class Nested(x: Int)
 }
+
+/** An object, included by path */
+object Users

@@ -3,9 +3,9 @@ package scaladoc.annotation;
 import java.lang.annotation.*;
 
 /**
- * The scaladoc of a class, kept in its bytecode.
+ * The scaladoc of a class or object, kept in its bytecode.
  *
- * <p>The scaladoc compiler plugin (Scala 2) puts it on every documented class it's told to embed, because the Scala 2
+ * <p>The scaladoc compiler plugin (Scala 2) puts it on every documented class and object it's told to embed, because the Scala 2
  * compiler drops doc comments otherwise. Its retention is {@code RUNTIME}, so it can be read:
  *
  * <ul>

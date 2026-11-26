@@ -59,31 +59,42 @@ class ScaladocComponent(
 
     private def fullName(name: Name): String = (name.decoded :: owners).reverse.mkString(".")
 
-    // adds the class's scaladoc as a `ScaladocCarrier` annotation (and as an attachment, for macros of the same run)
-    private def embed(cls: ClassDef): ClassDef = {
-      val embedded = for {
-        str <- SourceCodeUtils.extractComment(cls.pos)
+    // the definition's scaladoc as a `ScaladocCarrier` annotation (and the parsed scaladoc, as an attachment for macros
+    // of the same run), if it has a comment that parses
+    private def carrier(defn: ImplDef): Option[(Tree, Scaladoc)] =
+      for {
+        str <- SourceCodeUtils.extractComment(defn.pos)
         doc <- Scaladoc.fromString(str, strict = true) match {
                  case Left(err) =>
-                   reportError(cls.pos, err.getMessage, cls.symbol)
+                   reportError(defn.pos, err.getMessage, defn.symbol)
                    None
                  case Right(doc) =>
                    Some(doc)
                }
       } yield {
-        val Modifiers(flags, privateWithin, annos) = cls.mods
-        val carrier = Annotation(
+        val annotation = Annotation(
           carrierTpe,
           Nil,
           ListMap(
             TermName("text") -> LiteralAnnotArg(Constant(str)),
             TermName("tags") -> LiteralAnnotArg(Constant(true)))).tree
-
-        cls.copy(mods = Modifiers(flags, privateWithin, annos :+ carrier)).updateAttachment(doc).setPos(cls.pos)
+        (annotation, doc)
       }
 
-      embedded getOrElse cls
+    private def withCarrier(mods: Modifiers, annotation: Tree): Modifiers = {
+      val Modifiers(flags, privateWithin, annos) = mods
+      Modifiers(flags, privateWithin, annos :+ annotation)
     }
+
+    private def embed(cls: ClassDef): ClassDef =
+      carrier(cls).fold(cls) { case (annotation, doc) =>
+        cls.copy(mods = withCarrier(cls.mods, annotation)).updateAttachment(doc).setPos(cls.pos)
+      }
+
+    private def embed(obj: ModuleDef): ModuleDef =
+      carrier(obj).fold(obj) { case (annotation, doc) =>
+        obj.copy(mods = withCarrier(obj.mods, annotation)).updateAttachment(doc).setPos(obj.pos)
+      }
 
     // skip the whole compile unit if none of its classes can be embedded
     override def transformUnit(unit: CompilationUnit): Unit =
@@ -96,7 +107,10 @@ class ScaladocComponent(
         case pkg: PackageDef =>
           withOwner(refName(pkg.pid))(super.transform(pkg))
         case obj: ModuleDef =>
-          withOwner(obj.name.decoded)(super.transform(obj))
+          // like a class: what's nested first, with this object as its owner
+          val body = withOwner(obj.name.decoded)(transformTemplate(obj.impl))
+          val res  = treeCopy.ModuleDef(obj, obj.mods, obj.name, body)
+          if (filter.accepts(path, fullName(obj.name))) embed(res) else res
         case cls: ClassDef =>
           // nested classes first, with this class as their owner; they are visited even if this class is not embedded
           val body = withOwner(cls.name.decoded)(transformTemplate(cls.impl))

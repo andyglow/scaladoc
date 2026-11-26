@@ -18,6 +18,11 @@ option and deprecates the old name, and Scala 3.3 and 3.4 don't know the new one
 **On Scala 3, `Scaladoc.of` reads objects from other modules and jars**, where it gave `None`: `Scaladoc.of[Guest.type]`
 for a documented `object Guest` in another module now has its scaladoc, as a class there has.
 
+**The compiler plugin embeds the scaladoc of objects too**, where it embedded only classes', so `Scaladoc.of[Obj.type]`
+reads a documented object from a Scala 2 jar, on Scala 2 and Scala 3. Objects go by the same include and exclude
+patterns, by their name like classes: a pattern that matches `com.acme.Registry` now embeds `object Registry` too, so a
+build that embeds selectively may want to check what its patterns now cover.
+
 **On Scala 3, `Scaladoc.of` reads doc comments as Markdown**, Scala 3's default syntax, where it read them as wiki
 before. A codebase that writes its comments in wiki syntax, as with scaladoc's `-comment-syntax wiki`, says so with a
 given in scope at the call site, or a comment with a tag, as in Scala 3's scaladoc:

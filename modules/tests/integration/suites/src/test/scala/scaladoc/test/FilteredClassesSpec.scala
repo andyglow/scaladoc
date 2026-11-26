@@ -55,4 +55,13 @@ class FilteredClassesSpec extends AnyFunSuite {
     Scaladoc.of[KeptOuter] mustBe doc("Included by class name", "o", "the o")
     Scaladoc.of[KeptOuter#Nested] mustBe None
   }
+
+  private def described(text: String) = Some(Scaladoc(Description(Document(Paragraph(PlainText(text))))))
+
+  test("objects, by the same rules as classes") {
+    Scaladoc.of[Users.type] mustBe described("An object, included by path")
+    Scaladoc.of[KeptObject.type] mustBe described("An object, included by class name")
+    Scaladoc.of[DroppedObject.type] mustBe None
+    Scaladoc.of[Secrets.type] mustBe None
+  }
 }
