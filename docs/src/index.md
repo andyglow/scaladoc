@@ -18,7 +18,8 @@ This library puts that prose to work. It has four parts:
   lists, tables, code, links, bold and the rest)
 - **a parser** that turns comment text into the model. It reads scaladoc's wiki markup and Markdown, as Scala 3's
   scaladoc does, with HTML and javadoc's inline tags, on the JVM and on Scala.js
-- **`Scaladoc.of[T]`**, which hands you the scaladoc of a type at compile time, in macros and type class derivation
+- **`Scaladoc.of[T]`**, which hands you the scaladoc of a type at compile time, in macros and type class derivation,
+  and `Typedoc.of[T]`, the scaladoc of a sealed hierarchy or an enum with its variants', as a tree
 - **a compiler plugin** (Scala 2) that embeds the scaladoc of classes into their bytecode, so it survives the trip
   into a jar
 

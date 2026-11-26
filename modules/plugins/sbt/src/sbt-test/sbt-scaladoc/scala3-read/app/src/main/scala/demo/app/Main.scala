@@ -15,5 +15,24 @@ object Main {
     require(registry.contains("Where the users are."), s"Registry: $registry")
     val guest = Scaladoc.of[demo.model.Guest.type].map(_.textDescriptions.mkString)
     require(guest.contains("The guest, who needs no account."), s"Guest: $guest")
+    // an enum and a sealed trait, as trees, from TASTy: in declaration order
+    val role = show(Typedoc.of[demo.model.Role])
+    require(role == "Role(A role a user has.)[Reader(Reads.), Writer(Writes, to some places.){places: where}]", s"Role: $role")
+    val login = show(Typedoc.of[demo.model.Login])
+    require(
+      login == "Login(How a user signs in.)[Password(With a password.){user: the user's name}, Anonymous(Without signing in.)]",
+      s"Login: $login")
+  }
+
+  // the tree, one line: names, descriptions and fields' docs
+  private def show(t: Typedoc): String = {
+    def text(doc: Option[Scaladoc]) = doc.map(_.textDescriptions.mkString).getOrElse("-")
+    t match {
+      case Typedoc.Sum(name, doc, variants) => s"$name(${text(doc)})[${variants.map(show).mkString(", ")}]"
+      case Typedoc.Product(name, doc, fields) =>
+        s"$name(${text(doc)}){${fields.map(f => f.name + ": " + f.doc.fold("-")(_.trimmed.plainString)).mkString(", ")}}"
+      case Typedoc.Singleton(name, doc) => s"$name(${text(doc)})"
+      case Typedoc.Plain(name, doc)     => s"$name(${text(doc)})"
+    }
   }
 }
