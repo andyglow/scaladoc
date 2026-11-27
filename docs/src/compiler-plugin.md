@@ -15,8 +15,9 @@ The compiler plugin writes the prose down before it's forgotten. For every docum
 - packs the comment into a `@ScaladocCarrier` annotation on the class, which stays in the bytecode. For an object,
   that's its class, `Obj$`, and the class of its static forwarders, `Obj`, when it has no companion class
 
-@ref:[`Scaladoc.of`](extractor.md) finds the annotation, so it works for classes and objects from any module or jar compiled
-with the plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn't need it, since it keeps comments in TASTy on its own.
+@ref:[`Scaladoc.of` and `Typedoc.of`](extractor.md) find the annotation, so they work for classes and objects from any
+module or jar compiled with the plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn't need it, since it keeps
+comments in TASTy on its own.
 
 The @ref:[sbt](getting-started.md#the-sbt-plugin) and @ref:[Gradle](getting-started.md#gradle) plugins add it on Scala 2
 modules, and @ref:[Maven](getting-started.md#maven) builds list it in `scala-maven-plugin`'s `compilerPlugins`. In sbt,
@@ -35,7 +36,7 @@ compile scope, the jar reaches every consumer, like `scala-library` does.
 
 ## Reading embedded scaladoc without this library
 
-The annotation is a public, documented format, and `Scaladoc.of` is just one way to read it. It's a plain Java
+The annotation is a public, documented format, and this library's macros are just one way to read it. It's a plain Java
 annotation, `scaladoc.annotation.ScaladocCarrier`, with runtime retention:
 
 | Element  | Holds                                                                                  |

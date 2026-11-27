@@ -1,4 +1,4 @@
-# Scaladoc.of
+# Scaladoc.of and Typedoc.of
 
 > Any sufficiently advanced technology is indistinguishable from magic.
 >
@@ -28,8 +28,36 @@ Scaladoc.of[geometry.Point].map(_.textParams)
 That makes it a natural building block for derivation. A macro or a type class instance that describes `T` can call
 `Scaladoc.of[T]` and get titles and descriptions for free. A type without a comment gives `None`.
 
-What remains is the question of *where* the compiler finds the comment, and the answer is different on Scala 2 and on
-Scala 3.
+A type made of others, a sealed hierarchy or an enum, has a comment on each part. `Typedoc.of[T]` is the same trick for
+those, and gives them all, as a tree:
+
+```scala mdoc
+object shapes {
+
+  /** A shape. */
+  sealed trait Shape
+
+  /** A circle.
+    *
+    * @param radius the radius
+    */
+  case class Circle(radius: Double) extends Shape
+
+  /** No shape at all. */
+  case object Empty extends Shape
+}
+
+Typedoc.of[shapes.Shape] match {
+  case Typedoc.Sum(name, _, variants) => name -> variants.map(v => v.name -> v.doc.flatMap(_.textSummary))
+  case other                          => other.name -> Nil
+}
+```
+
+A derivation that describes a sealed trait as a `oneOf`, say, gets the description of the whole and of each
+alternative from it. The tree has more to it, which its own section below goes through.
+
+What remains is the question of *where* the compiler finds the comments, which is the same for both, and the answer is
+different on Scala 2 and on Scala 3.
 
 ## On Scala 2
 
@@ -97,32 +125,7 @@ site, with the comment and the reason. A comment without borders is fine; only a
 
 ## Typedoc.of
 
-`Scaladoc.of[T]` gives one comment. A type made of others, a sealed hierarchy or an enum, has a comment on each part,
-and `Typedoc.of[T]` gives them all, as a tree:
-
-```scala mdoc
-object shapes {
-
-  /** A shape. */
-  sealed trait Shape
-
-  /** A circle.
-    *
-    * @param radius the radius
-    */
-  case class Circle(radius: Double) extends Shape
-
-  /** No shape at all. */
-  case object Empty extends Shape
-}
-
-Typedoc.of[shapes.Shape] match {
-  case Typedoc.Sum(name, _, variants) => name -> variants.map(v => v.name -> v.doc.flatMap(_.textSummary))
-  case other                          => other.name -> Nil
-}
-```
-
-Each node has the type's name and its scaladoc, as `Scaladoc.of` gives it:
+`Typedoc.of[T]`'s tree is made of nodes, each with the type's name and its scaladoc, as `Scaladoc.of` gives it:
 
 | Node | For | Has |
 |---|---|---|
