@@ -5,7 +5,6 @@ import scaladoc.utils._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
-import scala.util.matching.Regex
 
 /** Parses markup into a `Markup.Document`: the parser of every comment syntax. `ParseMarkup(text, syntax)` takes it to
   * the one the text is written in. scaladoc's wiki syntax is parsed here; Markdown by `MarkdownBlocks` and
@@ -45,7 +44,10 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
 
   private def isBlankLine(i: Int): Boolean = firstNonSpace(i) >= lineEnd(i)
 
-  private def codeBlockAt(i: Int): Boolean = codeBlocks && at("{{{", i) && text.indexOf("}}}", i + 3) >= 0
+  // the next `}}}`, found once for all the `{{{`s before it
+  private val codeEnd = new ParseMarkup.Next(text, "}}}")
+
+  private def codeBlockAt(i: Int): Boolean = codeBlocks && at("{{{", i) && codeEnd.from(i + 3) >= 0
 
   // a heading is a line of its own: `=`s, the title and as many `=`s again. Returns the level, the title and where
   // the line ends.
@@ -98,16 +100,9 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
     } else None
   }
 
-  private val DelimiterCell = """\s*(:?)-+(:?)\s*""".r
-
   // a delimiter row: `---`, `:---`, `:---:` or `---:` cells
   private def alignmentsAt(i: Int): Option[List[Table.Alignment]] = rowAt(i) flatMap { cells =>
-    val alignments = cells map {
-      case DelimiterCell(":", ":") => Some(Table.Alignment.Center)
-      case DelimiterCell("", ":")  => Some(Table.Alignment.Right)
-      case DelimiterCell(_, _)     => Some(Table.Alignment.Left)
-      case _                       => None
-    }
+    val alignments = cells.map(ParseMarkup.alignmentOf)
     if (alignments.forall(_.isDefined)) Some(alignments.flatten) else None
   }
 
@@ -309,15 +304,11 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
 
     // an HTML tag. The inline ones with a model equivalent, like <b>, become that, the other safe ones an HtmlTag. Any
     // other `<`, like the one of `List<String>`, is text.
-    def html(): Unit = {
-      val m = ParseMarkup.HtmlTagPattern.matcher(text)
-      m.region(pos, len)
-      if (!m.lookingAt()) { buf += '<'; pos += 1 }
-      else {
-        val raw     = m.group(0)
-        val closing = m.group(1).nonEmpty
-        val name    = m.group(2).toLowerCase
-        val end     = m.end()
+    def html(): Unit = ParseMarkup.htmlTagAt(text, pos) match {
+      case None => buf += '<'; pos += 1
+      case Some(ParseMarkup.TagAt(closing, tagName, attributes, end)) =>
+        val raw  = text.substring(pos, end)
+        val name = tagName.toLowerCase
         def tag(): Unit = { flush(); spans += HtmlTag(raw); pos = end }
         def to(close: String)(make: List[Span] => Span): Unit = {
           val from            = pos
@@ -340,22 +331,20 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
             if (j < len && at(close, j)) { flush(); spans += Monospace(ParseMarkup.decodeEntities(text.substring(end, j))); pos = j + close.length }
             else tag()
           case "a" =>
-            ParseMarkup.Href.findFirstMatchIn(m.group(3)) match {
-              case Some(href) => to("</a>")(title => Link(ParseMarkup.decodeEntities(href.group(2)), title.trim))
+            ParseMarkup.hrefIn(attributes) match {
+              case Some(href) => to("</a>")(title => Link(ParseMarkup.decodeEntities(href), title.trim))
               case None       => tag()
             }
           case "br"                               => buf += '\n'; pos = end
           case _ if ParseMarkup.SafeTags(name)    => tag()
           case _                                  => buf += '<'; pos += 1
         }
-      }
     }
 
     // `&lt;`, `&#60;` and the like are the characters they stand for; an unknown one stays as it is
     def entity(): Unit = {
-      val m = ParseMarkup.EntityPattern.matcher(text)
-      m.region(pos, len)
-      if (m.lookingAt()) { buf ++= ParseMarkup.decodeEntities(m.group(0)); pos = m.end() }
+      val end = ParseMarkup.entityAt(text, pos)
+      if (end >= 0) { buf ++= ParseMarkup.decodeEntity(text.substring(pos, end)); pos = end }
       else { buf += '&'; pos += 1 }
     }
 
@@ -406,7 +395,7 @@ object ParseMarkup {
     * the indentation that all of its non-blank lines share.
     */
   private[scaladoc] def normalizeCode(code: String): String = {
-    val lines    = code.replaceAll("\\s+$", "").split("\n", -1).toList.dropWhile(_.trim.isEmpty)
+    val lines    = scaladoc.Markup.lines(code.stripTrailingSpace).dropWhile(_.trim.isEmpty)
     val nonBlank = lines.filter(_.trim.nonEmpty)
     val indent   = if (nonBlank.isEmpty) 0 else nonBlank.map(_.takeWhile(_ == ' ').length).min
     lines.map(line => if (line.trim.isEmpty) "" else line.drop(indent)).mkString("\n")
@@ -529,10 +518,97 @@ object ParseMarkup {
   def apply(text: String, log: Log = Log.Noop): Document =
     new ParseMarkup(htmlToWiki(text), log, codeBlocks = true).document()
 
-  // `<b>`, `</td>`, `<a href="x">`, `<br/>`: the closing slash, the name and the attributes
-  private[parser] val HtmlTagPattern = java.util.regex.Pattern.compile("""<(/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s[^<>]*)?)/?>""")
+  /** Where the next `x` starts, from a position on, or -1. A scanner that looks for a closer at each opener asks for
+    * one position after another, and this finds each `x` once for all of them, so the scanner stays linear when the
+    * closer is missing. Any position can be asked for, but going back means looking again.
+    */
+  private[parser] final class Next(text: String, x: String, ignoreCase: Boolean = false) {
+    // the last position asked for, and the answer
+    private var last  = Int.MaxValue
+    private var found = -1
 
-  private[parser] val Href = """(?i)href\s*=\s*(["'])(.*?)\1""".r
+    private def at(j: Int): Boolean = if (ignoreCase) text.startsWithAsciiLower(x, j) else text.startsWith(x, j)
+
+    def from(i: Int): Int = {
+      if (i < last) {
+        // up to `last`, where the answer is known
+        val end = math.min(last, text.length)
+        var j   = i
+        while (j < end && !at(j)) j += 1
+        if (j < end) found = j
+        last = i
+      } else if (found >= 0 && i > found) {
+        var j = i
+        while (j < text.length && !at(j)) j += 1
+        found = if (j < text.length) j else -1
+        last = i
+      }
+      found
+    }
+  }
+
+  /** An HTML tag as the inline parser has it: whether it's a closing one, its name, its attributes (from the
+    * whitespace after the name), and where it ends.
+    */
+  private[parser] final case class TagAt(closing: Boolean, name: String, attributes: String, end: Int)
+
+  /** The HTML tag at `i`: `<b>`, `</td>`, `<a href="x">` or `<br/>`. A name is ASCII letters and digits, starting with
+    * a letter. Attributes come after whitespace, and go up to the `>`, without a `<` in them.
+    */
+  private[parser] def htmlTagAt(text: String, i: Int): Option[TagAt] = {
+    val len       = text.length
+    val closing   = text.startsWith("</", i)
+    val nameStart = if (closing) i + 2 else i + 1
+    if (i >= len || text.charAt(i) != '<' || nameStart >= len || !text.charAt(nameStart).isAsciiLetter) None
+    else {
+      var nameEnd = nameStart + 1
+      while (nameEnd < len && text.charAt(nameEnd).isAsciiAlnum) nameEnd += 1
+      val name = text.substring(nameStart, nameEnd)
+      if (nameEnd < len && text.charAt(nameEnd).isAsciiSpace) {
+        var j = nameEnd + 1
+        while (j < len && text.charAt(j) != '<' && text.charAt(j) != '>') j += 1
+        if (j < len && text.charAt(j) == '>') Some(TagAt(closing, name, text.substring(nameEnd, j), j + 1)) else None
+      } else if (text.startsWith("/>", nameEnd)) Some(TagAt(closing, name, "", nameEnd + 2))
+      else if (text.startsWith(">", nameEnd)) Some(TagAt(closing, name, "", nameEnd + 1))
+      else None
+    }
+  }
+
+  // the characters that end a line, which an attribute's value doesn't go past
+  private def isLineEnd(c: Char): Boolean = c == '\n' || c == '\r' || c == '\u0085' || c == '\u2028' || c == '\u2029'
+
+  /** The value of the first `href` in a tag's attributes that has one in quotes, `href="x"` or `href = 'x'`, in any
+    * case. The value is on one line.
+    */
+  private[parser] def hrefIn(attributes: String): Option[String] = {
+    val len = attributes.length
+    def spaceEnd(from: Int): Int = {
+      var j = from
+      while (j < len && attributes.charAt(j).isAsciiSpace) j += 1
+      j
+    }
+    def valueAt(i: Int): Option[String] = {
+      val eq = spaceEnd(i + 4)
+      if (eq >= len || attributes.charAt(eq) != '=') None
+      else {
+        val open = spaceEnd(eq + 1)
+        if (open >= len || (attributes.charAt(open) != '"' && attributes.charAt(open) != '\'')) None
+        else {
+          val quote = attributes.charAt(open)
+          var j     = open + 1
+          while (j < len && attributes.charAt(j) != quote && !isLineEnd(attributes.charAt(j))) j += 1
+          if (j < len && attributes.charAt(j) == quote) Some(attributes.substring(open + 1, j)) else None
+        }
+      }
+    }
+    var i                    = 0
+    var href: Option[String] = None
+    while (href.isEmpty && i + 4 <= len) {
+      if (attributes.startsWithAsciiLower("href", i)) href = valueAt(i)
+      i += 1
+    }
+    href
+  }
 
   private[parser] val JavadocTags: Set[String] = Set("code", "docRoot", "link", "linkplain", "literal", "value")
 
@@ -543,17 +619,44 @@ object ParseMarkup {
     "label", "legend", "link", "map", "object", "optgroup", "option", "param", "pre", "q", "samp", "select", "small",
     "span", "strong", "sub", "sup", "table", "tbody", "td", "textarea", "tfoot", "th", "thead", "tr", "tt", "u", "var")
 
-  private val EntityRegex               = """&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);""".r
-  private[parser] val EntityPattern     = EntityRegex.pattern
-  private val NamedEntities             =
-    Map("lt" -> "<", "gt" -> ">", "amp" -> "&", "quot" -> "\"", "apos" -> "'", "nbsp" -> " ")
+  private val NamedEntities =
+    Map("lt" -> "<", "gt" -> ">", "amp" -> "&", "quot" -> "\"", "apos" -> "'", "nbsp" -> "\u00a0")
+
+  /** Where the entity at `i` ends: `&lt;`, `&#60;` or `&#x3c;`, with ASCII letters and digits. -1 if there's none. */
+  private[parser] def entityAt(text: String, i: Int): Int = {
+    val len = text.length
+    // where the run of `ok` characters from `from` ends, if it isn't empty and a `;` follows it
+    def run(from: Int, ok: Char => Boolean): Int = {
+      var j = from
+      while (j < len && ok(text.charAt(j))) j += 1
+      if (j > from && j < len && text.charAt(j) == ';') j + 1 else -1
+    }
+    if (i + 1 >= len || text.charAt(i) != '&') -1
+    else if (text.charAt(i + 1) == '#') {
+      val decimal = run(i + 2, _.isAsciiDigit)
+      if (decimal >= 0) decimal
+      else if (i + 2 < len && (text.charAt(i + 2) == 'x' || text.charAt(i + 2) == 'X')) run(i + 3, _.isHexDigit)
+      else -1
+    } else if (text.charAt(i + 1).isAsciiLetter) run(i + 1, _.isAsciiAlnum)
+    else -1
+  }
 
   /** `&lt;`, `&#60;` and `&#x3c;` are `<`. Unknown entities stay as they are. */
   private[scaladoc] def decodeEntities(x: String): String =
     if (x.indexOf('&') < 0) x
-    else EntityRegex.replaceAllIn(x, m => Regex.quoteReplacement(decodeEntity(m.matched)))
+    else {
+      val out = new StringBuilder(x.length)
+      var i   = 0
+      while (i < x.length) {
+        val end = entityAt(x, i)
+        if (end >= 0) { out ++= decodeEntity(x.substring(i, end)); i = end }
+        else { out += x.charAt(i); i += 1 }
+      }
+      out.toString
+    }
 
-  private def decodeEntity(entity: String): String = {
+  // an entity, as `entityAt` finds it
+  private[parser] def decodeEntity(entity: String): String = {
     val body = entity.substring(1, entity.length - 1)
     def char(code: => Int) = Try(new String(Character.toChars(code))).getOrElse(entity)
     if (body.startsWith("#x") || body.startsWith("#X")) char(Integer.parseInt(body.drop(2), 16))
@@ -561,43 +664,128 @@ object ParseMarkup {
     else NamedEntities.getOrElse(body, entity)
   }
 
-  private val CodeSegment  = """(?s)\{\{\{.*?\}\}\}""".r
-  private val Pre          = """(?is)<pre(?:\s[^>]*)?>(.*?)</pre>""".r
-  private val Code         = """(?i)</?code(?:\s[^>]*)?>""".r
-  private val Comment      = """(?s)<!--.*?-->""".r
-  private val ParagraphTag = """(?i)</?(?:p|div)(?:\s[^>]*)?/?>""".r
-  private val HeadingOpen  = """(?i)<h([1-6])(?:\s[^>]*)?>""".r
-  private val HeadingClose = """(?i)</h([1-6])>""".r
-  private val ListItem     = """(?i)<li(?:\s[^>]*)?>""".r
-  private val ListTags     = """(?i)</?(?:ul|ol)(?:\s[^>]*)?>|</li>""".r
+  /** A table's delimiter cell: `---`, `:---`, `:---:` or `---:`, with whitespace around it. */
+  private[parser] def alignmentOf(cell: String): Option[Table.Alignment] = {
+    var from = 0
+    var to   = cell.length
+    while (from < to && cell.charAt(from).isAsciiSpace) from += 1
+    while (to > from && cell.charAt(to - 1).isAsciiSpace) to -= 1
+    val left  = from < to && cell.charAt(from) == ':'
+    if (left) from += 1
+    val right = to > from && cell.charAt(to - 1) == ':'
+    if (right) to -= 1
+    if (from == to || (from until to).exists(cell.charAt(_) != '-')) None
+    else if (left && right) Some(Table.Alignment.Center)
+    else if (right) Some(Table.Alignment.Right)
+    else Some(Table.Alignment.Left)
+  }
 
   /** HTML block tags in wiki syntax, as scaladoc does: `<p>` and `<div>` are paragraph breaks, `<h1>` to `<h6>`
     * headings, `<li>` list items and `<pre>` code blocks; `<ul>`, `<ol>` and comments go. `{{{...}}}` stays as is.
+    *
+    * One pass from left to right, where what starts first wins: tags in a comment, a `<pre>` or a `{{{...}}}` stay as
+    * they are. Tag names are in any case.
     */
-  private[scaladoc] def htmlToWiki(text: String): String = {
-    def outsideCode(x: String)(f: String => String): String = {
-      val sb   = new StringBuilder
-      var last = 0
-      CodeSegment.findAllMatchIn(x) foreach { m =>
-        sb ++= f(x.substring(last, m.start))
-        sb ++= m.matched
-        last = m.end
+  private[scaladoc] def htmlToWiki(text: String): String =
+    if (text.indexOf('<') < 0) text else new HtmlToWiki(text).run()
+
+  /** The tags `htmlToWiki` knows: `<name>`, `<name attributes>` and, where they can close themselves, `<name/>`. The
+    * attributes come after whitespace and go up to the next `>`.
+    */
+  private final class Tags(text: String) {
+    private val gt = new Next(text, ">")
+
+    /** Where the tag whose name ends at `i` ends, after its `>`, or -1. */
+    def end(i: Int, selfClosing: Boolean = false): Int =
+      if (i >= text.length) -1
+      else if (text.charAt(i) == '>') i + 1
+      else if (selfClosing && text.startsWith("/>", i)) i + 2
+      else if (text.charAt(i).isAsciiSpace) { val k = gt.from(i + 1); if (k < 0) -1 else k + 1 }
+      else -1
+  }
+
+  private final class HtmlToWiki(text: String) {
+    private val len        = text.length
+    private val out        = new StringBuilder(len)
+    private val tags       = new Tags(text)
+    private val codeEnd    = new Next(text, "}}}")
+    private val commentEnd = new Next(text, "-->")
+    private val preEnd     = new Next(text, "</pre>", ignoreCase = true)
+
+    def run(): String = {
+      var i = 0
+      while (i < len) {
+        val c = text.charAt(i)
+        val end =
+          if (c == '{' && text.startsWith("{{{", i)) code(i)
+          else if (c == '<') tag(i)
+          else -1
+        if (end >= 0) i = end
+        else { out += c; i += 1 }
       }
-      sb ++= f(x.substring(last))
-      sb.toString
+      out.toString
     }
-    if (text.indexOf('<') < 0) text
-    else {
-      val pre = outsideCode(text) { x =>
-        Pre.replaceAllIn(x, m => Regex.quoteReplacement("\n{{{\n" + decodeEntities(Code.replaceAllIn(m.group(1), "")) + "\n}}}\n"))
+
+    // `{{{...}}}`, as it is
+    private def code(i: Int): Int = {
+      val close = codeEnd.from(i + 3)
+      if (close < 0) -1 else { out ++= text.substring(i, close + 3); close + 3 }
+    }
+
+    // a comment, a `<pre>` or a block tag at `i`, and where it ends; -1 if there's none
+    private def tag(i: Int): Int = {
+      val closing = text.startsWith("</", i)
+      val name    = if (closing) i + 2 else i + 1
+      // where the tag ends if it's `x`, or -1
+      def is(x: String, selfClosing: Boolean = false): Int =
+        if (text.startsWithAsciiLower(x, name)) tags.end(name + x.length, selfClosing) else -1
+      def replace(end: Int, by: String): Int = { if (end >= 0) out ++= by; end }
+      // `h1` to `h6`, or 0
+      val level =
+        if (text.startsWithAsciiLower("h", name) && name + 1 < len && text.charAt(name + 1) >= '1' && text.charAt(name + 1) <= '6')
+          text.charAt(name + 1) - '0'
+        else 0
+
+      if (text.startsWith("<!--", i)) { val close = commentEnd.from(i + 4); if (close < 0) -1 else close + 3 }
+      else if (!closing && is("pre") >= 0) pre(is("pre"))
+      else if (level > 0 && !closing) replace(tags.end(name + 2), "\n" + "=" * level + " ")
+      else if (level > 0) replace(if (text.startsWith(">", name + 2)) name + 3 else -1, " " + "=" * level + "\n")
+      else {
+        // the names don't start one another, so one at most is here
+        val paragraph = math.max(is("p", selfClosing = true), is("div", selfClosing = true))
+        val item      = if (closing) -1 else is("li")
+        if (paragraph >= 0) replace(paragraph, "\n\n")
+        else if (item >= 0) replace(item, "\n - ")
+        else if (closing && text.startsWithAsciiLower("li>", name)) name + 3
+        else math.max(is("ul"), is("ol"))
       }
-      outsideCode(pre) { x =>
-        val blocks   = ParagraphTag.replaceAllIn(Comment.replaceAllIn(x, ""), "\n\n")
-        val headings = HeadingClose.replaceAllIn(
-          HeadingOpen.replaceAllIn(blocks, m => "\n" + "=" * m.group(1).toInt + " "),
-          m => " " + "=" * m.group(1).toInt + "\n")
-        ListTags.replaceAllIn(ListItem.replaceAllIn(headings, "\n - "), "")
+    }
+
+    // `<pre>...</pre>` as a code block, without `<code>` tags and with its entities decoded
+    private def pre(open: Int): Int = {
+      val close = preEnd.from(open)
+      if (close < 0) -1
+      else {
+        out ++= "\n{{{\n" ++= decodeEntities(withoutCodeTags(text.substring(open, close))) ++= "\n}}}\n"
+        close + "</pre>".length
       }
     }
   }
+
+  // `<code>` and `</code>` go
+  private def withoutCodeTags(code: String): String =
+    if (code.indexOf('<') < 0) code
+    else {
+      val tags = new Tags(code)
+      val out  = new StringBuilder(code.length)
+      var i    = 0
+      while (i < code.length) {
+        val name = if (code.startsWith("</", i)) i + 2 else i + 1
+        val end  =
+          if (code.charAt(i) == '<' && code.startsWithAsciiLower("code", name)) tags.end(name + "code".length) else -1
+        if (end >= 0) i = end
+        else { out += code.charAt(i); i += 1 }
+      }
+      out.toString
+    }
 }

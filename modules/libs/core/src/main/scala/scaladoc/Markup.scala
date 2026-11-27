@@ -12,6 +12,20 @@ sealed trait Markup extends Product with Serializable {
 
 object Markup {
 
+  /** The lines of `x`, split at each `\n`. Empty ones count, at the end too: `"a\n"` is `a` and an empty line. */
+  private[scaladoc] def lines(x: String): List[String] = {
+    val lines = List.newBuilder[String]
+    var from  = 0
+    var nl    = x.indexOf('\n')
+    while (nl >= 0) {
+      lines += x.substring(from, nl)
+      from = nl + 1
+      nl = x.indexOf('\n', from)
+    }
+    lines += x.substring(from)
+    lines.result()
+  }
+
   private[scaladoc] def trimML(x: String): String = x.linesIterator.map(_.trim).filterNot(_.isEmpty).mkString("\n")
 
   // trims a run of spans as one text: the whitespace around it goes, every line is trimmed, and whitespace between
@@ -137,13 +151,22 @@ object Markup {
     def trimmed: Self with Trimmed = new Link(target.trim, trimSpans(title)) with Trimmed
 
     /** Whether the target is a URL (it has a scheme, like `https:`) rather than an entity. */
-    def isUrl: Boolean = Link.SchemeUri.pattern.matcher(target).matches()
+    def isUrl: Boolean = Link.hasScheme(target)
   }
 
   object Link {
     def apply(target: String): Link                    = Link(target, Nil)
     def apply(target: String, title: String): Link     = Link(target, List(PlainText(title)))
-    private val SchemeUri                              = "[a-z][a-z0-9+.-]*:.*".r
+
+    // a scheme, `[a-z][a-z0-9+.-]*:`, and the rest on one line
+    private def hasScheme(target: String): Boolean = {
+      def schemeChar(c: Char) = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '.' || c == '-'
+      def lineEnd(c: Char)    = c == '\n' || c == '\r' || c == '\u0085' || c == '\u2028' || c == '\u2029'
+      var i = 1
+      while (i < target.length && schemeChar(target.charAt(i))) i += 1
+      target.nonEmpty && target.charAt(0) >= 'a' && target.charAt(0) <= 'z' && i < target.length &&
+      target.charAt(i) == ':' && !target.exists(lineEnd)
+    }
   }
 
   /** An image: `![alt](src)` (Markdown). `alt` is its text alternative, as plain text. */
@@ -215,7 +238,7 @@ object Markup {
     override def isBlank: Boolean = content.isBlank
     // its lines, each after a `>`
     override def plainString: String =
-      content.plainString.split("\n", -1).map(line => if (line.isEmpty) ">" else s"> $line").mkString("\n")
+      lines(content.plainString).map(line => if (line.isEmpty) ">" else s"> $line").mkString("\n")
     def trimmed: Self with Trimmed = new BlockQuote(content.trimmed) with Trimmed
   }
 
@@ -231,7 +254,7 @@ object Markup {
     override def isBlank: Boolean = content.isBlank
     // `[^1]: ` and the text, its next lines indented
     override def plainString: String = {
-      val lines = content.plainString.split("\n", -1).toList
+      val lines = Markup.lines(content.plainString)
       (s"[^$label]: ${lines.head}" :: lines.tail.map(line => if (line.isEmpty) "" else s"    $line")).mkString("\n")
     }
     def trimmed: Self with Trimmed = new Footnote(label.trim, content.trimmed) with Trimmed

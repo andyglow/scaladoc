@@ -24,6 +24,22 @@ trait StringUtils {
     }
 
     def isSpace: Boolean = !isNL && c.isWhitespace
+
+    /** Whitespace as HTML has it, in tags and around table cells: a space, a tab, a line feed, a vertical tab, a form
+      * feed or a carriage return.
+      */
+    def isAsciiSpace: Boolean = c == ' ' || c == '\t' || c == '\n' || c == '\u000b' || c == '\f' || c == '\r'
+
+    def isAsciiLetter: Boolean = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+
+    def isAsciiDigit: Boolean = c >= '0' && c <= '9'
+
+    def isAsciiAlnum: Boolean = isAsciiLetter || isAsciiDigit
+
+    def isHexDigit: Boolean = isAsciiDigit || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+
+    // a lowercase ASCII letter for an uppercase one
+    def toAsciiLower: Char = if (c >= 'A' && c <= 'Z') (c + ('a' - 'A')).toChar else c
   }
 
   private[scaladoc] implicit class StringOps(private val chars: String) {
@@ -31,6 +47,25 @@ trait StringUtils {
     final def isVain: Boolean = chars.forall(_.isWhitespace)
 
     final def leadingWS: Int = chars.takeWhile(_.isWhitespace).length
+
+    /** Whether `x`, which is lowercase, is at `i`, whatever the case of the ASCII letters here: `<PRE>` is `<pre>`. */
+    final def startsWithAsciiLower(x: String, i: Int): Boolean =
+      i >= 0 && i + x.length <= chars.length && {
+        var k = 0
+        while (k < x.length && chars.charAt(i + k).toAsciiLower == x.charAt(k)) k += 1
+        k == x.length
+      }
+
+    /** Without the `isAsciiSpace` whitespace at the end. If it ends with a line separator (`\u2028`, `\u2029` or
+      * `\u0085`) instead, that stays, and the whitespace before it goes.
+      */
+    final def stripTrailingSpace: String = {
+      val separator = chars.nonEmpty && "\u2028\u2029\u0085".indexOf(chars.charAt(chars.length - 1)) >= 0
+      val last      = if (separator) chars.length - 1 else chars.length
+      var end       = last
+      while (end > 0 && chars.charAt(end - 1).isAsciiSpace) end -= 1
+      chars.substring(0, end) + chars.substring(last)
+    }
 
     final def splitByParSep: List[String] = {
       firstParSep match {

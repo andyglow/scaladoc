@@ -251,13 +251,15 @@ it into the same model as the wiki markup, wherever the model has an equivalent:
 - `<b>` and `<strong>` are bold, `<i>` and `<em>` italic, `<u>` underlined, `<sup>` and `<sub>` raised and lowered
 - `<code>` and `<tt>` are monospace, `<a href="...">` is a link, `<br>` is a line break
 - entities like `&lt;`, `&#60;` and `&nbsp;` are the characters they stand for
+- `<!-- comments -->` go, with any tags in them
 
 ```scala mdoc
 parse("/** <p>Returns a <code>List&lt;A&gt;</code> of <b>all</b> the <a href=\"https://example.com\">items</a>.</p> */")
 ```
 
 Other tags that scaladoc keeps, like `<span>` or `<table>`, come back as `HtmlTag` spans with the tag as written. A
-`<` that isn't a tag at all, as in `List<String>`, is text. HTML inside `{{{` code blocks stays as it is.
+`<` that isn't a tag at all, as in `List<String>`, is text. HTML inside `{{{` code blocks stays as it is, and so it does
+in `<pre>`, except that `<code>` tags go and entities are decoded.
 
 ## Javadoc's inline tags
 
