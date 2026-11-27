@@ -1,2 +1,2 @@
 // Scala 2, a module that reads scaladoc: the parser, which brings scaladoc-core along
-//> using dep io.github.andyglow::scaladoc-parser:@VERSION@
+//> using dep io.github.andyglow::scaladoc-parser:0.5.0

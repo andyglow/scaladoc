@@ -1,5 +1,5 @@
 //> using dep demo:model_2.13:1.0
-//> using dep io.github.andyglow::scaladoc-parser:@VERSION@
+//> using dep io.github.andyglow::scaladoc-parser:0.5.0
 
 package demo.consumer
 
