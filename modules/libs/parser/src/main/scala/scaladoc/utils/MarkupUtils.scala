@@ -14,7 +14,7 @@ trait MarkupUtils {
           if (stripped.isEmpty) stripHead(rest, strip) else PlainText(stripped) :: rest
         case other => other
       }
-      stripHead(stripHead(slice, _.dropWhile(_.isWhitespace)).reverse, _.replaceAll("\\s+$", "")).reverse
+      stripHead(stripHead(slice, _.dropWhile(_.isWhitespace)).reverse, _.stripTrailingSpace).reverse
     }
   }
 }

@@ -115,7 +115,7 @@ private[scaladoc] object StripCommentTags {
       * indentation past the border is kept, as lists and code depend on it.
       */
     def block(style: Style, lines: Iterable[String]): Comment = {
-      val trimmed = lines.toList.map(_.replaceAll("\\s+$", ""))
+      val trimmed = lines.toList.map(_.stripTrailingSpace)
       Comment(style, trimmed.dropWhile(_.isEmpty).reverse.dropWhile(_.isEmpty).reverse.mkString("\n"))
     }
   }

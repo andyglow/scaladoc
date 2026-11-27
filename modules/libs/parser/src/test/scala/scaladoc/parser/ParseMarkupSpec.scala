@@ -367,6 +367,44 @@ class ParseMarkupSpec extends WSpec {
       ParseMarkup("{{{<p>&lt;</p>}}}") mustBe Document(CodeBlock("<p>&lt;</p>"))
     }
 
+    "turn HTML blocks into their markup whatever the case, with attributes, from left to right" in {
+      ParseMarkup("<P class=\"x\">One<DIV/>Two</Div >") mustBe Document(Paragraph(PlainText("One")), Paragraph(PlainText("Two")))
+      ParseMarkup("<H2\nid=x>Title</H2>") mustBe Document(Heading(Two, "Title"))
+      ParseMarkup("<OL type=\"a\">\n<LI value=\"2\">a</LI></OL>") mustBe Document(
+        UnorderedList(List(Document(Paragraph(PlainText("a"))))))
+      ParseMarkup("<PRE class=\"x\"><CODE lang=\"scala\">a &amp;&amp; b</Code></Pre>") mustBe Document(CodeBlock("a && b"))
+      // not block tags: `<h7>`, `<h1/>`, `</li >`, `<pre/>`, and a `<p` without its `>`
+      ParseMarkup("<h7>a<h1/>b</li >c<pre/>d<p x") mustBe Document(
+        Paragraph(PlainText("<h7>a<h1/>b</li >c"), HtmlTag("<pre/>"), PlainText("d<p x")))
+      // a comment hides the tags in it, a <pre> too, and so does code
+      ParseMarkup("a<!-- <pre>x</pre> <p> -->b") mustBe Document(Paragraph(PlainText("ab")))
+      ParseMarkup("<pre><p>x</p><!-- y --></pre>") mustBe Document(CodeBlock("<p>x</p><!-- y -->"))
+      // without its end, a comment or a <pre> is text
+      ParseMarkup("a <!-- b") mustBe Document(Paragraph(PlainText("a <!-- b")))
+      ParseMarkup("a <pre>b") mustBe Document(Paragraph(PlainText("a "), HtmlTag("<pre>"), PlainText("b")))
+    }
+
+    "find inline tags, their href and entities as HTML has them" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+
+      ParseMarkup("<a class=x HREF = 'y'>t</a>") mustBe p(Link("y", List(PlainText("t"))))
+      // the first href in quotes counts, and a quoted value is on one line
+      ParseMarkup("<a href=x href=\"y\">t</a>") mustBe p(Link("y", List(PlainText("t"))))
+      ParseMarkup("<a href=\"x\ny\">t</a>") mustBe p(HtmlTag("<a href=\"x\ny\">"), PlainText("t"), HtmlTag("</a>"))
+      ParseMarkup("a<br />b <b x<i>c</i>") mustBe p(PlainText("a\nb <b x"), Italic("c"))
+      ParseMarkup("&#X41;&#x;&#1a;&a1;&1a;&") mustBe p(PlainText("A&#x;&#1a;&a1;&1a;&"))
+    }
+
+    "tell a table's delimiter cells from other cells" in {
+      ParseMarkup("| a | b | c | d |\n| :- | -: |\t:-:\t| - |") mustBe Document(
+        Table(
+          Table.Row(List(Paragraph(PlainText("a")), Paragraph(PlainText("b")), Paragraph(PlainText("c")), Paragraph(PlainText("d")))),
+          List(Table.Alignment.Left, Table.Alignment.Right, Table.Alignment.Center, Table.Alignment.Left),
+          Nil))
+      ParseMarkup("| a |\n| : - |") mustBe Document(Paragraph(PlainText("| a |\n| : - |")))
+      ParseMarkup("| a |\n| : |") mustBe Document(Paragraph(PlainText("| a |\n| : |")))
+    }
+
     "parse javadoc's inline tags" in {
       def p(spans: Span*) = Document(Paragraph(spans.toList))
 
