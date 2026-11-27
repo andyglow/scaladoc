@@ -52,6 +52,18 @@ object model {
     * @param team the team they're in
     */
   case class Member(team: String) extends Role
+
+  /** Can look, for a while. */
+  sealed trait Guest extends Role
+
+  /** Invited by a member.
+    *
+    * @param by who invited them
+    */
+  case class Invited(by: String) extends Guest
+
+  /** Came in by a shared link. */
+  final class Anonymous extends Guest
 }
 
 import model._
@@ -69,18 +81,69 @@ doc.textParams
 `textSummary` is the first sentence, the one scaladoc itself would show in a list of members. `textParams` is what
 each field means. A schema generator needs nothing more to give every property a title and a description.
 
-`Typedoc.of` gives the comments of a type made of others, as a tree: here a sealed trait's, and its variants':
+`Typedoc.of` gives the comments of a type made of others, as a tree. Here each `Some(doc)` is shown as its text:
 
-```scala mdoc
-def summaries(t: Typedoc): List[(String, Option[String])] = t match {
-  case Typedoc.Sum(name, doc, variants) => (name -> doc.flatMap(_.textSummary)) :: variants.flatMap(summaries)
-  case other                            => List(other.name -> other.doc.flatMap(_.textSummary))
-}
-
-summaries(Typedoc.of[Role])
+```scala mdoc:compile-only
+Typedoc.of[Role]
+// Sum("Role", "What a user may do.", List(
+//   Singleton("Admin", "Can do anything, invite others included."),
+//   Product("Member", "Can read and comment.", List(Field("team", "the team they're in"))),
+//   Sum("Guest", "Can look, for a while.", List(
+//     Product("Invited", "Invited by a member.", List(Field("by", "who invited them"))),
+//     Plain("Anonymous", "Came in by a shared link.")))))
 ```
 
-That's a `oneOf` with a description, and one for each of its alternatives.
+```scala mdoc:invisible
+// what the comment above says, checked
+def shown(t: Typedoc, indent: String): String = {
+  def text(doc: Option[Scaladoc]) = "\"" + doc.flatMap(_.textSummary).get + "\""
+  t match {
+    case Typedoc.Sum(n, d, vs) =>
+      s"Sum(\"$n\", ${text(d)}, List(\n" + vs.map(v => indent + "  " + shown(v, indent + "  ")).mkString(",\n") + "))"
+    case Typedoc.Product(n, d, fs) =>
+      s"Product(\"$n\", ${text(d)}, List(" +
+        fs.map(f => s"Field(\"${f.name}\", \"${f.doc.get.trimmed.plainString}\")").mkString(", ") + "))"
+    case Typedoc.Singleton(n, d) => s"Singleton(\"$n\", ${text(d)})"
+    case Typedoc.Plain(n, d)     => s"Plain(\"$n\", ${text(d)})"
+  }
+}
+assert(shown(Typedoc.of[Role], "") ==
+  """Sum("Role", "What a user may do.", List(
+    |  Singleton("Admin", "Can do anything, invite others included."),
+    |  Product("Member", "Can read and comment.", List(Field("team", "the team they're in"))),
+    |  Sum("Guest", "Can look, for a while.", List(
+    |    Product("Invited", "Invited by a member.", List(Field("by", "who invited them"))),
+    |    Plain("Anonymous", "Came in by a shared link.")))))""".stripMargin, shown(Typedoc.of[Role], ""))
+```
+
+- `Sum`: a sealed trait or class, with its variants, which can be sums themselves
+- `Product`: a case class, with its fields, each documented by its `@param`
+- `Singleton`: an object
+- `Plain`: any other type
+
+A Scala 3 enum is a `Sum` of its cases, a case with parameters a `Product`, and one without a `Singleton`:
+
+```scala
+/** How a user hears from the app. */
+enum Channel {
+
+  /** Not at all. */
+  case Silent
+
+  /** By e-mail.
+    *
+    * @param perDay how many a day, at most
+    */
+  case Email(perDay: Int)
+}
+
+Typedoc.of[Channel]
+// Sum("Channel", "How a user hears from the app.", List(
+//   Singleton("Silent", "Not at all."),
+//   Product("Email", "By e-mail.", List(Field("perDay", "how many a day, at most")))))
+```
+
+A schema generator makes a sealed trait a `oneOf`, with a description for the whole and one for each alternative.
 
 ## Supported versions
 
