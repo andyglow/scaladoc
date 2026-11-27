@@ -6,6 +6,53 @@
 
 ## To 0.6
 
+**The sbt and Gradle plugins set up the compiler and nothing else:** the compiler plugin on Scala 2, and `-Xread-docs`
+on Scala 3 (see below), now on every Scala 3 module they're enabled on. They no longer add libraries. A module that
+reads scaladoc depends on `scaladoc-parser` itself, like on any library it calls; `scaladoc-core` comes with it:
+
+```sbt
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value   // sbt
+```
+
+```kotlin
+implementation("io.github.andyglow:scaladoc-parser_2.13:@VERSION@")                        // Gradle
+```
+
+**`scaladocRead` and `scaladocEmbed` are gone**, and so are Gradle's `read` and `embed`. A build that still sets them
+doesn't load:
+
+- **`scaladocRead := true` or `read.set(true)`:** replace it with the dependency above.
+- **`scaladocEmbed := false` or `embed.set(false)`:** with the libraries gone, a module that doesn't embed gets nothing
+  from the plugin, so it doesn't enable the plugin. On Scala 3, where `embed` never did anything, a module that reads
+  keeps the plugin for `-Xread-docs` and drops the setting.
+
+**A module that embeds scaladoc depends on `scaladoc-annotation`.** In 0.5.0 it got just the compiler plugin, which
+broke its Scala 3 consumers: Scala 3 doesn't compile against classes that refer to the annotation without its jar,
+and fails with "Bad symbolic reference … refers to ScaladocCarrier". The sbt and Gradle plugins now add it on Scala 2;
+by hand, and in Maven, add it at compile scope:
+
+```sbt
+libraryDependencies += "io.github.andyglow" % "scaladoc-annotation" % "@VERSION@"
+```
+
+Until a library published with 0.5.0 is republished, a Scala 3 project that uses it adds the same dependency itself.
+Versions before 0.5.0 aren't affected: there the plugins gave publishers `scaladoc-ast`, which held the annotation then.
+
+**An unclosed HTML or javadoc tag is an error.** A `<b>`, `<i>`, `<code>`, `<a href>` or another tag the model has a
+span for, or a `{@code`, `{@link` or another javadoc tag, that isn't closed in its paragraph used to come back as an
+`HtmlTag` or as text. It's now an `UnclosedMarkup` error, which in `Scaladoc.of` and the compiler plugin is a compile
+error that shows how the text goes from the tag:
+
+```
+Unclosed <b>: <b>bold claim, never ...
+```
+
+Close the tag, or write `&lt;` for a `<` that isn't one. Java-style generics in prose, like `Future<B>` or `List<I>`,
+read as `<b>` and `<i>`, so they fail too; `List<A>` doesn't, since `<a>` without `href` needs no closing. Tags that
+need no closing, like `<br>`, `<img>` or `<span>`, are as before, and so are wiki markers without their closers, like
+`x^2`. Markup nests at most 64 deep, past which a tag is a `MarkupTooDeep` error. See
+@ref:[Comment syntax](syntax.md#inline-markup).
+
 **On Scala 3, the libraries need Scala 3.9 and Java 17.** They are built with Scala 3.9, the LTS after 3.3, and a
 project on Scala 3.3 can't read what a newer Scala compiled, so a Scala 3 project moves to 3.9 or stays on 0.5. Scala
 3.9 targets Java 17 and up. On Scala 2 nothing changes: Scala 2.12 and 2.13, and Java 8.
@@ -68,48 +115,14 @@ case CodeBlock(code)    => code
 case CodeBlock(code, _) => code
 ```
 
-## To 0.5.1
-
-The sbt and Gradle plugins set up the compiler and nothing else: the compiler plugin on Scala 2, and `-Yread-docs` on
-Scala 3, now on every Scala 3 module they're enabled on. They no longer add libraries. A module that reads scaladoc
-depends on `scaladoc-parser` itself, like on any library it calls; `scaladoc-core` comes with it:
-
-```sbt
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value   // sbt
-```
-
-```kotlin
-implementation("io.github.andyglow:scaladoc-parser_2.13:@VERSION@")                        // Gradle
-```
-
-`scaladocRead` and Gradle's `read`, added in 0.5.0, are deprecated: they still add the libraries, with a warning, and
-go away in 0.6.0. Replace them with the dependency above.
-
-**A module that embeds scaladoc depends on `scaladoc-annotation`.** In 0.5.0 it got just the compiler plugin, which
-broke its Scala 3 consumers: Scala 3 doesn't compile against classes that refer to the annotation without its jar,
-and fails with "Bad symbolic reference … refers to ScaladocCarrier". The sbt and Gradle plugins now add it on Scala 2;
-by hand, and in Maven, add it at compile scope:
-
-```sbt
-libraryDependencies += "io.github.andyglow" % "scaladoc-annotation" % "@VERSION@"
-```
-
-Until a library published with 0.5.0 is republished, a Scala 3 project that uses it adds the same dependency itself.
-Versions before 0.5.0 aren't affected: there the plugins gave publishers `scaladoc-ast`, which held the annotation then.
-
-`scaladocEmbed` and Gradle's `embed` are deprecated too, and go away in 0.6.0. With the libraries gone, a module that
-doesn't embed gets nothing from the plugin, so it doesn't enable it. Until then, turning `embed` off still leaves the
-compiler plugin out, with a deprecation warning. On Scala 3, where `embed` never did anything, a module that reads keeps
-the plugin for `-Yread-docs` and drops the setting.
-
 ## To 0.5
 
 0.5 gives a module only what its part needs. A module that publishes its scaladoc no longer gets the scaladoc
 libraries along with the compiler plugin, and a module that reads it asks for them.
 
 **The sbt and Gradle plugins** publish by default, as before, but now add no libraries for that: on Scala 2 just the
-compiler plugin (0.5.1 adds `scaladoc-annotation` back, see above), on Scala 3 nothing. Reading is opt-in. In 0.5.0, a module that calls `Scaladoc.of` sets (see 0.5.1 above, which replaces this with a plain
-dependency):
+compiler plugin (0.6 adds `scaladoc-annotation` back, see above), on Scala 3 nothing. Reading is opt-in. In 0.5.0, a
+module that calls `Scaladoc.of` sets (see 0.6 above, which replaces this with a plain dependency):
 
 ```sbt
 scaladocRead := true          // sbt
@@ -120,8 +133,7 @@ scaladoc { read.set(true) }   // Gradle
 ```
 
 Without it, a module that reads gets "not found: value Scaladoc" when compiling, and setting it fixes that. A module
-that only reads could also turn publishing off, with `scaladocEmbed := false` or `embed.set(false)` (deprecated in
-0.5.1).
+that only reads could also turn publishing off, with `scaladocEmbed := false` or `embed.set(false)` (gone in 0.6).
 
 **By hand**, a Scala 2 module that publishes can drop `scaladoc-ast` (now `scaladoc-core`) and `scaladoc-parser`, and
 keep just the compiler plugin. A Scala 3 module that publishes needs nothing, and `-Yread-docs` belongs only to modules that read.

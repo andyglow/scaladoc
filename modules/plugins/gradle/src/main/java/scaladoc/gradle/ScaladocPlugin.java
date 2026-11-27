@@ -14,7 +14,6 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.scala.ScalaCompile;
 
 /**
@@ -54,9 +53,6 @@ public class ScaladocPlugin implements Plugin<Project> {
     public void apply(Project project) {
         ScaladocExtension extension = project.getExtensions().create("scaladoc", ScaladocExtension.class);
         extension.getVersion().convention(ownVersion());
-        @SuppressWarnings("deprecation")
-        Property<Boolean> read = extension.getRead();
-        read.convention(false);
         extension.getIncludePaths().convention(Collections.emptyList());
         extension.getExcludePaths().convention(Collections.emptyList());
         extension.getIncludeClasses().convention(Collections.emptyList());
@@ -78,38 +74,16 @@ public class ScaladocPlugin implements Plugin<Project> {
 
         String version = extension.getVersion().get();
         DependencyHandler dependencies = project.getDependencies();
-        String core = GROUP + ":scaladoc-core_" + scala + ":" + version;
-        String parser = GROUP + ":scaladoc-parser_" + scala + ":" + version;
-
-        @SuppressWarnings("deprecation")
-        Boolean embedSetting = extension.getEmbed().getOrNull();
-        if (embedSetting != null) {
-            // deprecated, until 0.6.0
-            project.getLogger().warn(
-                "scaladoc: `embed` is deprecated and will be removed in 0.6.0; a module that shouldn't embed scaladoc "
-                    + "doesn't apply the plugin");
-        }
-        boolean embed = embedSetting == null || embedSetting;
 
         if (scala.equals("3")) {
             addCompilerOptions(project, Collections.singletonList(readDocsOption(scalaVersion)));
-        } else if (embed) {
+        } else {
             // the compiler plugin's jar has everything it needs to run
             dependencies.add("scalaCompilerPlugins", GROUP + ":" + COMPILER_PLUGIN + "_" + scala + ":" + version);
             addCompilerOptions(project, compilerPluginOptions(extension));
             // the classes it embeds scaladoc into refer to the annotation in their Scala signatures
             exposeAnnotation(project);
             dependencies.add(ANNOTATION_CONFIGURATION, GROUP + ":" + ANNOTATION + ":" + version);
-        }
-        @SuppressWarnings("deprecation")
-        boolean read = extension.getRead().get();
-        if (read) {
-            // deprecated, until 0.6.0
-            project.getLogger().warn(
-                "scaladoc: `read` is deprecated and will be removed in 0.6.0; depend on scaladoc-parser instead: "
-                    + "implementation(\"{}\")", parser);
-            dependencies.add("implementation", core);
-            dependencies.add("implementation", parser);
         }
     }
 
