@@ -100,7 +100,7 @@ Typedoc.of[Channel]
 Add the sbt plugin to `project/plugins.sbt`:
 
 ```sbt
-addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.5.0")
+addSbtPlugin("io.github.andyglow" % "sbt-scaladoc" % "0.6.0")
 ```
 
 and enable it on the modules that need it:
@@ -115,7 +115,7 @@ in TASTy on its own, `-Xread-docs`. It adds no library for reading. A module tha
 reads scaladoc with `Scaladoc.of` or `Typedoc.of` depends on the parser, like on any library it calls:
 
 ```sbt
-libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.5.0"
+libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % "0.6.0"
 ```
 
 Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
@@ -123,7 +123,7 @@ Gradle builds have a plugin that does the same, next to Gradle's `scala` plugin:
 ```kotlin
 plugins {
     scala
-    id("io.github.andyglow.scaladoc") version "0.5.0"
+    id("io.github.andyglow.scaladoc") version "0.6.0"
 }
 ```
 

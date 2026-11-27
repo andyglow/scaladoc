@@ -1,7 +1,5 @@
 package scaladoc.sbtplugin
 
-import scala.annotation.nowarn
-
 import sbt._
 import sbt.Keys._
 
@@ -25,14 +23,6 @@ object ScaladocPlugin extends AutoPlugin {
 
   object autoImport {
     val scaladocVersion = settingKey[String]("Version of the scaladoc compiler plugin")
-    @deprecated("a module that shouldn't embed scaladoc doesn't enable the plugin", "0.5.1")
-    val scaladocEmbed =
-      settingKey[Boolean]("Deprecated: Scala 2: embed scaladoc into bytecode; don't enable the plugin instead")
-    @deprecated(
-      "add scaladoc-parser as a dependency instead: libraryDependencies += \"io.github.andyglow\" %% \"scaladoc-parser\" % <version>",
-      "0.5.1")
-    val scaladocRead =
-      settingKey[Boolean]("Deprecated: adds scaladoc-core and scaladoc-parser; depend on scaladoc-parser instead")
     val scaladocIncludePaths =
       settingKey[Seq[String]]("Scala 2: embed only classes from source files matching these globs")
     val scaladocExcludePaths =
@@ -73,11 +63,8 @@ object ScaladocPlugin extends AutoPlugin {
     case _                             => "-Xread-docs"
   }
 
-  @nowarn("cat=deprecation")
   override def projectSettings = Seq(
     scaladocVersion        := BuildInfo.version,
-    scaladocEmbed          := true,
-    scaladocRead           := false,
     scaladocIncludePaths   := Nil,
     scaladocExcludePaths   := Nil,
     scaladocIncludeClasses := Nil,
@@ -89,31 +76,21 @@ object ScaladocPlugin extends AutoPlugin {
       // `platform`) would pick a `_sjs1` one that doesn't exist. Its jar has everything it needs to run. The classes it
       // embeds scaladoc into refer to the annotation in their Scala signatures, so the annotation's jar is a dependency
       // of the module, and of everything that uses it: Scala 3 doesn't compile against those classes without it.
-      val plugin =
-        // deprecated: until 0.6.0, `scaladocEmbed := false` still leaves the compiler plugin out
-        if (!scala3 && scaladocEmbed.value)
-          Seq(
-            compilerPlugin(organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v),
-            organization % annotationName % v
-          )
-        else Nil
-      // deprecated: until 0.6.0, `scaladocRead := true` still adds the libraries
-      val libraries =
-        if (scaladocRead.value) {
-          val cross = PlatformCompat.libraryCrossVersion.value
-          Seq((organization % "scaladoc-core" % v).cross(cross), (organization % "scaladoc-parser" % v).cross(cross))
-        } else Nil
-      plugin ++ libraries
+      if (scala3) Nil
+      else
+        Seq(
+          compilerPlugin(organization % s"${compilerPluginName}_${scalaBinaryVersion.value}" % v),
+          organization % annotationName % v
+        )
     },
     scalacOptions ++= {
       if (isScala3(scalaBinaryVersion.value)) Seq(readDocsOption(scalaVersion.value))
-      else if (scaladocEmbed.value)
+      else
         compilerPluginOptions(
           scaladocIncludePaths.value,
           scaladocExcludePaths.value,
           scaladocIncludeClasses.value,
           scaladocExcludeClasses.value)
-      else Nil
     }
   )
 }

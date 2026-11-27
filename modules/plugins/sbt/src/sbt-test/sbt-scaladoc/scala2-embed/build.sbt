@@ -36,15 +36,3 @@ TaskKey[Unit]("checkModel") := {
   val classpath = (model / Compile / dependencyClasspath).value.map(_.data.toString).filter(_.contains("scaladoc-"))
   assert(classpath.size == 1 && classpath.head.contains("scaladoc-annotation"), s"classpath: $classpath")
 }
-
-// deprecated, until 0.6.0: `scaladocEmbed := false` still leaves the compiler plugin out
-lazy val legacy = project
-  .enablePlugins(ScaladocPlugin)
-  .settings(scaladocEmbed := false)
-
-TaskKey[Unit]("checkLegacy") := {
-  val deps = (legacy / libraryDependencies).value.filter(_.organization == "io.github.andyglow")
-  assert(deps.isEmpty, s"libraryDependencies: $deps")
-  val opts = (legacy / Compile / scalacOptions).value.filter(_.startsWith("-P:scaladoc"))
-  assert(opts.isEmpty, s"scalacOptions: $opts")
-}

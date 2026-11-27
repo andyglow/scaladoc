@@ -188,40 +188,6 @@ class ScaladocPluginTest {
     }
 
     @Test
-    void deprecatedEmbedStillLeavesTheCompilerPluginOutAndWarns() {
-        write("settings.gradle", "rootProject.name = 'fixture'\n");
-        write("build.gradle", String.join("\n",
-            "plugins {",
-            "  id 'scala'",
-            "  id 'io.github.andyglow.scaladoc'",
-            "}",
-            "repositories { mavenLocal(); mavenCentral() }",
-            "dependencies { " + scala2("2.13.18") + " }",
-            "scaladoc { embed.set(false) }",
-            ""));
-        String output = runner("dependencies", "--configuration", "scalaCompilerPlugins").build().getOutput();
-        assertTrue(output.contains("`embed` is deprecated"), output);
-        assertTrue(!output.contains("scaladoc-compiler-plugin"), output);
-    }
-
-    @Test
-    void deprecatedReadStillAddsTheLibrariesAndWarns() {
-        write("settings.gradle", "rootProject.name = 'fixture'\n");
-        write("build.gradle", String.join("\n",
-            "plugins {",
-            "  id 'scala'",
-            "  id 'io.github.andyglow.scaladoc'",
-            "}",
-            "repositories { mavenLocal(); mavenCentral() }",
-            "dependencies { " + scala2("2.13.18") + " }",
-            "scaladoc { read.set(true) }",
-            ""));
-        String output = runner("dependencies", "--configuration", "runtimeClasspath").build().getOutput();
-        assertTrue(output.contains("`read` is deprecated"), output);
-        assertTrue(output.contains("io.github.andyglow:scaladoc-parser_2.13:" + VERSION), output);
-    }
-
-    @Test
     void scala3PublisherGetsNothing() {
         fixture("implementation 'org.scala-lang:scala3-library_3:3.9.0'", false);
         String model = runner(":model:dependencies", "--configuration", "compileClasspath").build().getOutput();
