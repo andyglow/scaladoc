@@ -31,7 +31,7 @@ That makes it a natural building block for derivation. A macro or a type class i
 A type made of others, a sealed hierarchy or an enum, has a comment on each part. `Typedoc.of[T]` is the same trick for
 those, and gives them all, as a tree:
 
-```scala mdoc
+```scala mdoc:silent
 object shapes {
 
   /** A shape. */
@@ -45,16 +45,80 @@ object shapes {
 
   /** No shape at all. */
   case object Empty extends Shape
-}
 
-Typedoc.of[shapes.Shape] match {
-  case Typedoc.Sum(name, _, variants) => name -> variants.map(v => v.name -> v.doc.flatMap(_.textSummary))
-  case other                          => other.name -> Nil
+  /** A shape with straight sides. */
+  sealed trait Polygon extends Shape
+
+  /** A square.
+    *
+    * @param side the length of a side
+    */
+  case class Square(side: Double) extends Polygon
+
+  /** Drawn by hand. */
+  final class Freehand extends Polygon
 }
 ```
 
+Here each `Some(doc)` is shown as its text:
+
+```scala mdoc:compile-only
+Typedoc.of[shapes.Shape]
+// Sum("Shape", "A shape.", List(
+//   Product("Circle", "A circle.", List(Field("radius", "the radius"))),
+//   Singleton("Empty", "No shape at all."),
+//   Sum("Polygon", "A shape with straight sides.", List(
+//     Product("Square", "A square.", List(Field("side", "the length of a side"))),
+//     Plain("Freehand", "Drawn by hand.")))))
+```
+
+```scala mdoc:invisible
+// what the comment above says, checked
+def shown(t: Typedoc, indent: String): String = {
+  def text(doc: Option[Scaladoc]) = "\"" + doc.flatMap(_.textSummary).get + "\""
+  t match {
+    case Typedoc.Sum(n, d, vs) =>
+      s"Sum(\"$n\", ${text(d)}, List(\n" + vs.map(v => indent + "  " + shown(v, indent + "  ")).mkString(",\n") + "))"
+    case Typedoc.Product(n, d, fs) =>
+      s"Product(\"$n\", ${text(d)}, List(" +
+        fs.map(f => s"Field(\"${f.name}\", \"${f.doc.get.trimmed.plainString}\")").mkString(", ") + "))"
+    case Typedoc.Singleton(n, d) => s"Singleton(\"$n\", ${text(d)})"
+    case Typedoc.Plain(n, d)     => s"Plain(\"$n\", ${text(d)})"
+  }
+}
+assert(shown(Typedoc.of[shapes.Shape], "") ==
+  """Sum("Shape", "A shape.", List(
+    |  Product("Circle", "A circle.", List(Field("radius", "the radius"))),
+    |  Singleton("Empty", "No shape at all."),
+    |  Sum("Polygon", "A shape with straight sides.", List(
+    |    Product("Square", "A square.", List(Field("side", "the length of a side"))),
+    |    Plain("Freehand", "Drawn by hand.")))))""".stripMargin, shown(Typedoc.of[shapes.Shape], ""))
+```
+
+A Scala 3 enum is a `Sum` of its cases, a case with parameters a `Product`, and one without a `Singleton`:
+
+```scala
+/** A traffic light's signal. */
+enum Signal {
+
+  /** Stop. */
+  case Red
+
+  /** Go, after a pause.
+    *
+    * @param seconds how long the pause is
+    */
+  case Green(seconds: Int)
+}
+
+Typedoc.of[Signal]
+// Sum("Signal", "A traffic light's signal.", List(
+//   Singleton("Red", "Stop."),
+//   Product("Green", "Go, after a pause.", List(Field("seconds", "how long the pause is")))))
+```
+
 A derivation that describes a sealed trait as a `oneOf`, say, gets the description of the whole and of each
-alternative from it. The tree has more to it, which its own section below goes through.
+alternative from it. The section on the tree, below, has the details.
 
 What remains is the question of *where* the compiler finds the comments, which is the same for both, and the answer is
 different on Scala 2 and on Scala 3.
