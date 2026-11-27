@@ -5,8 +5,8 @@
 > — Linus Torvalds
 
 A module plays one of two parts, sometimes both. It **publishes** its scaladoc, keeping the doc comments of its classes
-readable after it's compiled. Or it **reads** scaladoc, calling @ref:[`Scaladoc.of`](extractor.md) to get it. In a
-typical project, a module of models publishes, and the module that derives schemas from them reads.
+readable after it's compiled. Or it **reads** scaladoc, calling @ref:[`Scaladoc.of` or `Typedoc.of`](extractor.md) to
+get it. In a typical project, a module of models publishes, and the module that derives schemas from them reads.
 
 Each part needs something different, and what that is depends on the Scala version, because Scala 2 and Scala 3 keep
 doc comments in very different places:
@@ -24,10 +24,10 @@ doesn't compile against such classes when it's missing, so a Scala 3 project cou
 this way. Scala 3 keeps doc comments in its TASTy files on its own; a reading module needs `-Xread-docs`, the option
 that tells the compiler to load them.
 
-A reading module calls `Scaladoc.of`, so it depends on `scaladoc-parser` like on any library it calls; `scaladoc-core`,
-the model, comes with it. The rest is compiler setup, which is where the sbt and Gradle plugins help: they add the
-compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Xread-docs` on Scala 3. Maven gets a few lines of POM,
-and scala-cli a few `using` directives.
+A reading module calls `Scaladoc.of` or `Typedoc.of`, so it depends on `scaladoc-parser` like on any library it
+calls; `scaladoc-core`, the model, comes with it. The rest is compiler setup, which is where the sbt and Gradle plugins
+help: they add the compiler plugin, with `scaladoc-annotation`, on Scala 2 and `-Xread-docs` on Scala 3. Maven gets a
+few lines of POM, and scala-cli a few `using` directives.
 
 ## sbt
 
@@ -50,7 +50,7 @@ lazy val schemas = project
   .dependsOn(model)
   .enablePlugins(ScaladocPlugin)            // on Scala 3, for -Xread-docs; a Scala 2 reader doesn't need it
   .settings(
-    // reads it with Scaladoc.of; scaladocVersion keeps the parser in step with the plugin
+    // reads it with Scaladoc.of and Typedoc.of; scaladocVersion keeps the parser in step with the plugin
     libraryDependencies += "io.github.andyglow" %% "scaladoc-parser" % scaladocVersion.value
   )
 ```
@@ -274,5 +274,5 @@ parsed.map(_.textReturns)
 
 The result is an `Either`, because not every string is a doc comment. The `Right` holds a `Scaladoc`: a list of tags,
 each with its markup. The rest of this guide walks through that structure. @ref:[Comment syntax](syntax.md) covers what
-you can write, @ref:[The model](model.md) what you get back, and @ref:[Scaladoc.of](extractor.md) how to get it without
-having the comment as a string at all.
+you can write, @ref:[The model](model.md) what you get back, and @ref:[Scaladoc.of and Typedoc.of](extractor.md) how
+to get it without having the comment as a string at all.

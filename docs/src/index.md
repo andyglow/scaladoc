@@ -12,18 +12,20 @@ That's a waste, because the prose is often exactly what other tools are missing.
 class can say that a field is a string, but not that it's *the name shown to other users*. An OpenAPI spec knows the
 shape of a request, not its purpose. The purpose is right there in the source, one line above the shape.
 
-This library puts that prose to work. It has four parts:
+This library puts that prose to work. It has five parts:
 
 - **a model** of what a doc comment says: its tags (`@param`, `@return`, ...) and its markup (paragraphs, headings,
   lists, tables, code, links, bold and the rest)
 - **a parser** that turns comment text into the model. It reads scaladoc's wiki markup and Markdown, as Scala 3's
   scaladoc does, with HTML and javadoc's inline tags, on the JVM and on Scala.js
-- **`Scaladoc.of[T]`**, which hands you the scaladoc of a type at compile time, in macros and type class derivation,
-  and `Typedoc.of[T]`, the scaladoc of a sealed hierarchy or an enum with its variants', as a tree
+- **`Scaladoc.of[T]`**, which hands you the scaladoc of a type at compile time, in macros and type class derivation
+- **`Typedoc.of[T]`**, which hands you the scaladoc of a sealed hierarchy or an enum with its variants', and of a case
+  class with its fields', as a tree
 - **a compiler plugin** (Scala 2) that embeds the scaladoc of classes into their bytecode, so it survives the trip
   into a jar
 
-Here is the whole idea in a few lines. A case class documents itself, and the code asks it what it said:
+Here is the whole idea in a few lines. A case class and a sealed hierarchy document themselves, and the code asks them
+what they said:
 
 ```scala mdoc:silent
 import scaladoc._
@@ -38,12 +40,26 @@ object model {
     * @param age  how old they are, in years
     */
   case class User(name: String, age: Int)
+
+  /** What a user may do. */
+  sealed trait Role
+
+  /** Can do anything, invite others included. */
+  case object Admin extends Role
+
+  /** Can read and comment.
+    *
+    * @param team the team they're in
+    */
+  case class Member(team: String) extends Role
 }
 
 import model._
 
 val doc = Scaladoc.of[User].get
 ```
+
+`Scaladoc.of` gives a type's comment:
 
 ```scala mdoc
 doc.textSummary
@@ -52,6 +68,19 @@ doc.textParams
 
 `textSummary` is the first sentence, the one scaladoc itself would show in a list of members. `textParams` is what
 each field means. A schema generator needs nothing more to give every property a title and a description.
+
+`Typedoc.of` gives the comments of a type made of others, as a tree: here a sealed trait's, and its variants':
+
+```scala mdoc
+def summaries(t: Typedoc): List[(String, Option[String])] = t match {
+  case Typedoc.Sum(name, doc, variants) => (name -> doc.flatMap(_.textSummary)) :: variants.flatMap(summaries)
+  case other                            => List(other.name -> other.doc.flatMap(_.textSummary))
+}
+
+summaries(Typedoc.of[Role])
+```
+
+That's a `oneOf` with a description, and one for each of its alternatives.
 
 ## Supported versions
 
@@ -70,14 +99,14 @@ target Java 8, Scala 3 ones Java 17 (Scala 3.9 needs it), and run on any later J
 
 If you want to try it, start with @ref:[Getting started](getting-started.md). If you write the comments,
 @ref:[Comment syntax](syntax.md) shows everything the parser understands. If you write the tools that read them,
-@ref:[The model](model.md) and @ref:[Scaladoc.of](extractor.md) are for you.
+@ref:[The model](model.md) and @ref:[Scaladoc.of and Typedoc.of](extractor.md) are for you.
 
 @@@ index
 
 * [Getting started](getting-started.md)
 * [Comment syntax](syntax.md)
 * [The model](model.md)
-* [Scaladoc.of](extractor.md)
+* [Scaladoc.of and Typedoc.of](extractor.md)
 * [Compiler plugin](compiler-plugin.md)
 * [Migrating](migration.md)
 
