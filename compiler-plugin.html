@@ -146,7 +146,7 @@ andyglow/scaladoc
   <li><a href="getting-started.html" class="page">Getting started</a></li>
   <li><a href="syntax.html" class="page">Comment syntax</a></li>
   <li><a href="model.html" class="page">The model</a></li>
-  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of and Typedoc.of</a></li>
   <li><a href="compiler-plugin.html" class="active page">Compiler plugin</a></li>
   <li><a href="migration.html" class="page">Migrating</a></li>
 </ul>
@@ -165,7 +165,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.5.0
+<i class="md-icon" title="Version">label_outline</i> 0.6.0
 </label>
 </li>
 </ul>
@@ -198,18 +198,19 @@ andyglow/scaladoc
   <p>— Chinese proverb</p>
 </blockquote>
 <p>The Scala 2 compiler has a short memory. It reads every doc comment while it compiles a file, then lets go of it, and nothing of the comment reaches the bytecode. A tool that looks at your classes later, from another module or out of a jar, finds the types intact and the prose gone.</p>
-<p>The compiler plugin writes the prose down before it&rsquo;s forgotten. For every documented class, it:</p>
+<p>The compiler plugin writes the prose down before it&rsquo;s forgotten. For every documented class and object, it:</p>
 <ul>
   <li>validates the comment. One the parser can&rsquo;t read, like one with a misaligned border, is reported as a warning in  the <code>scaladoc</code> category and isn&rsquo;t embedded. <code>-Xfatal-warnings</code>, or <code>-Wconf:cat=scaladoc:e</code> on 2.13, turns it into an error</li>
-  <li>packs the comment into a <code>@ScaladocCarrier</code> annotation on the class, which stays in the bytecode</li>
+  <li>packs the comment into a <code>@ScaladocCarrier</code> annotation on the class, which stays in the bytecode. For an object,  that&rsquo;s its class, <code>Obj$</code>, and the class of its static forwarders, <code>Obj</code>, when it has no companion class</li>
 </ul>
-<p><a href="extractor.html"><code>Scaladoc.of</code></a> finds the annotation, so it works for classes from any module or jar compiled with the plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn&rsquo;t need it, since it keeps comments in TASTy on its own.</p>
+<p><a href="extractor.html"><code>Scaladoc.of</code> and <code>Typedoc.of</code></a> find the annotation, so they work for classes and objects from any module or jar compiled with the plugin. The plugin is for Scala 2.12 and 2.13. Scala 3 doesn&rsquo;t need it, since it keeps comments in TASTy on its own.</p>
 <p>The <a href="getting-started.html#the-sbt-plugin">sbt</a> and <a href="getting-started.html#gradle">Gradle</a> plugins add it on Scala 2 modules, and <a href="getting-started.html#maven">Maven</a> builds list it in <code>scala-maven-plugin</code>&rsquo;s <code>compilerPlugins</code>. In sbt, by hand:</p>
-<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.5.0&quot;)
+<pre class="prettyprint"><code class="language-sbt">addCompilerPlugin(&quot;io.github.andyglow&quot; %% &quot;scaladoc-compiler-plugin&quot; % &quot;0.6.0&quot;)
+libraryDependencies += &quot;io.github.andyglow&quot; % &quot;scaladoc-annotation&quot; % &quot;0.6.0&quot;
 </code></pre>
-<p>The plugin&rsquo;s jar has everything it needs, so a module whose scaladoc gets embedded needs no library besides it.</p>
+<p>The plugin&rsquo;s jar has everything it needs to run. The module still depends on <code>scaladoc-annotation</code>, which holds the annotation and nothing else, because its classes refer to the annotation in their Scala signatures. Scala 2 compiles against them without it, and the JVM runs them without it. Scala 3 doesn&rsquo;t: a Scala 3 module that uses them fails with &ldquo;Bad symbolic reference … refers to ScaladocCarrier&rdquo;, even if it never reads any scaladoc. With the dependency at compile scope, the jar reaches every consumer, like <code>scala-library</code> does.</p>
 <h2><a href="#reading-embedded-scaladoc-without-this-library" name="reading-embedded-scaladoc-without-this-library" class="anchor"><span class="anchor-link"></span></a>Reading embedded scaladoc without this library</h2>
-<p>The annotation is a public, documented format, and <code>Scaladoc.of</code> is just one way to read it. It&rsquo;s a plain Java annotation, <code>scaladoc.annotation.ScaladocCarrier</code>, with runtime retention:</p>
+<p>The annotation is a public, documented format, and this library&rsquo;s macros are just one way to read it. It&rsquo;s a plain Java annotation, <code>scaladoc.annotation.ScaladocCarrier</code>, with runtime retention:</p>
 <table>
   <thead>
     <tr>
@@ -229,7 +230,7 @@ andyglow/scaladoc
   </tbody>
 </table>
 <p>It lives in a jar of its own, <code>scaladoc-annotation</code>, which has no dependencies and no Scala version suffix. A tool that reads embedded scaladoc its own way, at runtime with reflection or in any JVM language, needs only that jar:</p>
-<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; % &quot;scaladoc-annotation&quot; % &quot;0.5.0&quot;
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; % &quot;scaladoc-annotation&quot; % &quot;0.6.0&quot;
 </code></pre>
 <pre class="prettyprint"><code class="language-java">ScaladocCarrier carrier = User.class.getAnnotation(ScaladocCarrier.class);
 String comment = carrier == null ? null : carrier.text();   // null: no scaladoc was embedded
@@ -237,7 +238,7 @@ String comment = carrier == null ? null : carrier.text();   // null: no scaladoc
 <p>The text is then yours to process, with this library&rsquo;s parser (<code>Scaladoc.fromString(text, hasTags = carrier.tags())</code>) or anything else. Tools that read class files directly, without loading them, find the annotation by its name and need no jar at all.</p>
 <p>The annotation&rsquo;s class doesn&rsquo;t have to be present wherever the annotated classes are used: the JVM loads and runs them without it, and Java reflection then just leaves the annotation out.</p>
 <h2><a href="#choosing-what-to-embed" name="choosing-what-to-embed" class="anchor"><span class="anchor-link"></span></a>Choosing what to embed</h2>
-<p>By default the plugin embeds the scaladoc of every documented class. That&rsquo;s often more than needed, and a comment meant for the team may not be meant for every jar. Include and exclude patterns narrow it down. With <code>sbt-scaladoc</code> they&rsquo;re settings:</p>
+<p>By default the plugin embeds the scaladoc of every documented class and object. That&rsquo;s often more than needed, and a comment meant for the team may not be meant for every jar. Include and exclude patterns narrow it down. With <code>sbt-scaladoc</code> they&rsquo;re settings:</p>
 <pre class="prettyprint"><code class="language-sbt">scaladocIncludePaths   := Seq(&quot;**/model/**&quot;)
 scaladocIncludeClasses := Seq(&quot;com.acme.api.*&quot;)
 scaladocExcludePaths   := Seq(&quot;**/generated/**&quot;)
@@ -269,7 +270,7 @@ scaladocExcludeClasses := Seq(&quot;com.acme.**.internal.*&quot;)
     </tr>
     <tr>
       <td><code>include:class:&lt;pattern&gt;</code> </td>
-      <td>classes whose fully qualified name matches the pattern </td>
+      <td>classes and objects whose fully qualified name matches the pattern </td>
     </tr>
     <tr>
       <td><code>exclude:class:&lt;pattern&gt;</code> </td>
@@ -282,7 +283,7 @@ scaladocExcludeClasses := Seq(&quot;com.acme.**.internal.*&quot;)
   <li>Without any <code>include</code>, every class is included. With some, a class is included if its file matches an  <code>include:path</code> or its name matches an <code>include:class</code>.</li>
   <li>An <code>exclude</code> always wins over an <code>include</code>.</li>
   <li>Path globs use <a href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-"><code>java.nio</code> glob syntax</a>  and are matched against the absolute path of the source file, so they usually start with <code>**/</code>.</li>
-  <li>In class patterns, <code>*</code> matches within one segment of the name, <code>**</code> across segments, and <code>**.</code> zero or more  packages: <code>com.acme.**.internal.*</code> matches both <code>com.acme.internal.Secret</code> and <code>com.acme.a.b.internal.Secret</code>.  Nested classes are written with dots, as in <code>com.acme.Outer.Inner</code>.</li>
+  <li>In class patterns, <code>*</code> matches within one segment of the name, <code>**</code> across segments, and <code>**.</code> zero or more  packages: <code>com.acme.**.internal.*</code> matches both <code>com.acme.internal.Secret</code> and <code>com.acme.a.b.internal.Secret</code>.  Nested classes are written with dots, as in <code>com.acme.Outer.Inner</code>, and objects are matched by their name, like  classes: <code>com.acme.Registry</code>, not <code>com.acme.Registry$</code>.</li>
   <li>A malformed option fails the compilation, rather than quietly embedding everything.</li>
 </ul>
 </div>
@@ -293,7 +294,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.5.0
+0.6.0
 </span>
 </div>
 </article>
@@ -303,7 +304,7 @@ Edit this page
 <footer class="md-footer">
 <div class="md-footer-nav">
 <nav class="md-footer-nav__inner md-grid">
-<a href="extractor.html" title="Scaladoc.of" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+<a href="extractor.html" title="Scaladoc.of and Typedoc.of" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
 <div class="md-flex__cell md-flex__cell--shrink">
 <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
 </div>
@@ -312,7 +313,7 @@ Edit this page
 <span class="md-footer-nav__direction">
 Previous
 </span>
-Scaladoc.of
+Scaladoc.of and Typedoc.of
 </span>
 </div>
 </a>

@@ -146,7 +146,7 @@ andyglow/scaladoc
   <li><a href="getting-started.html" class="page">Getting started</a></li>
   <li><a href="syntax.html" class="page">Comment syntax</a></li>
   <li><a href="model.html" class="active page">The model</a></li>
-  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of and Typedoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
   <li><a href="migration.html" class="page">Migrating</a></li>
 </ul>
@@ -166,7 +166,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.5.0
+<i class="md-icon" title="Version">label_outline</i> 0.6.0
 </label>
 </li>
 </ul>
@@ -221,7 +221,7 @@ andyglow/scaladoc
 Scaladoc = List Tag
 </code></pre>
 <h2><a href="#markup" name="markup" class="anchor"><span class="anchor-link"></span></a>Markup</h2>
-<p>Markup comes in two kinds: blocks, which stack on top of each other, and spans, which run inline within a block. A <code>Document</code> holds blocks, and a tag&rsquo;s text is always a <code>Document</code>:</p>
+<p>Markup comes in two kinds: blocks, which stack on top of each other, and spans, which run inline within a block. A <code>Document</code> holds blocks, and a tag&rsquo;s text is always a <code>Document</code>. The nodes are named for what the markup means, not how it&rsquo;s written, so <code>&#39;&#39;&#39;bold&#39;&#39;&#39;</code> in wiki syntax and <code>**bold**</code> in Markdown are both <code>Bold</code>. A few only come from Markdown, since the wiki syntax has no way to write them; they&rsquo;re marked below.</p>
 <pre><code>Span     = PlainText   (String)
          | Monospace   (String)
          | Italic      (List Span)
@@ -229,17 +229,24 @@ Scaladoc = List Tag
          | Underline   (List Span)
          | Superscript (List Span)
          | Subscript   (List Span)
+         | Strikethrough     (List Span)           -- Markdown
          | Link        (String (List Span))        -- target, title
+         | Image       (String String)             -- Markdown: source, alternative text
+         | LineBreak                               -- Markdown: a hard line break
+         | Checkbox    (Boolean)                   -- Markdown: a task list item&#39;s, at its start
+         | FootnoteReference (String)              -- Markdown: a footnote&#39;s label
          | HtmlTag     (String)                    -- an HTML tag the model has no node for
 
 Markup   = Span
          | Paragraph     (List Span)
          | Heading       (Level (List Span))       -- Level: One to Six
-         | CodeBlock     (String)
+         | CodeBlock     (String (Option String))  -- code, the language a Markdown fence names
+         | BlockQuote    (Document)                -- Markdown
          | UnorderedList (List Document)           -- each item: its text and nested lists
          | OrderedList   (List Document Style)     -- Style: Decimal, LowerRoman, UpperRoman, LowerAlpha, UpperAlpha
          | Table         (Row (List Alignment) (List Row))   -- a Row: one Paragraph a cell
          | HorizontalRule
+         | Footnote      (String Document)         -- Markdown: label, text
          | Document      (List Markup)
 </code></pre>
 <p>The spans that hold other spans can nest without limit, so walking the model is naturally recursive. Here is a function that collects every link target in a piece of markup, however deep it sits:</p>
@@ -251,6 +258,8 @@ Markup   = Span
   case x: HasSpans             =&gt; x.spans.flatMap(links)
   case x: ListBlock            =&gt; x.items.flatMap(links)
   case Table(header, _, rows)  =&gt; (header :: rows).flatMap(_.cells).flatMap(links)
+  case BlockQuote(content)     =&gt; links(content)
+  case Footnote(_, content)    =&gt; links(content)
   case _                       =&gt; Nil
 }
 
@@ -367,7 +376,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.5.0
+0.6.0
 </span>
 </div>
 </article>
@@ -390,13 +399,13 @@ Comment syntax
 </span>
 </div>
 </a>
-<a href="extractor.html" title="Scaladoc.of" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+<a href="extractor.html" title="Scaladoc.of and Typedoc.of" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
 <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
 <span class="md-flex__ellipsis">
 <span class="md-footer-nav__direction">
 Next
 </span>
-Scaladoc.of
+Scaladoc.of and Typedoc.of
 </span>
 </div>
 <div class="md-flex__cell md-flex__cell--shrink">

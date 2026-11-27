@@ -146,7 +146,7 @@ andyglow/scaladoc
   <li><a href="getting-started.html" class="page">Getting started</a></li>
   <li><a href="syntax.html" class="active page">Comment syntax</a></li>
   <li><a href="model.html" class="page">The model</a></li>
-  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of and Typedoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
   <li><a href="migration.html" class="page">Migrating</a></li>
 </ul>
@@ -167,6 +167,7 @@ andyglow/scaladoc
     <li><a href="syntax.html#html" class="header">HTML</a></li>
     <li><a href="syntax.html#javadocs-inline-tags" class="header">Javadoc&rsquo;s inline tags</a></li>
     <li><a href="syntax.html#macros" class="header">Macros</a></li>
+    <li><a href="syntax.html#markdown" class="header">Markdown</a></li>
     <li><a href="syntax.html#how-this-differs-from-scaladoc" class="header">How this differs from scaladoc</a></li>
   </ul></li>
 </ul>
@@ -176,7 +177,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.5.0
+<i class="md-icon" title="Version">label_outline</i> 0.6.0
 </label>
 </li>
 </ul>
@@ -203,6 +204,7 @@ andyglow/scaladoc
     <li><a href="syntax.html#html" class="header">HTML</a></li>
     <li><a href="syntax.html#javadocs-inline-tags" class="header">Javadoc&rsquo;s inline tags</a></li>
     <li><a href="syntax.html#macros" class="header">Macros</a></li>
+    <li><a href="syntax.html#markdown" class="header">Markdown</a></li>
     <li><a href="syntax.html#how-this-differs-from-scaladoc" class="header">How this differs from scaladoc</a></li>
   </ul></li>
 </ul>
@@ -220,7 +222,7 @@ andyglow/scaladoc
   <p>— Ludwig Wittgenstein, <em>Tractatus Logico-Philosophicus</em></p>
 </blockquote>
 <p>A doc comment looks like prose, but it&rsquo;s a small language with a grammar of its own. Scaladoc defined most of it: the <code>*</code> border, the <code>@</code> tags, a wiki markup with <code>&#39;&#39;italic&#39;&#39;</code> and <code>[[links]]</code>. Over the years, comments picked up some HTML and a few habits from javadoc along the way, and real codebases contain all of it, often in the same comment.</p>
-<p>The parser reads all of it, and this page walks through what it understands, from the outside in: first the comment as a whole, then its tags, then the markup inside them. Every example on this page is compiled and run when the site is built, so what you see after each snippet is what the parser really returns.</p>
+<p>The parser reads all of it, and this page walks through what it understands, from the outside in: first the comment as a whole, then its tags, then the markup inside them. That markup is scaladoc&rsquo;s wiki syntax, Scala 2&rsquo;s, unless the comment is in Markdown, Scala 3&rsquo;s default, which the <a href="syntax.html#markdown">last part</a> is about. Every example on this page is compiled and run when the site is built, so what you see after each snippet is what the parser really returns.</p>
 <h2><a href="#the-comment" name="the-comment" class="anchor"><span class="anchor-link"></span></a>The comment</h2>
 <p>A doc comment starts with <code>/**</code> and ends with <code>*/</code>. In between, each line usually starts with a <code>*</code> border: aligned under the second <code>*</code> of the opening marker in scaladoc&rsquo;s style, under the first in javadoc&rsquo;s. The border and one space after it belong to the comment&rsquo;s frame, not to its text:</p>
 <pre class="prettyprint"><code class="language-scala">parse(
@@ -462,10 +464,17 @@ parse(
 //   )
 // )
 </code></pre>
+<p>HTML and javadoc tags are another matter: a <code>&lt;b&gt;</code> or a <code>{@code</code> that isn&rsquo;t closed in its paragraph is an error, since nobody writes one by accident, and there&rsquo;s no telling where it was meant to end. The error shows how the text goes from the tag:</p>
+<pre class="prettyprint"><code class="language-scala">Scaladoc.fromString(&quot;/** A &lt;b&gt;bold claim, never closed. */&quot;)
+// res6: Either[ScaladocException, Scaladoc] = Left(
+//   value = UnclosedMarkup(markup = &quot;&lt;b&gt;&quot;, near = &quot;&lt;b&gt;bold claim, never ...&quot;)
+// )
+</code></pre>
+<p>Markup nests at most 64 deep. Deeper, a marker is text, as it is without a closer, and a tag is an error.</p>
 <h2><a href="#links" name="links" class="anchor"><span class="anchor-link"></span></a>Links</h2>
 <p>A link holds a target and, optionally, a title. The target runs to the first whitespace and the rest is the title, which can have markup of its own. The target is either an entity, like a class or a member, or a URL:</p>
 <pre class="prettyprint"><code class="language-scala">parse(&quot;/** See [[scala.Option]] and [[https://docs.scala-lang.org the &#39;&#39;Scala&#39;&#39; docs]]. */&quot;)
-// res6: Markup = Document(
+// res7: Markup = Document(
 //   elements = List(
 //     Paragraph(
 //       markup = List(
@@ -488,7 +497,7 @@ parse(
 </code></pre>
 <p>Member signatures can contain <code>]]</code> themselves. A link opened with more brackets closes with as many, which keeps such a target in one piece:</p>
 <pre class="prettyprint"><code class="language-scala">parse(&quot;/** Overloads are told apart like [[[baz(x:List[List[A]])*]]]. */&quot;)
-// res7: Markup = Document(
+// res8: Markup = Document(
 //   elements = List(
 //     Paragraph(
 //       markup = List(
@@ -512,7 +521,7 @@ parse(
     |  * == Caveats ==
     |  * Second paragraph.
     |  */&quot;&quot;&quot;.stripMargin)
-// res8: Markup = Document(
+// res9: Markup = Document(
 //   elements = List(
 //     Heading(
 //       level = One,
@@ -547,14 +556,15 @@ parse(
     |  *     println(x)
     |  * }}}
     |  */&quot;&quot;&quot;.stripMargin)
-// res9: Markup = Document(
+// res10: Markup = Document(
 //   elements = List(
 //     Paragraph(markup = List(PlainText(value = &quot;For example:&quot;))),
 //     CodeBlock(
 //       value = &quot;&quot;&quot;val x = 1
 // 
 // if (x &gt; 0)
-//   println(x)&quot;&quot;&quot;
+//   println(x)&quot;&quot;&quot;,
+//       language = None
 //     )
 //   )
 // )
@@ -575,7 +585,7 @@ parse(
     |  *     - on Scala.js
     |  *   1. Run the tests
     |  */&quot;&quot;&quot;.stripMargin)
-// res10: Markup = Document(
+// res11: Markup = Document(
 //   elements = List(
 //     Paragraph(markup = List(PlainText(value = &quot;Steps:&quot;))),
 //     OrderedList(
@@ -626,7 +636,7 @@ parse(
     |  * | S    | 10    | &#39;&#39;cheap&#39;&#39;  |
     |  * | M    | 15    |
     |  */&quot;&quot;&quot;.stripMargin)
-// res11: Markup = Document(
+// res12: Markup = Document(
 //   elements = List(
 //     Paragraph(markup = List(PlainText(value = &quot;Sizes:&quot;))),
 //     Table(
@@ -664,7 +674,7 @@ parse(
 <h2><a href="#horizontal-rules" name="horizontal-rules" class="anchor"><span class="anchor-link"></span></a>Horizontal rules</h2>
 <p>Four or more dashes on a line of their own make a rule:</p>
 <pre class="prettyprint"><code class="language-scala">parse(&quot;/** Above.\n  *\n  * ----\n  *\n  * Below.\n  */&quot;)
-// res12: Markup = Document(
+// res13: Markup = Document(
 //   elements = List(
 //     Paragraph(markup = List(PlainText(value = &quot;Above.&quot;))),
 //     HorizontalRule,
@@ -680,9 +690,10 @@ parse(
   <li><code>&lt;b&gt;</code> and <code>&lt;strong&gt;</code> are bold, <code>&lt;i&gt;</code> and <code>&lt;em&gt;</code> italic, <code>&lt;u&gt;</code> underlined, <code>&lt;sup&gt;</code> and <code>&lt;sub&gt;</code> raised and lowered</li>
   <li><code>&lt;code&gt;</code> and <code>&lt;tt&gt;</code> are monospace, <code>&lt;a href=&quot;...&quot;&gt;</code> is a link, <code>&lt;br&gt;</code> is a line break</li>
   <li>entities like <code>&amp;lt;</code>, <code>&amp;#60;</code> and <code>&amp;nbsp;</code> are the characters they stand for</li>
+  <li><code>&lt;!-- comments --&gt;</code> go, with any tags in them</li>
 </ul>
 <pre class="prettyprint"><code class="language-scala">parse(&quot;/** &lt;p&gt;Returns a &lt;code&gt;List&amp;lt;A&amp;gt;&lt;/code&gt; of &lt;b&gt;all&lt;/b&gt; the &lt;a href=\&quot;https://example.com\&quot;&gt;items&lt;/a&gt;.&lt;/p&gt; */&quot;)
-// res13: Markup = Document(
+// res14: Markup = Document(
 //   elements = List(
 //     Paragraph(
 //       markup = List(
@@ -701,7 +712,7 @@ parse(
 //   )
 // )
 </code></pre>
-<p>Other tags that scaladoc keeps, like <code>&lt;span&gt;</code> or <code>&lt;table&gt;</code>, come back as <code>HtmlTag</code> spans with the tag as written. A <code>&lt;</code> that isn&rsquo;t a tag at all, as in <code>List&lt;String&gt;</code>, is text. HTML inside <code>{{{</code> code blocks stays as it is.</p>
+<p>The tags that become the model, from <code>&lt;b&gt;</code> to <code>&lt;a href=&quot;...&quot;&gt;</code>, have to be closed in their paragraph (see <a href="syntax.html#inline-markup">Inline markup</a>). Other tags that scaladoc keeps, like <code>&lt;span&gt;</code> or <code>&lt;table&gt;</code>, come back as <code>HtmlTag</code> spans with the tag as written, closed or not. A <code>&lt;</code> that isn&rsquo;t a tag at all, as in <code>List&lt;String&gt;</code>, is text. HTML inside <code>{{{</code> code blocks stays as it is, and so it does in <code>&lt;pre&gt;</code>, except that <code>&lt;code&gt;</code> tags go and entities are decoded.</p>
 <h2><a href="#javadocs-inline-tags" name="javadocs-inline-tags" class="anchor"><span class="anchor-link"></span></a>Javadoc&rsquo;s inline tags</h2>
 <p>Javadoc&rsquo;s inline tags are understood too:</p>
 <table>
@@ -739,7 +750,7 @@ parse(
   </tbody>
 </table>
 <pre class="prettyprint"><code class="language-scala">parse(&quot;/** Wraps a {@link java.util.Map} of {@code Map&lt;K, {V}&gt;}, see {@linkplain Foo#bar the bar}. */&quot;)
-// res14: Markup = Document(
+// res15: Markup = Document(
 //   elements = List(
 //     Paragraph(
 //       markup = List(
@@ -755,7 +766,7 @@ parse(
 //   )
 // )
 </code></pre>
-<p>Braces inside a tag must balance, which is what lets <code>{@code Map&lt;K, {V}&gt;}</code> hold braces of its own.</p>
+<p>Braces inside a tag must balance, which is what lets <code>{@code Map&lt;K, {V}&gt;}</code> hold braces of its own, and a tag has to be closed in its paragraph, in Markdown too. Others, like <code>{@inheritDoc}</code>, are text.</p>
 <h2><a href="#macros" name="macros" class="anchor"><span class="anchor-link"></span></a>Macros</h2>
 <blockquote>
   <p>I have made this longer than usual because I have not had time to make it shorter.</p>
@@ -768,24 +779,144 @@ parse(
     |  * @define coll immutable list
     |  * @param x the element to add to the $coll
     |  */&quot;&quot;&quot;.stripMargin).map(doc =&gt; (doc.textDescriptions, doc.textParams))
-// res15: Either[ScaladocException, (Seq[String], Map[String, String])] = Right(
+// res16: Either[ScaladocException, (Seq[String], Map[String, String])] = Right(
 //   value = (
 //     List(&quot;Adds an element to the immutable list.&quot;),
 //     Map(&quot;x&quot; -&gt; &quot;the element to add to the immutable list&quot;)
 //   )
 // )
 </code></pre>
-<p>A define runs up to the next tag, can use other defines, and doesn&rsquo;t show up in the parsed comment. Scaladoc also lets a comment use the defines of its enclosing and parent classes. Only the compiler knows those classes, though, so here a comment can use its own defines only, and an unknown variable stays as written.</p>
+<p>A define runs up to the next tag, can use other defines, and doesn&rsquo;t show up in the parsed comment. An unknown variable stays as written.</p>
+<p>A comment also uses the defines of its class&rsquo;s parents and enclosing classes, as scaladoc has it. Only the compiler knows those classes, so that&rsquo;s <code>Scaladoc.of</code>&rsquo;s doing: it looks a variable up in the comment itself, then in the base classes in linearization order, and then in the enclosing classes and objects, the same way, outward. The first one found wins, and a define is expanded where it&rsquo;s used, so a class can change what a parent&rsquo;s <code>$coll</code> means:</p>
+<pre class="prettyprint"><code class="language-scala">/** A collection of things.
+  *
+  * @define coll collection
+  * @define adds Adds an element to this $coll.
+  */
+trait Coll
+
+/** A list. $adds
+  *
+  * @define coll list
+  */
+class MyList extends Coll  // Scaladoc.of[MyList]: &quot;A list. Adds an element to this list.&quot;
+</code></pre>
+<p>The parents&rsquo; comments come from where <code>Scaladoc.of</code> finds any comment: TASTy on Scala 3, and on Scala 2 the source when the parent is compiled in the same run, or the scaladoc the compiler plugin embedded in it. On Scala 3, a class&rsquo;s self type counts when the class is compiled in the same run, since it&rsquo;s read from the class&rsquo;s definition. <code>fromString</code> sees a single comment, so only its own defines.</p>
+<h2><a href="#markdown" name="markdown" class="anchor"><span class="anchor-link"></span></a>Markdown</h2>
+<blockquote>
+  <p>Simplicity is prerequisite for reliability.</p>
+  <p>— Edsger W. Dijkstra</p>
+</blockquote>
+<p>Scala 3&rsquo;s scaladoc reads doc comments as Markdown by default, and wiki syntax only when told to. The parser reads both, and is told which one a comment is written in, since the same characters mean different things in the two: <code>__x__</code> is underline in wiki and bold in Markdown, and <code>=x=</code> is a heading in one and text in the other.</p>
+<p><code>Scaladoc.fromString</code> and <code>fromDocstring</code> take the syntax as a parameter, wiki by default. A comment can also say it for itself, as in Scala 3&rsquo;s scaladoc, with <code>@syntax wiki</code> or <code>@syntax markdown</code> on a line of its own; the tag isn&rsquo;t kept in the parsed comment. <a href="extractor.html#which-syntax">Scaladoc.of</a> picks the syntax by where it finds the comment.</p>
+<pre class="prettyprint"><code class="language-scala">parseMarkdown(
+  &quot;&quot;&quot;/** Some **bold**, `code` and a [link](https://scala-lang.org).
+    |  *
+    |  * - [x] a task, done
+    |  * - [ ] and one to do
+    |  */&quot;&quot;&quot;.stripMargin)
+// res17: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(value = &quot;Some &quot;),
+//         Bold(spans = List(PlainText(value = &quot;bold&quot;))),
+//         PlainText(value = &quot;, &quot;),
+//         Monospace(value = &quot;code&quot;),
+//         PlainText(value = &quot; and a &quot;),
+//         Link(
+//           target = &quot;https://scala-lang.org&quot;,
+//           title = List(PlainText(value = &quot;link&quot;))
+//         ),
+//         PlainText(value = &quot;.&quot;)
+//       )
+//     ),
+//     UnorderedList(
+//       items = List(
+//         Document(
+//           elements = List(
+//             Paragraph(
+//               markup = List(
+//                 Checkbox(checked = true),
+//                 PlainText(value = &quot; a task, done&quot;)
+//               )
+//             )
+//           )
+//         ),
+//         Document(
+//           elements = List(
+//             Paragraph(
+//               markup = List(
+//                 Checkbox(checked = false),
+//                 PlainText(value = &quot; and one to do&quot;)
+//               )
+//             )
+//           )
+//         )
+//       )
+//     )
+//   )
+// )
+
+Scaladoc.fromString(
+  &quot;&quot;&quot;/** Some &#39;&#39;&#39;bold&#39;&#39;&#39; text.
+    |  *
+    |  * @syntax wiki
+    |  */&quot;&quot;&quot;.stripMargin, syntax = CommentSyntax.Markdown).map(_.descriptions)
+// res18: Either[ScaladocException, Seq[Markup]] = Right(
+//   value = List(
+//     Document(
+//       elements = List(
+//         Paragraph(
+//           markup = List(
+//             PlainText(value = &quot;Some &quot;),
+//             Bold(spans = List(PlainText(value = &quot;bold&quot;))),
+//             PlainText(value = &quot; text.&quot;)
+//           )
+//         )
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<p>Both syntaxes give the same model, named for what the markup means, so tools that walk it work the same on either: <code>&#39;&#39;&#39;bold&#39;&#39;&#39;</code> and <code>**bold**</code> are both <code>Bold</code>. Tags work the same in both, and only their text&rsquo;s markup differs. A few nodes only come from Markdown, because wiki syntax can&rsquo;t write them: <code>BlockQuote</code>, <code>Strikethrough</code>, <code>Image</code>, <code>LineBreak</code>, <code>Checkbox</code> and footnotes; see <a href="model.html#markup">The model</a>.</p>
+<h3><a href="#what-it-reads" name="what-it-reads" class="anchor"><span class="anchor-link"></span></a>What it reads</h3>
+<p>The Markdown is Scala 3&rsquo;s: <a href="https://commonmark.org">CommonMark</a>, with the extensions Scala 3&rsquo;s scaladoc turns on.</p>
+<ul>
+  <li><strong>Blocks:</strong> paragraphs, <code>#</code> and underlined headings, fenced (<code>```</code>, <code>~~~</code>, with a language) and indented code,  block quotes, bullet and numbered lists, thematic breaks, and HTML blocks.</li>
+  <li><strong>Inlines:</strong> <code>*emphasis*</code> and <code>**strong**</code> (with <code>_</code> too), code spans, links (<code>[text](url)</code> and by reference),  images, entities and escapes, and hard line breaks after a <code>\</code>.</li>
+  <li><strong>Scala 3&rsquo;s extensions:</strong> tables, task lists, <code>~~strikethrough~~</code>, bare URLs and email addresses as links,  footnotes (<code>[^1]</code>), and scaladoc&rsquo;s own <code>[[links]]</code> and <code>{{{ code }}}</code>.</li>
+  <li><strong>Javadoc&rsquo;s inline tags</strong>, as in wiki: <code>{@code x}</code>, <code>{@link x}</code> and the rest.</li>
+</ul>
+<p>HTML is cleaned first, as Scala 3&rsquo;s scaladoc does it: the tags it keeps stay (<code>&lt;b&gt;</code>, <code>&lt;code&gt;</code>, <code>&lt;span&gt;</code>, <code>&lt;table&gt;</code> and the like), <code>&lt;p&gt;</code> and <code>&lt;div&gt;</code> are paragraph breaks, and other tags go. As in Scala 3, that includes what only looks like a tag, <code>&lt;https://x.y&gt;</code> or the <code>&lt;A&gt;</code> in <code>List&lt;A&gt;</code>:</p>
+<pre class="prettyprint"><code class="language-scala">parseMarkdown(&quot;/** A &lt;b&gt;safe&lt;/b&gt; tag, a &lt;font&gt;gone&lt;/font&gt; one, and List&lt;A&gt; or &lt;https://x.y&gt; */&quot;)
+// res19: Markup = Document(
+//   elements = List(
+//     Paragraph(
+//       markup = List(
+//         PlainText(value = &quot;A &quot;),
+//         HtmlTag(data = &quot;&lt;b&gt;&quot;),
+//         PlainText(value = &quot;safe&quot;),
+//         HtmlTag(data = &quot;&lt;/b&gt;&quot;),
+//         PlainText(value = &quot; tag, a gone one, and List or&quot;)
+//       )
+//     )
+//   )
+// )
+</code></pre>
+<h3><a href="#how-it-was-checked" name="how-it-was-checked" class="anchor"><span class="anchor-link"></span></a>How it was checked</h3>
+<p>The parser is checked against the examples of the GitHub Flavored Markdown spec, CommonMark&rsquo;s plus GitHub&rsquo;s: 650 of the 672 parse to what the spec expects. The others differ on purpose, the way Scala 3&rsquo;s scaladoc does, which reads Markdown with flexmark: as a check, the same examples run through flexmark with Scala 3&rsquo;s options, and the two parse 635 of them alike. The rest are corners where flexmark follows an earlier CommonMark. The parser stays linear on pathological input, like ten thousand unclosed brackets, and nests at most 100 deep, as markdown-it does.</p>
+<p>Two things Scala 3 does, the parser doesn&rsquo;t: <code>:emoji:</code> stays text, since the model has no node for it, and a table&rsquo;s rows are as wide as its header, missing cells added and extra ones dropped.</p>
 <h2><a href="#how-this-differs-from-scaladoc" name="how-this-differs-from-scaladoc" class="anchor"><span class="anchor-link"></span></a>How this differs from scaladoc</h2>
 <p>Scaladoc renders comments to HTML, and this parser turns them into a model for other tools to use. A few choices follow from that difference, and a few from fixing what scaladoc leaves to warnings:</p>
 <ul>
   <li><strong>Monospace is literal.</strong> Scaladoc parses markup inside backticks; here the text of code stays as written.</li>
-  <li><strong>Unclosed markers are text.</strong> Scaladoc runs an unclosed <code>&#39;&#39;</code> to the end of the paragraph.</li>
+  <li><strong>Unclosed markers are text.</strong> Scaladoc runs an unclosed <code>&#39;&#39;</code> to the end of the paragraph. An unclosed <code>&lt;b&gt;</code> or  <code>{@code</code>, though, is an error.</li>
   <li><strong>Bold inside italic works.</strong> In <code>&#39;&#39;a &#39;&#39;&#39;b&#39;&#39;&#39; c&#39;&#39;</code>, scaladoc ends the italic at the <code>&#39;&#39;&#39;</code>; here the bold nests.</li>
   <li><strong>Broken tables aren&rsquo;t tables.</strong> Without a valid delimiter row, scaladoc repairs the table and warns; here the lines  stay text, which is what GitHub does and what scaladoc&rsquo;s own source says it should do.</li>
   <li><strong>HTML becomes the model.</strong> Scaladoc passes <code>&lt;b&gt;</code> on as HTML; here it&rsquo;s <code>Bold</code>, and HTML in code blocks is left  alone.</li>
   <li><strong><code>{@literal}</code> is text</strong>, as in javadoc. Scaladoc shows it as code.</li>
-  <li><strong><code>@define</code> sees only its own comment</strong>, as described above.</li>
+  <li><strong><code>$super</code> stays as written.</strong> In a class comment, Scala 3&rsquo;s scaladoc replaces it with the nearest parent&rsquo;s comment.</li>
 </ul>
 </div>
 <div>
@@ -795,7 +926,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.5.0
+0.6.0
 </span>
 </div>
 </article>

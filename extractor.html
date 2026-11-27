@@ -23,8 +23,8 @@
 <meta property="og:description" content="scaladoc-docs">
 <meta name="twitter:card" content="summary">
 <link rel="shortcut icon" href="assets/images/favicon.png">
-<title>Scaladoc.of · Scaladoc</title>
-<meta property="og:title" content="Scaladoc.of · Scaladoc">
+<title>Scaladoc.of and Typedoc.of · Scaladoc</title>
+<meta property="og:title" content="Scaladoc.of and Typedoc.of · Scaladoc">
 <link rel="stylesheet" href="assets/stylesheets/application.451f80e5.css">
 <link rel="stylesheet" href="assets/stylesheets/application-palette.22915126.css">
 <meta name="theme-color" content="#03a9f4" />
@@ -64,7 +64,7 @@ data-md-color-accent="cyan"
 Scaladoc
 </span>
 <span class="md-header-nav__topic">
-Scaladoc.of
+Scaladoc.of and Typedoc.of
 </span>
 </div>
 </div>
@@ -146,18 +146,21 @@ andyglow/scaladoc
   <li><a href="getting-started.html" class="page">Getting started</a></li>
   <li><a href="syntax.html" class="page">Comment syntax</a></li>
   <li><a href="model.html" class="page">The model</a></li>
-  <li><a href="extractor.html" class="active page">Scaladoc.of</a></li>
+  <li><a href="extractor.html" class="active page">Scaladoc.of and Typedoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
   <li><a href="migration.html" class="page">Migrating</a></li>
 </ul>
 <nav class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">Table of contents</label>
 <ul>
-  <li><a href="extractor.html#scaladoc-of" class="header">Scaladoc.of</a>
+  <li><a href="extractor.html#scaladoc-of-and-typedoc-of" class="header">Scaladoc.of and Typedoc.of</a>
   <ul>
     <li><a href="extractor.html#on-scala-2" class="header">On Scala 2</a></li>
     <li><a href="extractor.html#on-scala-3" class="header">On Scala 3</a></li>
+    <li><a href="extractor.html#which-syntax" class="header">Which syntax</a></li>
+    <li><a href="extractor.html#scala-2-libraries-on-scala-3" class="header">Scala 2 libraries on Scala 3</a></li>
     <li><a href="extractor.html#a-misaligned-comment-is-a-compile-error" class="header">A misaligned comment is a compile error</a></li>
+    <li><a href="extractor.html#typedoc-of" class="header">Typedoc.of</a></li>
     <li><a href="extractor.html#from-a-string" class="header">From a string</a></li>
   </ul></li>
 </ul>
@@ -167,7 +170,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.5.0
+<i class="md-icon" title="Version">label_outline</i> 0.6.0
 </label>
 </li>
 </ul>
@@ -180,11 +183,14 @@ andyglow/scaladoc
 <nav class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">Table of contents</label>
 <ul>
-  <li><a href="extractor.html#scaladoc-of" class="header">Scaladoc.of</a>
+  <li><a href="extractor.html#scaladoc-of-and-typedoc-of" class="header">Scaladoc.of and Typedoc.of</a>
   <ul>
     <li><a href="extractor.html#on-scala-2" class="header">On Scala 2</a></li>
     <li><a href="extractor.html#on-scala-3" class="header">On Scala 3</a></li>
+    <li><a href="extractor.html#which-syntax" class="header">Which syntax</a></li>
+    <li><a href="extractor.html#scala-2-libraries-on-scala-3" class="header">Scala 2 libraries on Scala 3</a></li>
     <li><a href="extractor.html#a-misaligned-comment-is-a-compile-error" class="header">A misaligned comment is a compile error</a></li>
+    <li><a href="extractor.html#typedoc-of" class="header">Typedoc.of</a></li>
     <li><a href="extractor.html#from-a-string" class="header">From a string</a></li>
   </ul></li>
 </ul>
@@ -196,7 +202,7 @@ andyglow/scaladoc
 <div class="md-content">
 <article class="md-content__inner md-typeset">
 <div class="md-content__searchable">
-<h1><a href="#scaladoc-of" name="scaladoc-of" class="anchor"><span class="anchor-link"></span></a>Scaladoc.of</h1>
+<h1><a href="#scaladoc-of-and-typedoc-of" name="scaladoc-of-and-typedoc-of" class="anchor"><span class="anchor-link"></span></a>Scaladoc.of and Typedoc.of</h1>
 <blockquote>
   <p>Any sufficiently advanced technology is indistinguishable from magic.</p>
   <p>— Arthur C. Clarke, <em>Profiles of the Future</em></p>
@@ -220,7 +226,58 @@ Scaladoc.of[geometry.Point].map(_.textParams)
 // )
 </code></pre>
 <p>That makes it a natural building block for derivation. A macro or a type class instance that describes <code>T</code> can call <code>Scaladoc.of[T]</code> and get titles and descriptions for free. A type without a comment gives <code>None</code>.</p>
-<p>What remains is the question of <em>where</em> the compiler finds the comment, and the answer is different on Scala 2 and on Scala 3.</p>
+<p>A type made of others, a sealed hierarchy or an enum, has a comment on each part. <code>Typedoc.of[T]</code> is the same trick for those, and gives them all, as a tree:</p>
+<pre class="prettyprint"><code class="language-scala">object shapes {
+
+  /** A shape. */
+  sealed trait Shape
+
+  /** A circle.
+    *
+    * @param radius the radius
+    */
+  case class Circle(radius: Double) extends Shape
+
+  /** No shape at all. */
+  case object Empty extends Shape
+
+  /** A shape with straight sides. */
+  sealed trait Polygon extends Shape
+
+  /** A square.
+    *
+    * @param side the length of a side
+    */
+  case class Square(side: Double) extends Polygon
+
+  /** Drawn by hand. */
+  final class Freehand extends Polygon
+}
+</code></pre>
+<p>Here each <code>Some(doc)</code> is shown as its text:</p>
+<pre class="prettyprint"><code class="language-scala">Typedoc.of[shapes.Shape]
+</code></pre>
+<p>A Scala 3 enum is a <code>Sum</code> of its cases, a case with parameters a <code>Product</code>, and one without a <code>Singleton</code>:</p>
+<pre class="prettyprint"><code class="language-scala">/** A traffic light&#39;s signal. */
+enum Signal {
+
+  /** Stop. */
+  case Red
+
+  /** Go, after a pause.
+    *
+    * @param seconds how long the pause is
+    */
+  case Green(seconds: Int)
+}
+
+Typedoc.of[Signal]
+// Sum(&quot;Signal&quot;, &quot;A traffic light&#39;s signal.&quot;, List(
+//   Singleton(&quot;Red&quot;, &quot;Stop.&quot;),
+//   Product(&quot;Green&quot;, &quot;Go, after a pause.&quot;, List(Field(&quot;seconds&quot;, &quot;how long the pause is&quot;)))))
+</code></pre>
+<p>A derivation that describes a sealed trait as a <code>oneOf</code>, say, gets the description of the whole and of each alternative from it. The section on the tree, below, has the details.</p>
+<p>What remains is the question of <em>where</em> the compiler finds the comments, which is the same for both, and the answer is different on Scala 2 and on Scala 3.</p>
 <h2><a href="#on-scala-2" name="on-scala-2" class="anchor"><span class="anchor-link"></span></a>On Scala 2</h2>
 <p>The Scala 2 compiler keeps a comment only while it compiles the source file the comment is in, and forgets it afterwards. <code>Scaladoc.of</code> therefore checks three places, in this order:</p>
 <ol>
@@ -230,20 +287,95 @@ Scaladoc.of[geometry.Point].map(_.textParams)
 </ol>
 <p>The third place is fragile. An incremental compile that doesn&rsquo;t recompile the class&rsquo;s file loses the comment. For anything beyond a single module, the compiler plugin is the reliable way.</p>
 <h2><a href="#on-scala-3" name="on-scala-3" class="anchor"><span class="anchor-link"></span></a>On Scala 3</h2>
-<p>Scala 3 keeps doc comments in TASTy, the format it stores type information in, and <code>Scaladoc.of</code> reads them from <code>Symbol.docstring</code>. By default, though, the compiler only loads the comments of the sources it compiles in the current run. To read them from TASTy as well (other modules, jars, and files skipped by an incremental compile), compile the module that calls <code>Scaladoc.of</code> with <code>-Yread-docs</code>:</p>
-<pre class="prettyprint"><code class="language-sbt">scalacOptions += &quot;-Yread-docs&quot;
+<p>Scala 3 keeps doc comments in TASTy, the format it stores type information in, and <code>Scaladoc.of</code> reads them from <code>Symbol.docstring</code>. By default, though, the compiler only loads the comments of the sources it compiles in the current run. To read them from TASTy as well (other modules, jars, and files skipped by an incremental compile), compile the module that calls <code>Scaladoc.of</code> with <code>-Xread-docs</code> (<code>-Yread-docs</code> before Scala 3.5, and deprecated since):</p>
+<pre class="prettyprint"><code class="language-sbt">scalacOptions += &quot;-Xread-docs&quot;
 </code></pre>
-<p>The <a href="getting-started.html#the-sbt-plugin">sbt</a> and <a href="getting-started.html#gradle">Gradle</a> plugins add it to Scala 3 modules that read scaladoc; <a href="getting-started.html#maven">Maven</a> builds pass it in <code>scala-maven-plugin</code>&rsquo;s <code>args</code>.</p>
+<p>The <a href="getting-started.html#the-sbt-plugin">sbt</a> and <a href="getting-started.html#gradle">Gradle</a> plugins add it to every Scala 3 module they&rsquo;re enabled on, under the name its Scala version takes; <a href="getting-started.html#maven">Maven</a> builds pass it in <code>scala-maven-plugin</code>&rsquo;s <code>args</code>.</p>
+<h2><a href="#which-syntax" name="which-syntax" class="anchor"><span class="anchor-link"></span></a>Which syntax</h2>
+<p><code>Scaladoc.of</code> reads a comment in the syntax of where it finds it:</p>
+<table>
+  <thead>
+    <tr>
+      <th>Found in </th>
+      <th>Written for </th>
+      <th>Read as </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>the source code, the annotation (Scala 2) </td>
+      <td>Scala 2 </td>
+      <td>wiki, Scala 2&rsquo;s only syntax </td>
+    </tr>
+    <tr>
+      <td><code>Symbol.docstring</code> (Scala 3) </td>
+      <td>Scala 3 </td>
+      <td>Markdown, Scala 3&rsquo;s default </td>
+    </tr>
+    <tr>
+      <td>the annotation, on a Scala 2 class (Scala 3) </td>
+      <td>Scala 2 </td>
+      <td>wiki </td>
+    </tr>
+  </tbody>
+</table>
+<p>On Scala 3, a codebase that writes its comments in wiki syntax, as with scaladoc&rsquo;s <code>-comment-syntax wiki</code>, says so with a given in scope where it calls <code>Scaladoc.of</code>, or each comment says it for itself, as in Scala 3&rsquo;s scaladoc:</p>
+<pre class="prettyprint"><code class="language-scala">import scaladoc.syntax.wiki.given   // Scaladoc.of reads wiki from here on
+
+/** Some &#39;&#39;&#39;bold&#39;&#39;&#39; text.
+  *
+  * @syntax wiki
+  */
+</code></pre>
+<p><code>Scaladoc.of</code> reads the given&rsquo;s type, so it&rsquo;s <code>scaladoc.syntax.wiki</code> or <code>scaladoc.syntax.markdown</code>, which also works in a library that calls <code>Scaladoc.of</code> from its own macros: the given in scope where those expand counts.</p>
+<h2><a href="#scala-2-libraries-on-scala-3" name="scala-2-libraries-on-scala-3" class="anchor"><span class="anchor-link"></span></a>Scala 2 libraries on Scala 3</h2>
+<p>A Scala 3 project can use Scala 2.13 libraries, and their classes have no TASTy to keep doc comments in. When a library was compiled with the <a href="compiler-plugin.html">compiler plugin</a>, its classes carry their scaladoc in the <code>@ScaladocCarrier</code> annotation, and <code>Scaladoc.of</code> reads it from there, as wiki, the syntax it was written in.</p>
 <h2><a href="#a-misaligned-comment-is-a-compile-error" name="a-misaligned-comment-is-a-compile-error" class="anchor"><span class="anchor-link"></span></a>A misaligned comment is a compile error</h2>
 <p>A comment whose <code>*</code> border wanders from line to line is usually a sign of a botched edit. <code>Scaladoc.of</code> checks the alignment, on Scala 2 and on Scala 3 alike, and reports a comment it can&rsquo;t make sense of as a compile error at the call site, with the comment and the reason. A comment without borders is fine; only a border that&rsquo;s there gets checked.</p>
+<h2><a href="#typedoc-of" name="typedoc-of" class="anchor"><span class="anchor-link"></span></a>Typedoc.of</h2>
+<p><code>Typedoc.of[T]</code>&rsquo;s tree is made of nodes, each with the type&rsquo;s name and its scaladoc, as <code>Scaladoc.of</code> gives it:</p>
+<table>
+  <thead>
+    <tr>
+      <th>Node </th>
+      <th>For </th>
+      <th>Has </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Typedoc.Sum</code> </td>
+      <td>a sealed trait or class, a Scala 3 enum </td>
+      <td>its direct children as <code>variants</code> </td>
+    </tr>
+    <tr>
+      <td><code>Typedoc.Product</code> </td>
+      <td>a case class, a Scala 3 enum case with parameters </td>
+      <td>its constructor&rsquo;s parameters as <code>fields</code>, each with its <code>@param</code> </td>
+    </tr>
+    <tr>
+      <td><code>Typedoc.Singleton</code> </td>
+      <td>an object, a Scala 3 enum case without parameters </td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code>Typedoc.Plain</code> </td>
+      <td>anything else </td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+<p>Variants are nodes themselves, so a variant that&rsquo;s sealed is a nested <code>Sum</code>. Fields have just their name and their <code>@param</code>, not their type&rsquo;s tree: a tree of fields&rsquo; types could loop on a recursive type, and deriving a whole schema is for the code that walks the tree.</p>
+<p>Variants come in declaration order, where the compiler knows it: always on Scala 3, and on Scala 2 when the hierarchy is compiled in the same run. A Scala 2 hierarchy from a jar has no order, and its variants come by name, on Scala 2 and Scala 3 alike.</p>
+<p><code>Typedoc.of</code> finds comments where <code>Scaladoc.of</code> does, so on Scala 3 it reads other modules with <code>-Xread-docs</code>, and a Scala 2 hierarchy from another module or a jar needs the <a href="compiler-plugin.html">compiler plugin</a>. A malformed comment anywhere in the tree is a compile error.</p>
 <h2><a href="#from-a-string" name="from-a-string" class="anchor"><span class="anchor-link"></span></a>From a string</h2>
-<p>When you have the comment as text, there&rsquo;s no need for a macro. <code>Scaladoc.fromString</code> parses it:</p>
+<p>When you have the comment as text, there&rsquo;s no need for a macro. <code>Scaladoc.fromString</code> parses it, in wiki syntax unless told otherwise, with <code>syntax = CommentSyntax.Markdown</code>, or unless the comment says otherwise:</p>
 <pre class="prettyprint"><code class="language-scala">Scaladoc.fromString(&quot;/** Hello. */&quot;).map(_.textDescriptions)
-// res1: Either[ScaladocException, Seq[String]] = Right(value = List(&quot;Hello.&quot;))
+// res3: Either[ScaladocException, Seq[String]] = Right(value = List(&quot;Hello.&quot;))
 </code></pre>
 <p>Scala 3&rsquo;s <code>Symbol.docstring</code> returns a comment with one quirk: the indentation of its first line is gone, while the other lines keep theirs. <code>Scaladoc.fromDocstring</code> parses that form. With <code>strict = true</code>, it puts the indentation back and checks the border&rsquo;s alignment, exactly as <code>Scaladoc.of</code> does:</p>
 <pre class="prettyprint"><code class="language-scala">Scaladoc.fromDocstring(&quot;/** Nested class.\n    *\n    * @param a the a\n    */&quot;, strict = true).map(_.textParams)
-// res2: Either[ScaladocException, Map[String, String]] = Right(
+// res4: Either[ScaladocException, Map[String, String]] = Right(
 //   value = Map(&quot;a&quot; -&gt; &quot;the a&quot;)
 // )
 </code></pre>
@@ -255,7 +387,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.5.0
+0.6.0
 </span>
 </div>
 </article>

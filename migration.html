@@ -146,7 +146,7 @@ andyglow/scaladoc
   <li><a href="getting-started.html" class="page">Getting started</a></li>
   <li><a href="syntax.html" class="page">Comment syntax</a></li>
   <li><a href="model.html" class="page">The model</a></li>
-  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of and Typedoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
   <li><a href="migration.html" class="active page">Migrating</a></li>
 </ul>
@@ -155,6 +155,7 @@ andyglow/scaladoc
 <ul>
   <li><a href="migration.html#migrating" class="header">Migrating</a>
   <ul>
+    <li><a href="migration.html#to-0-6" class="header">To 0.6</a></li>
     <li><a href="migration.html#to-0-5" class="header">To 0.5</a></li>
     <li><a href="migration.html#to-0-4" class="header">To 0.4</a></li>
   </ul></li>
@@ -165,7 +166,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.5.0
+<i class="md-icon" title="Version">label_outline</i> 0.6.0
 </label>
 </li>
 </ul>
@@ -180,6 +181,7 @@ andyglow/scaladoc
 <ul>
   <li><a href="migration.html#migrating" class="header">Migrating</a>
   <ul>
+    <li><a href="migration.html#to-0-6" class="header">To 0.6</a></li>
     <li><a href="migration.html#to-0-5" class="header">To 0.5</a></li>
     <li><a href="migration.html#to-0-4" class="header">To 0.4</a></li>
   </ul></li>
@@ -197,17 +199,60 @@ andyglow/scaladoc
   <p>No man ever steps in the same river twice, for it&rsquo;s not the same river and he&rsquo;s not the same man.</p>
   <p>— attributed to Heraclitus</p>
 </blockquote>
+<h2><a href="#to-0-6" name="to-0-6" class="anchor"><span class="anchor-link"></span></a>To 0.6</h2>
+<p><strong>The sbt and Gradle plugins set up the compiler and nothing else:</strong> the compiler plugin on Scala 2, and <code>-Xread-docs</code> on Scala 3 (see below), now on every Scala 3 module they&rsquo;re enabled on. They no longer add libraries. A module that reads scaladoc depends on <code>scaladoc-parser</code> itself, like on any library it calls; <code>scaladoc-core</code> comes with it:</p>
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-parser&quot; % scaladocVersion.value   // sbt
+</code></pre>
+<pre class="prettyprint"><code class="language-kotlin">implementation(&quot;io.github.andyglow:scaladoc-parser_2.13:0.6.0&quot;)                        // Gradle
+</code></pre>
+<p><strong><code>scaladocRead</code> and <code>scaladocEmbed</code> are gone</strong>, and so are Gradle&rsquo;s <code>read</code> and <code>embed</code>. A build that still sets them doesn&rsquo;t load:</p>
+<ul>
+  <li><strong><code>scaladocRead := true</code> or <code>read.set(true)</code>:</strong> replace it with the dependency above.</li>
+  <li><strong><code>scaladocEmbed := false</code> or <code>embed.set(false)</code>:</strong> with the libraries gone, a module that doesn&rsquo;t embed gets nothing  from the plugin, so it doesn&rsquo;t enable the plugin. On Scala 3, where <code>embed</code> never did anything, a module that reads  keeps the plugin for <code>-Xread-docs</code> and drops the setting.</li>
+</ul>
+<p><strong>A module that embeds scaladoc depends on <code>scaladoc-annotation</code>.</strong> In 0.5.0 it got just the compiler plugin, which broke its Scala 3 consumers: Scala 3 doesn&rsquo;t compile against classes that refer to the annotation without its jar, and fails with &ldquo;Bad symbolic reference … refers to ScaladocCarrier&rdquo;. The sbt and Gradle plugins now add it on Scala 2; by hand, and in Maven, add it at compile scope:</p>
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; % &quot;scaladoc-annotation&quot; % &quot;0.6.0&quot;
+</code></pre>
+<p>Until a library published with 0.5.0 is republished, a Scala 3 project that uses it adds the same dependency itself. Versions before 0.5.0 aren&rsquo;t affected: there the plugins gave publishers <code>scaladoc-ast</code>, which held the annotation then.</p>
+<p><strong>An unclosed HTML or javadoc tag is an error.</strong> A <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;code&gt;</code>, <code>&lt;a href&gt;</code> or another tag the model has a span for, or a <code>{@code</code>, <code>{@link</code> or another javadoc tag, that isn&rsquo;t closed in its paragraph used to come back as an <code>HtmlTag</code> or as text. It&rsquo;s now an <code>UnclosedMarkup</code> error, which in <code>Scaladoc.of</code> and the compiler plugin is a compile error that shows how the text goes from the tag:</p>
+<pre><code>Unclosed &lt;b&gt;: &lt;b&gt;bold claim, never ...
+</code></pre>
+<p>Close the tag, or write <code>&amp;lt;</code> for a <code>&lt;</code> that isn&rsquo;t one. Java-style generics in prose, like <code>Future&lt;B&gt;</code> or <code>List&lt;I&gt;</code>, read as <code>&lt;b&gt;</code> and <code>&lt;i&gt;</code>, so they fail too; <code>List&lt;A&gt;</code> doesn&rsquo;t, since <code>&lt;a&gt;</code> without <code>href</code> needs no closing. Tags that need no closing, like <code>&lt;br&gt;</code>, <code>&lt;img&gt;</code> or <code>&lt;span&gt;</code>, are as before, and so are wiki markers without their closers, like <code>x^2</code>. Markup nests at most 64 deep, past which a tag is a <code>MarkupTooDeep</code> error. See <a href="syntax.html#inline-markup">Comment syntax</a>.</p>
+<p><strong>On Scala 3, the libraries need Scala 3.9 and Java 17.</strong> They are built with Scala 3.9, the LTS after 3.3, and a project on Scala 3.3 can&rsquo;t read what a newer Scala compiled, so a Scala 3 project moves to 3.9 or stays on 0.5. Scala 3.9 targets Java 17 and up. On Scala 2 nothing changes: Scala 2.12 and 2.13, and Java 8.</p>
+<p><strong>The sbt and Gradle plugins pass <code>-Xread-docs</code></strong> on Scala 3, where they passed <code>-Yread-docs</code>. Scala 3.5 renamed the option and deprecates the old name, and Scala 3.3 and 3.4 don&rsquo;t know the new one, so a module on those still gets <code>-Yread-docs</code>. A build that sets it by hand, like a Maven one, renames it too. The Gradle plugin also counts a <code>scala-library</code> 3.x dependency as Scala 3, which it is from 3.8 on.</p>
+<p><strong>On Scala 3, <code>Scaladoc.of</code> reads objects from other modules and jars</strong>, where it gave <code>None</code>: <code>Scaladoc.of[Guest.type]</code> for a documented <code>object Guest</code> in another module now has its scaladoc, as a class there has.</p>
+<p><strong>The compiler plugin embeds the scaladoc of objects too</strong>, where it embedded only classes&rsquo;, so <code>Scaladoc.of[Obj.type]</code> reads a documented object from a Scala 2 jar, on Scala 2 and Scala 3. Objects go by the same include and exclude patterns, by their name like classes: a pattern that matches <code>com.acme.Registry</code> now embeds <code>object Registry</code> too, so a build that embeds selectively may want to check what its patterns now cover.</p>
+<p><strong><code>Typedoc.of[T]</code> is new:</strong> the scaladoc of a sealed hierarchy or an enum, with its variants&rsquo;, and of a case class with its fields&rsquo;, as a tree. See <a href="extractor.html">Typedoc.of</a>. <code>Scaladoc.of</code> stays as it is.</p>
+<p><strong>On Scala 3, <code>Scaladoc.of</code> reads doc comments as Markdown</strong>, Scala 3&rsquo;s default syntax, where it read them as wiki before. A codebase that writes its comments in wiki syntax, as with scaladoc&rsquo;s <code>-comment-syntax wiki</code>, says so with a given in scope at the call site, or a comment with a tag, as in Scala 3&rsquo;s scaladoc:</p>
+<pre class="prettyprint"><code class="language-scala">import scaladoc.syntax.wiki.given    // every Scaladoc.of in scope reads wiki
+</code></pre>
+<pre class="prettyprint"><code class="language-scala">/** Some &#39;&#39;&#39;bold&#39;&#39;&#39; text.
+  *
+  * @syntax wiki
+  */
+</code></pre>
+<p><code>fromString</code> and <code>fromDocstring</code> take the syntax as a parameter, <code>CommentSyntax.Wiki</code> by default, and honor <code>@syntax</code> too. On Scala 2, <code>Scaladoc.of</code> reads wiki, Scala 2&rsquo;s only syntax, as before.</p>
+<p><strong><code>Scaladoc.of</code> expands the defines of parents and enclosing classes</strong>, as scaladoc does, where it left <code>$name</code> as written unless the comment itself defined it. See <a href="syntax.html#macros">Macros</a>. And <code>\$</code> is a <code>$</code> in every comment, as in scaladoc, where it stayed <code>\$</code> in a comment without defines.</p>
+<p><strong>On Scala 3, <code>Scaladoc.of</code> also reads the scaladoc of Scala 2.13 classes</strong>, that a library published with the compiler plugin embedded in them, in wiki syntax. It returned <code>None</code> for them before.</p>
+<p>The model grows the nodes Markdown needs (see <a href="model.html#markup">The model</a>): <code>Strikethrough</code>, <code>Image</code>, <code>LineBreak</code>, <code>Checkbox</code> and <code>FootnoteReference</code> among the spans, <code>BlockQuote</code> and <code>Footnote</code> among the blocks. Only Markdown comments produce them, so code that walks wiki comments sees nothing new, but a <code>match</code> over <code>Markup</code> that lists every node gets exhaustivity warnings until it handles them.</p>
+<p><strong><code>CodeBlock</code> has a language:</strong> <code>CodeBlock(value, language)</code>, where <code>language</code> is what a Markdown fence names, like <code>scala</code> in <code>```scala</code>, and <code>None</code> otherwise. Building one is unchanged, <code>CodeBlock(&quot;val x = 1&quot;)</code> still compiles, but a pattern needs the second field:</p>
+<pre class="prettyprint"><code class="language-scala">// 0.5
+case CodeBlock(code)    =&gt; code
+
+// 0.6
+case CodeBlock(code, _) =&gt; code
+</code></pre>
 <h2><a href="#to-0-5" name="to-0-5" class="anchor"><span class="anchor-link"></span></a>To 0.5</h2>
 <p>0.5 gives a module only what its part needs. A module that publishes its scaladoc no longer gets the scaladoc libraries along with the compiler plugin, and a module that reads it asks for them.</p>
-<p><strong>The sbt and Gradle plugins</strong> publish by default, as before, but now add no libraries for that: on Scala 2 just the compiler plugin, on Scala 3 nothing. Reading is opt-in. A module that calls <code>Scaladoc.of</code> sets:</p>
+<p><strong>The sbt and Gradle plugins</strong> publish by default, as before, but now add no libraries for that: on Scala 2 just the compiler plugin (0.6 adds <code>scaladoc-annotation</code> back, see above), on Scala 3 nothing. Reading is opt-in. In 0.5.0, a module that calls <code>Scaladoc.of</code> sets (see 0.6 above, which replaces this with a plain dependency):</p>
 <pre class="prettyprint"><code class="language-sbt">scaladocRead := true          // sbt
 </code></pre>
 <pre class="prettyprint"><code class="language-kotlin">scaladoc { read.set(true) }   // Gradle
 </code></pre>
-<p>Without it, a module that reads gets &ldquo;not found: value Scaladoc&rdquo; when compiling, and setting it fixes that. A module that only reads can also turn publishing off, with <code>scaladocEmbed := false</code> or <code>embed.set(false)</code>.</p>
+<p>Without it, a module that reads gets &ldquo;not found: value Scaladoc&rdquo; when compiling, and setting it fixes that. A module that only reads could also turn publishing off, with <code>scaladocEmbed := false</code> or <code>embed.set(false)</code> (gone in 0.6).</p>
 <p><strong>By hand</strong>, a Scala 2 module that publishes can drop <code>scaladoc-ast</code> (now <code>scaladoc-core</code>) and <code>scaladoc-parser</code>, and keep just the compiler plugin. A Scala 3 module that publishes needs nothing, and <code>-Yread-docs</code> belongs only to modules that read.</p>
 <p><strong><code>scaladoc-ast</code> is now <code>scaladoc-core</code>.</strong> It holds <code>Scaladoc</code> itself, the model of tags and markup, and the helpers like <code>textParams</code> and <code>summary</code>, which is more than a syntax tree. Only the artifact&rsquo;s name changed; the package is <code>scaladoc</code> as before, so no code changes. The plugins add the new name themselves. By hand, rename the dependency:</p>
-<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-core&quot; % &quot;0.5.0&quot;   // was scaladoc-ast
+<pre class="prettyprint"><code class="language-sbt">libraryDependencies += &quot;io.github.andyglow&quot; %% &quot;scaladoc-core&quot; % &quot;0.6.0&quot;   // was scaladoc-ast
 </code></pre>
 <p><strong><code>scaladoc-annotation</code></strong> is a new jar with just the <code>ScaladocCarrier</code> annotation, for anyone who reads embedded scaladoc without this library; see <a href="compiler-plugin.html#reading-embedded-scaladoc-without-this-library">Reading embedded scaladoc without this library</a>. The annotation&rsquo;s name and package haven&rsquo;t changed, so classes compiled with earlier versions read as before. <code>scaladoc-parser</code> depends on it on Scala 2, so readers don&rsquo;t need to add it.</p>
 <h2><a href="#to-0-4" name="to-0-4" class="anchor"><span class="anchor-link"></span></a>To 0.4</h2>
@@ -264,7 +309,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.5.0
+0.6.0
 </span>
 </div>
 </article>

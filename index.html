@@ -141,7 +141,7 @@ andyglow/scaladoc
   <li><a href="getting-started.html" class="page">Getting started</a></li>
   <li><a href="syntax.html" class="page">Comment syntax</a></li>
   <li><a href="model.html" class="page">The model</a></li>
-  <li><a href="extractor.html" class="page">Scaladoc.of</a></li>
+  <li><a href="extractor.html" class="page">Scaladoc.of and Typedoc.of</a></li>
   <li><a href="compiler-plugin.html" class="page">Compiler plugin</a></li>
   <li><a href="migration.html" class="page">Migrating</a></li>
 </ul>
@@ -160,7 +160,7 @@ andyglow/scaladoc
 <ul style="display: none">
 <li class="md-nav__item md-version" id="project.version">
 <label class="md-nav__link" for="__version">
-<i class="md-icon" title="Version">label_outline</i> 0.5.0
+<i class="md-icon" title="Version">label_outline</i> 0.6.0
 </label>
 </li>
 </ul>
@@ -194,14 +194,15 @@ andyglow/scaladoc
 </blockquote>
 <p>Every Scala codebase carries a second program, written in prose. It sits in the doc comments above classes and methods, and it explains what the code means: what a field holds, what a parameter is for, why an exception gets thrown. The compiler reads it once, mostly to throw it away, and <code>scaladoc</code> turns it into a web site. Then it rests.</p>
 <p>That&rsquo;s a waste, because the prose is often exactly what other tools are missing. A JSON Schema derived from a case class can say that a field is a string, but not that it&rsquo;s <em>the name shown to other users</em>. An OpenAPI spec knows the shape of a request, not its purpose. The purpose is right there in the source, one line above the shape.</p>
-<p>This library puts that prose to work. It has four parts:</p>
+<p>This library puts that prose to work. It has five parts:</p>
 <ul>
   <li><strong>a model</strong> of what a doc comment says: its tags (<code>@param</code>, <code>@return</code>, &hellip;) and its markup (paragraphs, headings,  lists, tables, code, links, bold and the rest)</li>
-  <li><strong>a parser</strong> that turns comment text into the model. It reads scaladoc&rsquo;s wiki markup, HTML and javadoc&rsquo;s inline  tags, on the JVM and on Scala.js</li>
+  <li><strong>a parser</strong> that turns comment text into the model. It reads scaladoc&rsquo;s wiki markup and Markdown, as Scala 3&rsquo;s  scaladoc does, with HTML and javadoc&rsquo;s inline tags, on the JVM and on Scala.js</li>
   <li><strong><code>Scaladoc.of[T]</code></strong>, which hands you the scaladoc of a type at compile time, in macros and type class derivation</li>
+  <li><strong><code>Typedoc.of[T]</code></strong>, which hands you the scaladoc of a sealed hierarchy or an enum with its variants&rsquo;, and of a case  class with its fields&rsquo;, as a tree</li>
   <li><strong>a compiler plugin</strong> (Scala 2) that embeds the scaladoc of classes into their bytecode, so it survives the trip  into a jar</li>
 </ul>
-<p>Here is the whole idea in a few lines. A case class documents itself, and the code asks it what it said:</p>
+<p>Here is the whole idea in a few lines. A case class and a sealed hierarchy document themselves, and the code asks them what they said:</p>
 <pre class="prettyprint"><code class="language-scala">import scaladoc._
 
 object model {
@@ -214,12 +215,37 @@ object model {
     * @param age  how old they are, in years
     */
   case class User(name: String, age: Int)
+
+  /** What a user may do. */
+  sealed trait Role
+
+  /** Can do anything, invite others included. */
+  case object Admin extends Role
+
+  /** Can read and comment.
+    *
+    * @param team the team they&#39;re in
+    */
+  case class Member(team: String) extends Role
+
+  /** Can look, for a while. */
+  sealed trait Guest extends Role
+
+  /** Invited by a member.
+    *
+    * @param by who invited them
+    */
+  case class Invited(by: String) extends Guest
+
+  /** Came in by a shared link. */
+  final class Anonymous extends Guest
 }
 
 import model._
 
 val doc = Scaladoc.of[User].get
 </code></pre>
+<p><code>Scaladoc.of</code> gives a type&rsquo;s comment:</p>
 <pre class="prettyprint"><code class="language-scala">doc.textSummary
 // res0: Option[String] = Some(value = &quot;A user of the app.&quot;)
 doc.textParams
@@ -229,6 +255,35 @@ doc.textParams
 // )
 </code></pre>
 <p><code>textSummary</code> is the first sentence, the one scaladoc itself would show in a list of members. <code>textParams</code> is what each field means. A schema generator needs nothing more to give every property a title and a description.</p>
+<p><code>Typedoc.of</code> gives the comments of a type made of others, as a tree. Here each <code>Some(doc)</code> is shown as its text:</p>
+<pre class="prettyprint"><code class="language-scala">Typedoc.of[Role]
+</code></pre>
+<ul>
+  <li><code>Sum</code>: a sealed trait or class, with its variants, which can be sums themselves</li>
+  <li><code>Product</code>: a case class, with its fields, each documented by its <code>@param</code></li>
+  <li><code>Singleton</code>: an object</li>
+  <li><code>Plain</code>: any other type</li>
+</ul>
+<p>A Scala 3 enum is a <code>Sum</code> of its cases, a case with parameters a <code>Product</code>, and one without a <code>Singleton</code>:</p>
+<pre class="prettyprint"><code class="language-scala">/** How a user hears from the app. */
+enum Channel {
+
+  /** Not at all. */
+  case Silent
+
+  /** By e-mail.
+    *
+    * @param perDay how many a day, at most
+    */
+  case Email(perDay: Int)
+}
+
+Typedoc.of[Channel]
+// Sum(&quot;Channel&quot;, &quot;How a user hears from the app.&quot;, List(
+//   Singleton(&quot;Silent&quot;, &quot;Not at all.&quot;),
+//   Product(&quot;Email&quot;, &quot;By e-mail.&quot;, List(Field(&quot;perDay&quot;, &quot;how many a day, at most&quot;)))))
+</code></pre>
+<p>A schema generator makes a sealed trait a <code>oneOf</code>, with a description for the whole and one for each alternative.</p>
 <h2><a href="#supported-versions" name="supported-versions" class="anchor"><span class="anchor-link"></span></a>Supported versions</h2>
 <table>
   <thead>
@@ -236,7 +291,7 @@ doc.textParams
       <th>Module </th>
       <th align="center">Scala 2.12 </th>
       <th align="center">Scala 2.13 </th>
-      <th align="center">Scala 3 (3.3+) </th>
+      <th align="center">Scala 3 (3.9+) </th>
       <th align="center">Scala.js 1.x </th>
     </tr>
   </thead>
@@ -271,9 +326,9 @@ doc.textParams
     </tr>
   </tbody>
 </table>
-<p><code>scaladoc-annotation</code> is a single Java jar, with no Scala suffix, for all of them. <code>sbt-scaladoc</code> works with sbt 1.5.8+ and sbt 2.x, and the Gradle plugin with Gradle 8.5+. All artifacts target Java 8 and run on any later JDK.</p>
+<p><code>scaladoc-annotation</code> is a single Java jar, with no Scala suffix, for all of them. <code>sbt-scaladoc</code> works with sbt 1.5.8+ and sbt 2.x, and the Gradle plugin with Gradle 8.5+. Scala 2 artifacts target Java 8, Scala 3 ones Java 17 (Scala 3.9 needs it), and run on any later JDK.</p>
 <h2><a href="#where-to-go-next" name="where-to-go-next" class="anchor"><span class="anchor-link"></span></a>Where to go next</h2>
-<p>If you want to try it, start with <a href="getting-started.html">Getting started</a>. If you write the comments, <a href="syntax.html">Comment syntax</a> shows everything the parser understands. If you write the tools that read them, <a href="model.html">The model</a> and <a href="extractor.html">Scaladoc.of</a> are for you.</p>
+<p>If you want to try it, start with <a href="getting-started.html">Getting started</a>. If you write the comments, <a href="syntax.html">Comment syntax</a> shows everything the parser understands. If you write the tools that read them, <a href="model.html">The model</a> and <a href="extractor.html">Scaladoc.of and Typedoc.of</a> are for you.</p>
 </div>
 <div>
 <a href="https://github.com/andyglow/scaladoc/tree/master/target/out/jvm/scala-2.13.18/scaladoc-docs/mdoc/index.md" title="Edit this page" class="md-source-file md-edit">
@@ -282,7 +337,7 @@ Edit this page
 </div>
 <div class="print-only">
 <span class="md-source-file md-version">
-0.5.0
+0.6.0
 </span>
 </div>
 </article>
