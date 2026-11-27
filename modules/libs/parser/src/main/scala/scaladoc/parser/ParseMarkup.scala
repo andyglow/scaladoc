@@ -1,8 +1,10 @@
 package scaladoc.parser
 
+import scaladoc.{MarkupTooDeep, UnclosedMarkup}
 import scaladoc.Markup._
 import scaladoc.utils._
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -11,19 +13,32 @@ import scala.util.Try
   * `MarkdownInlines`, which use what both syntaxes share from here.
   *
   * Wiki is parsed by a recursive descent parser like scaladoc's own: a document is a sequence of blocks (paragraphs, headings and code
-  * blocks, lists, tables, rules), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`. Unlike scaladoc, a
-  * marker that isn't closed within its paragraph is text, so `x^2` and an unclosed backtick parse.
+  * blocks, lists, tables, rules), and a paragraph or a heading is inline markup, which nests: `'''bold ''italic'''''`, at
+  * most `MaxDepth` deep. Unlike scaladoc, a marker that isn't closed within its paragraph is text, so `x^2` and an
+  * unclosed backtick parse. An HTML or javadoc tag that isn't closed, like `<b>` or `{@code`, is an `UnclosedMarkup`
+  * error.
   *
   * HTML: block tags become their wiki syntax first (see `htmlToWiki`). The inline tags with a model equivalent become
   * that (`<b>` is bold, `<code>` monospace, `<a href>` a link), other safe tags an `HtmlTag`, and entities are decoded.
   * So are javadoc's inline tags: `{@code x}` is monospace, `{@link x}` a link.
   *
   * @param codeBlocks whether `{{{ ... }}}` is a code block; a heading's title is parsed without
+  * @param depth how deep the text is nested, as a javadoc tag's label is
   */
-final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
+final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean, depth: Int = 0) {
 
   private var pos = 0
   private val len = text.length
+
+  // the markup parsed so far, by where its content starts, its closer, and whether a bold encloses it, which is what
+  // its content parses by: the content and where it ends, or none if it isn't closed. It parses the same the next
+  // time, so it isn't parsed again.
+  private val parsed = mutable.HashMap.empty[(Int, String, Boolean), Option[(List[Span], Int)]]
+
+  // the positions the scans for a closer that didn't find it went through, by the closer, whether a bold encloses
+  // them, and whether they're at the deepest level, where markup is text. From any of these positions on, such a scan
+  // is the same, and doesn't find it either.
+  private val unclosedFrom = mutable.HashMap.empty[(String, Boolean, Boolean), mutable.BitSet]
 
   private def eof: Boolean                    = pos >= len
   // HTML tags match whatever their case
@@ -131,7 +146,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       skipBlankLines()
       if (!eof) {
         val from = pos
-        block() foreach { b => log.info(s"- block: $b"); blocks += b }
+        block() foreach { b => log.info(s"- block: ${ParseMarkup.near(text, from, pos)}"); blocks += b }
         if (pos == from) pos += 1 // can't happen, but never loop forever
       }
     }
@@ -154,7 +169,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       case Some((level, title, end)) =>
         pos = end
         // the model goes down to level 6; deeper headings are level 6, much like scaladoc renders them
-        Some(Heading(Heading.levelOf(math.min(level, 6)), ParseMarkup.spans(title, log)))
+        Some(Heading(Heading.levelOf(math.min(level, 6)), ParseMarkup.spans(title, log, depth)))
       case None if ruleAt(pos).isDefined =>
         pos = ruleAt(pos).get
         Some(HorizontalRule)
@@ -173,7 +188,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
   // the rows after the header and the delimiter row, up to a line that isn't a row. Rows get as wide as the header.
   private def table(header: List[String], alignments: List[Table.Alignment], end: Int): Table = {
     def row(cells: List[String]) =
-      Table.Row(cells.padTo(header.size, "").take(header.size).map(cell => Paragraph(ParseMarkup.spans(cell, log))))
+      Table.Row(cells.padTo(header.size, "").take(header.size).map(cell => Paragraph(ParseMarkup.spans(cell, log, depth))))
     pos = end
     val rows = ListBuffer.empty[Table.Row]
     var more = true
@@ -234,18 +249,46 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       buf.setLength(0)
     }
 
+    // how deep the markup in this markup is
+    def level: Int = depth + stop.size + outer.size + 1
+
+    // the markup up to `close`, from here on, which ends where `close` is; none if it isn't closed in the paragraph,
+    // or would be nested deeper than `MaxDepth`
+    def inside(close: String): Option[List[Span]] =
+      if (level > ParseMarkup.MaxDepth) None
+      else {
+        val enclosing = stop.toList ++ outer
+        val key       = (pos, close, enclosing.contains("'''"))
+        val result = parsed.getOrElse(key, {
+          val r = spansUntil(Some(close), enclosing) match {
+            case (inner, true) => Some((inner, pos))
+            case _             => None
+          }
+          parsed(key) = r
+          r
+        })
+        result.map { case (inner, end) => pos = end; inner }
+      }
+
     // markup that can have markup inside, if its closing marker is in the paragraph
     def tryNested(marker: String)(make: List[Span] => Span): Boolean = {
-      val from            = pos
+      val from = pos
       pos += marker.length
-      val (inner, closed) = spansUntil(Some(marker), stop.toList ++ outer)
-      if (closed) {
-        flush()
-        spans += make(inner)
-        pos += marker.length
-      } else pos = from
-      closed
+      inside(marker) match {
+        case Some(inner) =>
+          flush()
+          spans += make(inner)
+          pos += marker.length
+          true
+        case None =>
+          pos = from
+          false
+      }
     }
+
+    // a tag that has to be closed, at `from`, can't be nested any deeper
+    def checkDepth(markup: String, from: Int): Unit =
+      if (level > ParseMarkup.MaxDepth) throw MarkupTooDeep(markup, ParseMarkup.MaxDepth, ParseMarkup.near(text, from))
 
     // ... without its closing marker, the opening one is text
     def nested(marker: String)(make: List[Span] => Span): Unit =
@@ -287,14 +330,14 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       } else if (hasTitle) {
         pos = j
         while (!paragraphBreakAt(pos) && text.charAt(pos).isWhitespace) pos += 1
-        val (title, closed) = spansUntil(Some(close), stop.toList ++ outer)
-        if (closed) {
-          flush()
-          spans += Link(text.substring(target, j), title.trim)
-          pos += close.length
-        } else {
-          pos = from + 2
-          buf ++= "[["
+        inside(close) match {
+          case Some(title) =>
+            flush()
+            spans += Link(text.substring(target, j), title.trim)
+            pos += close.length
+          case None =>
+            pos = from + 2
+            buf ++= "[["
         }
       } else {
         pos = from + 2
@@ -302,20 +345,23 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       }
     }
 
-    // an HTML tag. The inline ones with a model equivalent, like <b>, become that, the other safe ones an HtmlTag. Any
-    // other `<`, like the one of `List<String>`, is text.
+    // an HTML tag. The inline ones with a model equivalent, like <b>, become that, and have to be closed in the
+    // paragraph; the other safe ones are an HtmlTag. Any other `<`, like the one of `List<String>`, is text.
     def html(): Unit = ParseMarkup.htmlTagAt(text, pos) match {
       case None => buf += '<'; pos += 1
       case Some(ParseMarkup.TagAt(closing, tagName, attributes, end)) =>
         val raw  = text.substring(pos, end)
         val name = tagName.toLowerCase
         def tag(): Unit = { flush(); spans += HtmlTag(raw); pos = end }
+        def notClosed(): Nothing = throw UnclosedMarkup(s"<$name>", ParseMarkup.near(text, pos))
         def to(close: String)(make: List[Span] => Span): Unit = {
-          val from            = pos
+          checkDepth(s"<$name>", pos)
+          val from = pos
           pos = end
-          val (inner, closed) = spansUntil(Some(close), stop.toList ++ outer)
-          if (closed) { flush(); spans += make(inner); pos += close.length }
-          else { pos = from; tag() }
+          inside(close) match {
+            case Some(inner) => flush(); spans += make(inner); pos += close.length
+            case None        => pos = from; notClosed()
+          }
         }
         if (closing) { if (ParseMarkup.SafeTags(name)) tag() else { buf += '<'; pos += 1 } }
         else name match {
@@ -329,7 +375,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
             var j = end
             while (!paragraphBreakAt(j) && !at(close, j)) j += 1
             if (j < len && at(close, j)) { flush(); spans += Monospace(ParseMarkup.decodeEntities(text.substring(end, j))); pos = j + close.length }
-            else tag()
+            else notClosed()
           case "a" =>
             ParseMarkup.hrefIn(attributes) match {
               case Some(href) => to("</a>")(title => Link(ParseMarkup.decodeEntities(href), title.trim))
@@ -348,23 +394,31 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
       else { buf += '&'; pos += 1 }
     }
 
-    // javadoc's inline tags, which every syntax has; one that isn't closed in the paragraph is text
-    def javadocTag(): Unit = ParseMarkup.javadocTagAt(text, pos, paragraphBreakAt, ParseMarkup.spans(_, log)) match {
+    // a javadoc tag's label, which is nested in it
+    def label(x: String): List[Span] = { checkDepth("{@link", pos); ParseMarkup.spans(x, log, level) }
+
+    // javadoc's inline tags, which every syntax has, and have to be closed in the paragraph
+    def javadocTag(): Unit = ParseMarkup.javadocTagAt(text, pos, paragraphBreakAt, label) match {
       case Some((Left(content), end)) => buf ++= content; pos = end
       case Some((Right(span), end))   => flush(); spans += span; pos = end
       case None                       => buf ++= "{@"; pos += 2
     }
 
-    var closed = false
-    var done   = false
+    val scan    = (stop.getOrElse(""), outer.contains("'''"), level > ParseMarkup.MaxDepth)
+    val visited = if (stop.isDefined) mutable.ArrayBuffer.empty[Int] else null
+    var closed  = false
+    var done    = false
     while (!done) {
+      if (visited != null) visited += pos
       if (paragraphEndsAt(pos)) done = true
+      else if (visited != null && unclosedFrom.get(scan).exists(_(pos))) done = true
       else if (stop.exists(at(_, pos))) {
         // in `''...''`, a `'''` is bold if it gets closed. Otherwise it ends the italic, unless it ends an enclosing
         // bold: `'''a ''b'''` is bold with a stray `''`, while in `'''a ''b'''''` the italic closes first.
         val tripleQuote = stop.contains("''") && at("'''", pos)
         if (!(tripleQuote && tryNested("'''")(Bold(_)))) {
-          val quotes = text.iterator.drop(pos).takeWhile(_ == '\'').size
+          var quotes = 0
+          while (pos + quotes < len && text.charAt(pos + quotes) == '\'') quotes += 1
           closed = !(tripleQuote && outer.contains("'''") && quotes < 5)
           done = true
         }
@@ -384,6 +438,7 @@ final class ParseMarkup private (text: String, log: Log, codeBlocks: Boolean) {
         pos += 1
       }
     }
+    if (visited != null && !closed) unclosedFrom.getOrElseUpdate(scan, mutable.BitSet.empty) ++= visited
     flush()
     (spans.toList, closed)
   }
@@ -401,14 +456,37 @@ object ParseMarkup {
     lines.map(line => if (line.trim.isEmpty) "" else line.drop(indent)).mkString("\n")
   }
 
-  // the inline markup of a line, like a heading's title
-  private[parser] def spans(line: String, log: Log): List[Span] =
-    new ParseMarkup(line, log, codeBlocks = false).spansUntil(None)._1.trim
+  /** How deep inline markup nests: `<b>` in `<b>` in ... Deeper, a marker is text, as it is without a closer, and a
+    * tag that has to be closed, like `<b>`, a `MarkupTooDeep` error.
+    */
+  final val MaxDepth = 64
+
+  // the inline markup of a line, like a heading's title, nested `depth` deep
+  private[parser] def spans(line: String, log: Log, depth: Int = 0): List[Span] =
+    new ParseMarkup(line, log, codeBlocks = false, depth).spansUntil(None)._1.trim
+
+  /** How the text goes from `i`, for messages: the rest of its line, cut after 24 characters at a word's end if it
+    * can, and `...` if more than whitespace follows before `to`.
+    */
+  private[parser] def near(text: String, i: Int, to: Int = -1): String = {
+    val until = if (to < 0) text.length else to
+    var end   = i
+    while (end < until && end - i < 24 && !text.charAt(end).isNL) end += 1
+    if (end < until && !text.charAt(end).isWhitespace) {
+      var space = end - 1
+      while (space > i && !text.charAt(space).isWhitespace) space -= 1
+      if (space > i) end = space
+    }
+    while (end > i && text.charAt(end - 1).isWhitespace) end -= 1
+    var more = end
+    while (more < until && text.charAt(more).isWhitespace) more += 1
+    text.substring(i, end) + (if (more < until) " ..." else "")
+  }
 
   /** Javadoc's inline tag at `i` of `text`, which every syntax has: `{@code x}` and `{@value x}` are monospace,
     * `{@literal x}` is text, `{@link x}` and `{@linkplain x}` are links with an optional label, which `label` parses,
-    * and `{@docRoot}` goes. Braces in them must balance. Others, like `{@inheritDoc}`, and one that isn't closed before
-    * `ends` are none. Text (`Left`) or a span, and where the tag ends.
+    * and `{@docRoot}` goes. Braces in them must balance. Others, like `{@inheritDoc}`, are none, and one that isn't
+    * closed before `ends` is an `UnclosedMarkup` error. Text (`Left`) or a span, and where the tag ends.
     */
   private[parser] def javadocTagAt(
     text: String,
@@ -422,12 +500,13 @@ object ParseMarkup {
     while (j < len && text.charAt(j).isSpace) j += 1
     val from  = j
     var depth = 0
-    while (!ends(j) && !(text.charAt(j) == '}' && depth == 0)) {
-      if (text.charAt(j) == '{') depth += 1 else if (text.charAt(j) == '}') depth -= 1
-      j += 1
-    }
-    if (!text.startsWith("{@", i) || !JavadocTags(name) || j >= len || text.charAt(j) != '}') None
+    if (!text.startsWith("{@", i) || !JavadocTags(name)) None
     else {
+      while (!ends(j) && !(text.charAt(j) == '}' && depth == 0)) {
+        if (text.charAt(j) == '{') depth += 1 else if (text.charAt(j) == '}') depth -= 1
+        j += 1
+      }
+      if (j >= len || text.charAt(j) != '}') throw UnclosedMarkup("{@" + name, near(text, i))
       val content = text.substring(from, j)
       val tag: Either[String, Span] = name match {
         case "literal"        => Left(content)

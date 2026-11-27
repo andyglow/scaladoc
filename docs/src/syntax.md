@@ -131,6 +131,16 @@ paragraph is therefore plain text, not an error that loses the whole comment:
 parse("/** The cost grows like n^2, and `this backtick never closes. */")
 ```
 
+HTML and javadoc tags are another matter: a `<b>` or a `{@code` that isn't closed in its paragraph is an error, since
+nobody writes one by accident, and there's no telling where it was meant to end. The error shows how the text goes
+from the tag:
+
+```scala mdoc
+Scaladoc.fromString("/** A <b>bold claim, never closed. */")
+```
+
+Markup nests at most 64 deep. Deeper, a marker is text, as it is without a closer, and a tag is an error.
+
 ## Links
 
 A link holds a target and, optionally, a title. The target runs to the first whitespace and the rest is the title,
@@ -257,7 +267,9 @@ it into the same model as the wiki markup, wherever the model has an equivalent:
 parse("/** <p>Returns a <code>List&lt;A&gt;</code> of <b>all</b> the <a href=\"https://example.com\">items</a>.</p> */")
 ```
 
-Other tags that scaladoc keeps, like `<span>` or `<table>`, come back as `HtmlTag` spans with the tag as written. A
+The tags that become the model, from `<b>` to `<a href="...">`, have to be closed in their paragraph (see
+@ref:[Inline markup](#inline-markup)). Other tags that scaladoc keeps, like `<span>` or `<table>`, come back as `HtmlTag` spans with the
+tag as written, closed or not. A
 `<` that isn't a tag at all, as in `List<String>`, is text. HTML inside `{{{` code blocks stays as it is, and so it does
 in `<pre>`, except that `<code>` tags go and entities are decoded.
 
@@ -278,7 +290,8 @@ Javadoc's inline tags are understood too:
 parse("/** Wraps a {@link java.util.Map} of {@code Map<K, {V}>}, see {@linkplain Foo#bar the bar}. */")
 ```
 
-Braces inside a tag must balance, which is what lets `{@code Map<K, {V}>}` hold braces of its own.
+Braces inside a tag must balance, which is what lets `{@code Map<K, {V}>}` hold braces of its own, and a tag has to
+be closed in its paragraph, in Markdown too. Others, like `{@inheritDoc}`, are text.
 
 ## Macros
 
@@ -404,7 +417,8 @@ Scaladoc renders comments to HTML, and this parser turns them into a model for o
 follow from that difference, and a few from fixing what scaladoc leaves to warnings:
 
 - **Monospace is literal.** Scaladoc parses markup inside backticks; here the text of code stays as written.
-- **Unclosed markers are text.** Scaladoc runs an unclosed `''` to the end of the paragraph.
+- **Unclosed markers are text.** Scaladoc runs an unclosed `''` to the end of the paragraph. An unclosed `<b>` or
+  `{@code`, though, is an error.
 - **Bold inside italic works.** In `''a '''b''' c''`, scaladoc ends the italic at the `'''`; here the bold nests.
 - **Broken tables aren't tables.** Without a valid delimiter row, scaladoc repairs the table and warns; here the lines
   stay text, which is what GitHub does and what scaladoc's own source says it should do.

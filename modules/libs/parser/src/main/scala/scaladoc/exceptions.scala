@@ -78,3 +78,15 @@ final case class UnexpectedParagraphSeparator(
 
   def message = s"Unexpected Paragraph Separator: Len=$length"
 }
+
+/** Inline markup that has to be closed isn't, within its paragraph: an HTML tag the model has a span for, like `<b>`,
+  * `<code>` or `<a href>`, or a javadoc tag, like `{@code`. `markup` is its opener, `near` how the text goes from it.
+  */
+final case class UnclosedMarkup(markup: String, near: String) extends ScaladocException {
+  override def getMessage: String = s"Unclosed $markup: $near"
+}
+
+/** An HTML tag nested deeper than `limit` spans. `near` is how the text goes from it. */
+final case class MarkupTooDeep(markup: String, limit: Int, near: String) extends ScaladocException {
+  override def getMessage: String = s"$markup nested more than $limit deep: $near"
+}

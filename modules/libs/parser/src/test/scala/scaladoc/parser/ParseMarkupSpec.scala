@@ -341,9 +341,8 @@ class ParseMarkupSpec extends WSpec {
       def p(spans: Span*) = Document(Paragraph(spans.toList))
 
       ParseMarkup("""<span class="x">a</span>""") mustBe p(HtmlTag("""<span class="x">"""), PlainText("a"), HtmlTag("</span>"))
-      ParseMarkup("<b>unclosed") mustBe p(HtmlTag("<b>"), PlainText("unclosed"))
       ParseMarkup("<a name=\"x\">anchor</a>") mustBe p(HtmlTag("<a name=\"x\">"), PlainText("anchor"), HtmlTag("</a>"))
-      ParseMarkup("<code>unclosed") mustBe p(HtmlTag("<code>"), PlainText("unclosed"))
+      ParseMarkup("<span>unclosed") mustBe p(HtmlTag("<span>"), PlainText("unclosed"))
       ParseMarkup("List<String> and a < b and </nope>") mustBe p(PlainText("List<String> and a < b and </nope>"))
     }
 
@@ -412,10 +411,71 @@ class ParseMarkupSpec extends WSpec {
       ParseMarkup("see {@link Foo} or {@linkplain Foo#bar the ''bar''}") mustBe p(
         PlainText("see "), Link("Foo"), PlainText(" or "), Link("Foo#bar", List(PlainText("the "), Italic("bar"))))
       ParseMarkup("a {@literal <} b, {@value MAX}{@docRoot}") mustBe p(PlainText("a < b, "), Monospace("MAX"))
-      ParseMarkup("{@inheritDoc} and {@code open") mustBe p(PlainText("{@inheritDoc} and {@code open"))
+      ParseMarkup("{@inheritDoc} and {@unknown open") mustBe p(PlainText("{@inheritDoc} and {@unknown open"))
       Scaladoc.fromString("/** Uses {@link java.util.List}.\n  * @param a {@code a}\n  */").map(_.tags) mustBe Right(List(
         Tag.Description(Document(Paragraph(PlainText("Uses "), Link("java.util.List"), PlainText(".")))),
         Tag.Param("a", Document(Paragraph(Monospace("a"))))))
+    }
+
+    "fail on an HTML tag or a javadoc tag that isn't closed in its paragraph" in {
+      def error(x: String) = intercept[ScaladocException](ParseMarkup(x))
+
+      error("<b>Beginning of a sentence that goes on") mustBe
+        UnclosedMarkup("<b>", "<b>Beginning of a ...")
+      error("<b>Beginning of a sentence that goes on").getMessage mustBe
+        "Unclosed <b>: <b>Beginning of a ..."
+      error("a <B>b") mustBe UnclosedMarkup("<b>", "<B>b")
+      error("<b>a\n\n</b>") mustBe UnclosedMarkup("<b>", "<b>a ...")
+      for (tag <- List("strong", "i", "em", "u", "sup", "sub", "code", "tt"))
+        error(s"a <$tag>b") mustBe UnclosedMarkup(s"<$tag>", s"<$tag>b")
+      error("""<a href="x">link""") mustBe UnclosedMarkup("<a>", """<a href="x">link""")
+      error("<b>a <i>b</b>") mustBe UnclosedMarkup("<i>", "<i>b</b>")
+      error("| <b>a | b</b> |\n|---|---|") mustBe UnclosedMarkup("<b>", "<b>a")
+      error("= <i>Title =") mustBe UnclosedMarkup("<i>", "<i>Title")
+      error("a {@code b") mustBe UnclosedMarkup("{@code", "{@code b")
+      error("{@link Foo the {@code bar}") mustBe UnclosedMarkup("{@link", "{@link Foo the {@code ...")
+      error("{@literal a\n\nb}") mustBe UnclosedMarkup("{@literal", "{@literal a ...")
+      // in a comment, it's the comment that fails
+      Scaladoc.fromString("/** A <b>bold claim.\n  * @param a {@code a\n  */") mustBe Left(
+        UnclosedMarkup("<b>", "<b>bold claim."))
+      Scaladoc.fromString("/** @param a {@code a\n  */") mustBe Left(UnclosedMarkup("{@code", "{@code a"))
+    }
+
+    "take tags that don't need closing as they are, and markers that aren't closed as text" in {
+      def p(spans: Span*) = Document(Paragraph(spans.toList))
+      ParseMarkup("""a<br>b <a name="x">c <span>d <img src="e">""") mustBe p(
+        PlainText("a\nb "), HtmlTag("""<a name="x">"""), PlainText("c "), HtmlTag("<span>"), PlainText("d "),
+        HtmlTag("""<img src="e">"""))
+      ParseMarkup("<b>'' ^ [[a b</b> c") mustBe p(Bold("'' ^ [[a b"), PlainText(" c"))
+    }
+
+    "nest markup at most 64 deep" in {
+      def nested(n: Int, inner: String) = "<b>" * n + inner + "</b>" * n
+      def depth(spans: List[Span]): Int = spans match {
+        case List(Bold(inner)) => 1 + depth(inner)
+        case _                 => 0
+      }
+      def bold(x: String) = ParseMarkup(x) match { case Document(List(Paragraph(spans))) => spans }
+      depth(bold(nested(64, "x"))) mustBe 64
+      // deeper, markers are text, and tags an error
+      bold(nested(63, "''x''")).toString must include("Italic")
+      bold(nested(64, "''x''")).toString must include("PlainText(''x'')")
+      intercept[MarkupTooDeep](ParseMarkup(nested(65, "x"))) mustBe
+        MarkupTooDeep("<b>", 64, "<b>x</b></b></b></b></b> ...")
+      intercept[MarkupTooDeep](ParseMarkup(nested(3000, "x"))).getMessage mustBe
+        "<b> nested more than 64 deep: <b><b><b><b><b><b><b><b> ..."
+      // a javadoc tag's label nests in it
+      ParseMarkup("{@link a b " * 64 + "}" * 64).toString must include("Link(a,List(PlainText(b)))")
+      intercept[MarkupTooDeep](ParseMarkup("{@link a b " * 65 + "}" * 65)).markup mustBe "{@link"
+      ParseMarkup("<b>" * 62 + "{@link a ''b''}" + "</b>" * 62).toString must include("Italic(List(PlainText(b)))")
+      ParseMarkup("<b>" * 63 + "{@link a ''b''}" + "</b>" * 63).toString must include("PlainText(''b'')")
+    }
+
+    "log a block by how it starts, not the whole of it" in {
+      val logged = List.newBuilder[String]
+      val log    = new Log { def info(x: String): Unit = logged += x }
+      ParseMarkup("<b>Beginning of a long paragraph</b>\n\n" + "<b>" * 60 + "x" + "</b>" * 60, log)
+      logged.result() mustBe List("- block: <b>Beginning of a long ...", "- block: <b><b><b><b><b><b><b><b> ...")
     }
 
     "end a paragraph at a heading line" in {
