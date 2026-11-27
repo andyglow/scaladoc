@@ -45,14 +45,54 @@ case object Admin extends Role
   */
 case class Member(team: String) extends Role
 
-def summaries(t: Typedoc): List[(String, Option[String])] = t match {
-  case Typedoc.Sum(name, doc, variants) => (name -> doc.flatMap(_.textSummary)) :: variants.flatMap(summaries)
-  case other                            => List(other.name -> other.doc.flatMap(_.textSummary))
+/** Can look, for a while. */
+sealed trait Guest extends Role
+
+/** Invited by a member.
+  *
+  * @param by who invited them
+  */
+case class Invited(by: String) extends Guest
+
+/** Came in by a shared link. */
+final class Anonymous extends Guest
+
+Typedoc.of[Role]
+// Sum("Role", "What a user may do.", List(
+//   Singleton("Admin", "Can do anything, invite others included."),
+//   Product("Member", "Can read and comment.", List(Field("team", "the team they're in"))),
+//   Sum("Guest", "Can look, for a while.", List(
+//     Product("Invited", "Invited by a member.", List(Field("by", "who invited them"))),
+//     Plain("Anonymous", "Came in by a shared link.")))))
+```
+
+`Typedoc.of` gives the type's docs as a tree (above, each `Some(doc)` is shown as its text):
+
+- `Sum`: a sealed trait or class, with its variants, which can be sums themselves
+- `Product`: a case class, with its fields, each documented by its `@param`
+- `Singleton`: an object
+- `Plain`: any other type
+
+A Scala 3 enum is a `Sum` of its cases, a case with parameters a `Product`, and one without a `Singleton`:
+
+```scala
+/** How a user hears from the app. */
+enum Channel {
+
+  /** Not at all. */
+  case Silent
+
+  /** By e-mail.
+    *
+    * @param perDay how many a day, at most
+    */
+  case Email(perDay: Int)
 }
 
-summaries(Typedoc.of[Role])
-// List(("Role", Some("What a user may do.")), ("Admin", Some("Can do anything, invite others included.")),
-//   ("Member", Some("Can read and comment.")))
+Typedoc.of[Channel]
+// Sum("Channel", "How a user hears from the app.", List(
+//   Singleton("Silent", "Not at all."),
+//   Product("Email", "By e-mail.", List(Field("perDay", "how many a day, at most")))))
 ```
 
 ## Getting started
