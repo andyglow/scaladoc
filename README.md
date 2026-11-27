@@ -65,8 +65,8 @@ plugins {
 }
 ```
 
-Maven builds add a few lines to `scala-maven-plugin`'s configuration. For those, and for adding the dependencies by
-hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-started.html).
+Maven builds add a few lines to `scala-maven-plugin`'s configuration, and scala-cli projects a few `using`
+directives. For those, and for adding the dependencies by hand in sbt, see [Getting started](https://andyglow.github.io/scaladoc/getting-started.html).
 
 | Module                     | Scala 2.12 | Scala 2.13 | Scala 3 (3.9+) | Scala.js 1.x |
 |----------------------------|:----------:|:----------:|:--------------:|:------------:|

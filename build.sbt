@@ -50,6 +50,16 @@ ThisBuild / githubWorkflowTargetBranches        := Seq("master")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq()
 ThisBuild / githubWorkflowJavaVersions          := Seq(JavaSpec.temurin("21"))
 // Tests on every Scala version; coverage of core and parser measured once, on 2.13, and uploaded to Codecov
+// scala-cli, for `scalaCliCheck`: before the first sbt step, as sbt runs as a server that the later steps reuse, with
+// the PATH it started with. By default the action installs Java 17, which the steps after it would then run on
+ThisBuild / githubWorkflowJobSetup ++= Seq(
+  WorkflowStep.Use(
+    UseRef.Public("VirtusLab", "scala-cli-setup", "v1"),
+    params = Map("jvm" -> "temurin:21"),
+    name = Some("Install scala-cli"),
+    cond = Some(s"matrix.scala == '$scala213'")
+  )
+)
 ThisBuild / githubWorkflowBuild := Seq(
   WorkflowStep.Sbt(List("test"), name = Some("Build project")),
   // sbt-scaladoc against real sbt 2 and sbt 1 builds; they need this build's artifacts in the local repository
@@ -58,11 +68,11 @@ ThisBuild / githubWorkflowBuild := Seq(
     name = Some("sbt plugin scripted tests"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
-  // the Gradle plugin, and the Maven setup the docs show, against real Gradle and Maven builds; they resolve this
-  // build's libraries from the local Maven repository
+  // the Gradle plugin, and the Maven and scala-cli setups the docs show, against real Gradle, Maven and scala-cli
+  // builds; they resolve this build's libraries from the local Maven repository
   WorkflowStep.Sbt(
-    List("+publishM2", "gradlePluginCheck", "mavenCheck"),
-    name = Some("Gradle plugin and Maven tests"),
+    List("+publishM2", "gradlePluginCheck", "mavenCheck", "scalaCliCheck"),
+    name = Some("Gradle plugin, Maven and scala-cli tests"),
     cond = Some(s"matrix.scala == '$scala213'")
   ),
   // the site: mdoc compiles and runs its snippets, Paradox checks its links
@@ -420,6 +430,42 @@ lazy val gradlePluginPublish = taskKey[Unit]("Publishes the Gradle plugin to the
 // one version's classes are never read by another
 lazy val mavenCheck = taskKey[Unit]("Tests the documented Maven setup on each Scala version; needs `+publishM2` first")
 
+// modules/tests/scala-cli is the scala-cli setup that the docs show: its scala2/ and scala3/ files hold the directives,
+// with the version as @VERSION@, and the other directories the code. It runs from a copy in target/, with this build's
+// version, on each Scala version: the model is published to a repository of its own there, and the app reads it
+lazy val scalaCliCheck = taskKey[Unit]("Tests the documented scala-cli setup on each Scala version; needs `+publishM2` first")
+
+def scalaCliTests(base: File, version: String, log: Logger): Unit = {
+  val work = base / "target" / "scala-cli-tests"
+  val repo = work / "repo"
+  IO.delete(work)
+  IO.copyDirectory(base / "modules" / "tests" / "scala-cli", work)
+  (work ** "*.scala").get().foreach(f => IO.write(f, IO.read(f).replace("@VERSION@", version)))
+  // `programArgs` go to the program, after `--`
+  def cli(args: Seq[String], programArgs: String*): Unit = {
+    val options = Seq("-r", "m2Local", "-r", repo.toURI.toString, "--server=false")
+    val command = Seq("scala-cli") ++ args ++ options ++ (if (programArgs.isEmpty) Nil else "--" +: programArgs)
+    log.info(s"scala-cli-tests: ${command.mkString(" ")}")
+    val exit = scala.sys.process.Process(command, work).!(
+      scala.sys.process.ProcessLogger(line => log.info(line), line => log.info(line)))
+    if (exit != 0) sys.error(s"scala-cli-tests: ${args.mkString(" ")} failed with exit code $exit")
+  }
+  def publish(scala: String, setup: String*): Unit =
+    cli(Seq("--power", "publish", "local", "model") ++ setup ++ Seq("--scala", scala, "--organization", "demo",
+      "--name", "model", "--project-version", "1.0", "--m2", "--m2-home", repo.toString, "--doc=false"))
+  def run(scala: String, dir: String, setup: Seq[String], arg: String): Unit =
+    cli(Seq("run", dir) ++ setup ++ Seq("--scala", scala, "--dep", "demo::model:1.0"), arg)
+  // Scala 3 has no compiler plugin, so nothing is excluded there; and a Scala 3 module that publishes needs nothing
+  Seq(scala213, scala212).foreach { scala =>
+    publish(scala, "scala2/publish.scala")
+    run(scala, "app", Seq("scala2/read.scala"), "excluded")
+  }
+  publish(scala3)
+  run(scala3, "app", Seq("scala3/read.scala"), "none")
+  // a Scala 3 project that uses the 2.13 model, published above
+  cli(Seq("run", "consumer3", "--scala", scala3))
+}
+
 def mvnw(base: File, version: String, log: Logger, scalaBinary: String): Unit = {
   val command = Seq("./mvnw", "-B", s"-Dscala=$scalaBinary", s"-Dscaladoc.version=$version", "clean", "verify")
   log.info(s"maven-tests: ${command.mkString(" ")}")
@@ -450,5 +496,6 @@ lazy val root = (project in file("."))
     gradlePluginPublish := Def.uncached(gradlew(baseDirectory.value, version.value, streams.value.log, "publishPlugins")),
     mavenCheck := Def.uncached {
       Seq("2.13", "2.12", "3").foreach(mvnw(baseDirectory.value, version.value, streams.value.log, _))
-    }
+    },
+    scalaCliCheck := Def.uncached(scalaCliTests(baseDirectory.value, version.value, streams.value.log))
   )
