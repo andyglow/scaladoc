@@ -88,7 +88,8 @@ class MarkdownInlinesSpec extends FSpec {
     spans("{@code Map[K, V]}, {@link scala.Option the *option*} and {@literal a & b}") mustBe List(
       Monospace("Map[K, V]"), PlainText(", "), Link("scala.Option", List(PlainText("the "), Italic("option"))),
       PlainText(" and a & b"))
-    spans("{@inheritDoc} and {@code open") mustBe List(PlainText("{@inheritDoc} and {@code open"))
+    spans("{@inheritDoc} and {@unknown open") mustBe List(PlainText("{@inheritDoc} and {@unknown open"))
+    Scaladoc.fromString("/** a {@code b */", syntax = CommentSyntax.Markdown) mustBe Left(UnclosedMarkup("{@code", "{@code b"))
   }
 
   test("inline HTML stays as it is") {
