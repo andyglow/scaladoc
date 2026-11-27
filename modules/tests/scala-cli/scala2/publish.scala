@@ -1,3 +1,4 @@
+// scala-steward:off: @VERSION@ is the version under test, which the build fills in (see scalaCliTests)
 // Scala 2, a module that publishes its scaladoc: the compiler plugin, and the annotation it embeds scaladoc in, which
 // the module's consumers get along. The option is optional: what to leave out, see "Choosing what to embed"
 //> using plugin io.github.andyglow::scaladoc-compiler-plugin:@VERSION@

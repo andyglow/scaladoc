@@ -1,3 +1,4 @@
+// scala-steward:off: @VERSION@ is the version under test, which the build fills in (see scalaCliTests)
 //> using dep demo:model_2.13:1.0
 //> using dep io.github.andyglow::scaladoc-parser:@VERSION@
 
